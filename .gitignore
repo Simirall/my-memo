@@ -15,6 +15,7 @@ dist-server/
 # deps
 node_modules/
 .wrangler
+.vite
 
 # env
 .env
