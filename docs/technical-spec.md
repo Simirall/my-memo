@@ -31,10 +31,10 @@
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │              External OAuth Providers                           │
-│         ┌─────────────┐       ┌─────────────┐               　   │
-│         │  Microsoft  │       │   Google    │               　   │
-│         │   Entra ID  │       │   OAuth     │               　   │
-│         └─────────────┘       └─────────────┘               　   │
+│                      ┌─────────────┐                            │
+│                      │   GitHub    │                            │
+│                      │   OAuth     │                            │
+│                      └─────────────┘                            │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -129,7 +129,7 @@
 | ----------- | ---- | ---------------------------------- | ------------------------------ |
 | id          | TEXT | PRIMARY KEY                        | UUID v4                        |
 | provider_id | TEXT | NOT NULL                           | OAuth プロバイダの ユーザー ID |
-| provider    | TEXT | NOT NULL                           | 'microsoft' \| 'google'        |
+| provider    | TEXT | NOT NULL                           | github                      |
 | email       | TEXT | NOT NULL                           | メールアドレス                 |
 | name        | TEXT | NOT NULL                           | 表示名                         |
 | avatar_url  | TEXT |                                    | アバター画像 URL               |
@@ -236,10 +236,8 @@
 | メソッド | パス                     | 機能 ID  | 説明                         |
 | -------- | ------------------------ | -------- | ---------------------------- |
 | GET      | /auth/login              | AUTH-001 | ログイン画面表示             |
-| GET      | /auth/microsoft          | AUTH-001 | Microsoft OAuth 開始         |
-| GET      | /auth/microsoft/callback | AUTH-001 | Microsoft OAuth コールバック |
-| GET      | /auth/google             | AUTH-001 | Google OAuth 開始            |
-| GET      | /auth/google/callback    | AUTH-001 | Google OAuth コールバック    |
+| GET      | /auth/github             | AUTH-001 | GitHub OAuth 開始         |
+| GET      | /auth/github/callback    | AUTH-001 | GitHub OAuth コールバック |
 | POST     | /auth/logout             | AUTH-002 | ログアウト                   |
 
 ### 3.2 メモ（MEMO）
@@ -287,7 +285,7 @@
 
 | メソッド | パス                          | 機能 ID          | 説明             |
 | -------- | ----------------------------- | ---------------- | ---------------- |
-| POST     | /memos/:id/regenerate-summary | URL-003, URL-004 | 要約生成・再生成 |
+| POST     | /memos/:id/generate-summary | URL-003, URL-004 | 要約生成・再生成 |
 
 **備考**: URL 投稿（URL-001）はメモ作成/更新時に行う。要約生成（URL-002〜004）は保存処理とは非同期（クライアントからのリクエスト等）で実行する。
 
@@ -346,13 +344,9 @@ const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7, // 7日
   },
   socialProviders: {
-    microsoft: {
-      clientId: env.MICROSOFT_CLIENT_ID,
-      clientSecret: env.MICROSOFT_CLIENT_SECRET,
-    },
-    google: {
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID as string,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
     },
   },
 });
@@ -557,7 +551,7 @@ db/
 
 | 項目       | 仕様                                   |
 | ---------- | -------------------------------------- |
-| 認証方式   | OAuth 2.0（Microsoft, Google）         |
+| 認証方式   | OAuth 2.0（GitHub）         |
 | セッション | JWT（HTTP-only Cookie）                |
 | 認可       | ユーザーは自分のデータのみアクセス可能 |
 
@@ -662,19 +656,15 @@ db/
 
 | 名前                    | 説明                           |
 | ----------------------- | ------------------------------ |
-| MICROSOFT_CLIENT_ID     | Microsoft OAuth Client ID      |
-| MICROSOFT_CLIENT_SECRET | Microsoft OAuth Secret         |
-| GOOGLE_CLIENT_ID        | Google OAuth Client ID         |
-| GOOGLE_CLIENT_SECRET    | Google OAuth Secret            |
-| AUTH_SECRET             | Better Auth 署名用シークレット |
+| GITHUB_CLIENT_ID       | GitHub OAuth Client ID      |
+| GITHUB_CLIENT_SECRET   | GitHub OAuth Secret         |
+| AUTH_SECRET            | Better Auth 署名用シークレット |
 
 ### 10.3 シークレット設定コマンド
 
 ```bash
-wrangler secret put MICROSOFT_CLIENT_ID
-wrangler secret put MICROSOFT_CLIENT_SECRET
-wrangler secret put GOOGLE_CLIENT_ID
-wrangler secret put GOOGLE_CLIENT_SECRET
+wrangler secret put GITHUB_CLIENT_ID
+wrangler secret put GITHUB_CLIENT_SECRET
 wrangler secret put AUTH_SECRET
 ```
 
@@ -686,10 +676,8 @@ interface CloudflareBindings {
   DB: D1Database;
   BUCKET: R2Bucket;
   AI: Ai;
-  MICROSOFT_CLIENT_ID: string;
-  MICROSOFT_CLIENT_SECRET: string;
-  GOOGLE_CLIENT_ID: string;
-  GOOGLE_CLIENT_SECRET: string;
+  GITHUB_CLIENT_ID: string;
+  GITHUB_CLIENT_SECRET: string;
   AUTH_SECRET: string;
 }
 ```
@@ -700,4 +688,5 @@ interface CloudflareBindings {
 
 | 版  | 日付       | 内容     |
 | --- | ---------- | -------- |
-| 0.1 | 2024-12-18 | 初版作成 |
+| 0.1 | 2025-12-18 | 初版作成 |
+| 0.1 | 2025-12-19 | OAuthプロバイダー変更 |
