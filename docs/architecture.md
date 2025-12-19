@@ -19,6 +19,8 @@
 - Tailwind CSS
   - サーバーサイドでレンダリングするため、領域に依存しない Tailwind CSS を利用
   - コンポーネントライブラリとして daisyUI を利用
+- Zod
+  - バリデーションに利用
 - Auth
   - Better Auth のステートレス認証を利用
   - https://www.better-auth.com/docs/concepts/session-management#stateless-session-management
