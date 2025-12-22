@@ -13,7 +13,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                     Cloudflare Workers                          │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │                      Hono (SSR)                           │  │
+│  │                      HonoX (SSR)                          │  │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ 　  │  │
 │  │  │   Routes    │  │  Renderer   │  │   Middleware    │ 　  │  │
 │  │  │  (hono/jsx) │  │  (hono/jsx) │  │  (Auth, etc.)   │ 　  │  │
@@ -43,7 +43,7 @@
 | レイヤー       | 技術                           | 用途                 |
 | -------------- | ------------------------------ | -------------------- |
 | Runtime        | Cloudflare Workers             | Edge Runtime         |
-| Framework      | Hono v4                        | Web Framework / SSR  |
+| Framework      | HonoX                          | Full-stack Framework |
 | View           | hono/jsx                       | JSX Rendering        |
 | CSS            | Tailwind CSS v4 + daisyUI v5   | スタイリング         |
 | Build          | Vite + @cloudflare/vite-plugin | ビルド・開発サーバー |
@@ -55,7 +55,7 @@
 ### 1.3 リクエストフロー
 
 1. **ブラウザ** → Cloudflare Workers へリクエスト
-2. **Hono ミドルウェア** でセッション検証（Better Auth）
+2. **HonoX ミドルウェア** でセッション検証（Better Auth）
 3. 未認証の場合 → ログイン画面へリダイレクト
 4. 認証済みの場合 → ルートハンドラで処理
 5. 必要に応じて **D1/R2/Workers AI** へアクセス

@@ -12,22 +12,22 @@
 - [ ] `wrangler.jsonc` への Workers AI バインディング設定
 - [ ] 使用モデルの決定（`@cf/meta/llama-3-8b-instruct` 等）
 
-### 2.2 バックエンド (Hono)
+### 2.2 バックエンド (HonoX)
 
-- [ ] スクレイピング・要約サービスの実装 (`src/features/summary/service.ts`)
+- [ ] スクレイピング・要約サービスの実装 (`app/features/summary/service.ts`)
   - 指定 URL の HTML 取得 (`fetch`)
   - 本文抽出（不要なタグの除去）
   - Workers AI による要約生成
-- [ ] メモ機能の拡張 (`src/features/memo/`)
+- [ ] メモ機能の拡張 (`app/features/memo/`)
   - メモ作成・更新処理において、URL が存在する場合にバックグラウンドタスク (`c.executionCtx.waitUntil`) を起動
   - タスク内で要約生成サービスを呼び出し、完了後に `memos` テーブルを更新
 
-### 2.3 フロントエンド (Hono/JSX)
+### 2.3 フロントエンド (HonoX)
 
-- [ ] メモフォームの拡張 (`MemoFormPage.tsx`)
+- [ ] メモフォームの拡張 (`app/routes/memos/new.tsx`, `app/routes/memos/[id]/edit.tsx`)
   - URL 専用入力欄の追加（本文とは別管理とする場合）
   - または本文内の URL 自動検出ロジック（今回はシンプルに専用欄を推奨）
-- [ ] メモ詳細の拡張 (`MemoDetailPage.tsx`)
+- [ ] メモ詳細の拡張 (`app/routes/memos/[id].tsx`)
   - AI 要約の表示エリア追加
   - ローディング状態や「要約生成中」の表示（必要であれば）
 

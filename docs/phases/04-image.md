@@ -18,27 +18,27 @@
 - [ ] `images` テーブルのマイグレーション作成 (`db/migrations/0006_create_images.sql`)
 - [ ] ローカル D1 へのマイグレーション適用
 
-### 2.3 バックエンド (Hono)
+### 2.3 バックエンド (HonoX)
 
-- [ ] 画像機能の実装 (`src/features/image/`)
-  - Routes: 画像アップロード API (`POST /api/upload`)
+- [ ] 画像機能の実装 (`app/features/image/`)
+  - Routes: 画像アップロード API (`app/routes/api/upload.ts`)
     - ファイルを受け取り R2 に保存
     - `images` テーブルにレコード作成
   - Repository: 画像データの保存処理
-- [ ] メモ機能の拡張 (`src/features/memo/`)
+- [ ] メモ機能の拡張 (`app/features/memo/`)
   - Repository: メモ作成・更新時に、画像レコードの `memo_id` を更新して紐付ける処理
   - Repository: メモ取得時に画像リストを含める処理
 
-### 2.4 フロントエンド (Hono/JSX)
+### 2.4 フロントエンド (HonoX/Island)
 
-- [ ] 画像アップロードコンポーネント (`src/features/image/ImageUploader.tsx`)
+- [ ] 画像アップロードコンポーネント (`app/islands/ImageUploader.tsx`)
   - ファイル選択 UI
   - 非同期アップロード処理
   - プレビュー表示
-- [ ] メモフォームの拡張 (`MemoFormPage.tsx`)
+- [ ] メモフォームの拡張 (`app/routes/memos/new.tsx`, `app/routes/memos/[id]/edit.tsx`)
   - `ImageUploader` の組み込み
   - アップロード済み画像 ID の管理
-- [ ] メモ詳細の拡張 (`MemoDetailPage.tsx`)
+- [ ] メモ詳細の拡張 (`app/routes/memos/[id].tsx`)
   - 画像ギャラリー表示
 
 ## 3. 詳細設計

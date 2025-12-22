@@ -12,30 +12,30 @@
 - [ ] `memos` テーブルのマイグレーションファイル作成 (`db/migrations/0002_create_memos.sql`)
 - [ ] ローカル D1 へのマイグレーション適用
 
-### 2.2 バックエンド (Hono)
+### 2.2 バックエンド (HonoX)
 
-- [ ] メモ機能用ディレクトリ構成の整備 (`src/features/memo/`)
-- [ ] DB アクセス層（Repository）の実装 (`src/features/memo/repository.ts`)
+- [ ] メモ機能用ディレクトリ構成の整備 (`app/routes/memos/`)
+- [ ] DB アクセス層（Repository）の実装 (`app/features/memo/repository.ts`)
   - `findAllByUserId(userId)`
   - `findById(id)`
   - `create(data)`
   - `update(id, data)`
   - `delete(id)`
-- [ ] ルートハンドラの実装 (`src/features/memo/routes.ts`)
-  - `GET /`: メモ一覧表示
-  - `GET /memos/new`: 作成画面表示
-  - `POST /memos`: メモ作成処理
-  - `GET /memos/:id`: 詳細画面表示
-  - `GET /memos/:id/edit`: 編集画面表示
+- [ ] ルートハンドラの実装 (ファイルベースルーティング)
+  - `GET /`: メモ一覧表示 (`app/routes/index.tsx`)
+  - `GET /memos/new`: 作成画面表示 (`app/routes/memos/new.tsx`)
+  - `POST /memos`: メモ作成処理 (`app/routes/memos/index.tsx` or API)
+  - `GET /memos/:id`: 詳細画面表示 (`app/routes/memos/[id].tsx`)
+  - `GET /memos/:id/edit`: 編集画面表示 (`app/routes/memos/[id]/edit.tsx`)
   - `POST /memos/:id`: メモ更新処理
   - `POST /memos/:id/delete`: メモ削除処理
 
-### 2.3 フロントエンド (Hono/JSX)
+### 2.3 フロントエンド (HonoX)
 
-- [ ] メモ一覧ページ (`src/features/memo/MemoListPage.tsx`)
-- [ ] メモ詳細ページ (`src/features/memo/MemoDetailPage.tsx`)
-- [ ] メモ作成/編集ページ (`src/features/memo/MemoFormPage.tsx`)
-- [ ] メモカードコンポーネント (`src/features/memo/MemoCard.tsx`)
+- [ ] メモ一覧ページ (`app/routes/index.tsx`)
+- [ ] メモ詳細ページ (`app/routes/memos/[id].tsx`)
+- [ ] メモ作成/編集ページ (`app/routes/memos/new.tsx`, `app/routes/memos/[id]/edit.tsx`)
+- [ ] メモカードコンポーネント (`app/components/MemoCard.tsx`)
 
 ## 3. 詳細設計
 

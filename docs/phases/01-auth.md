@@ -16,26 +16,25 @@ Better Auth を使用し、GitHub アカウントによるソーシャルログ�
 ### 2.2 ライブラリ・設定
 
 - [ ] Better Auth 関連パッケージのインストール
-- [ ] `src/lib/auth.ts` の作成（Better Auth 設定）
+- [ ] `app/auth.ts` の作成（Better Auth 設定）
 - [ ] 環境変数 (`wrangler.jsonc`, `.dev.vars`) の設定
   - `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
   - `AUTH_SECRET`
 
-### 2.3 バックエンド (Hono)
+### 2.3 バックエンド (HonoX)
 
-- [ ] 認証用ルートハンドラの実装 (`src/features/auth/routes.ts`)
+- [ ] 認証用ルートハンドラの実装 (`app/routes/api/auth/index.ts`)
   - Better Auth のハンドラを Hono にマウント
-- [ ] 認証ミドルウェアの実装 (`src/middleware/auth.ts`)
+- [ ] 認証ミドルウェアの実装 (`app/routes/_middleware.ts`)
   - セッション検証ロジック
-  - 未認証時の `/auth/login` リダイレクト処理
-- [ ] ルート定義への組み込み (`src/index.tsx`)
+  - 未認証時の `/login` リダイレクト処理
 
-### 2.4 フロントエンド (Hono/JSX)
+### 2.4 フロントエンド (HonoX/Island)
 
-- [ ] ログイン画面コンポーネントの実装 (`src/features/auth/LoginPage.tsx`)
+- [ ] ログイン画面コンポーネントの実装 (`app/routes/(auth)/login.tsx`, `app/islands/login.tsx`)
   - daisyUI を使用したデザイン
   - GitHub ログインボタン
-- [ ] 共通レイアウトコンポーネントの実装 (`src/components/Layout.tsx`)
+- [ ] 共通レイアウトコンポーネントの実装 (`app/routes/_renderer.tsx`)
   - ヘッダーにユーザーアイコンとログアウトボタンを配置
 
 ## 3. 詳細設計
