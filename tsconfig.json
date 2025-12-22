@@ -5,11 +5,10 @@
     "moduleResolution": "Bundler",
     "strict": true,
     "skipLibCheck": true,
-    "lib": [
-      "ESNext"
-    ],
-    "types": ["vite/client", "@types/node"],
+    "lib": ["ESNext", "DOM"],
+    "types": ["vite/client", "@types/node", "./worker-configuration.d.ts"],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx"
   },
+  "include": ["**/*.ts", "**/*.tsx"]
 }
