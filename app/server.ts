@@ -2,7 +2,7 @@ import { showRoutes } from "hono/dev";
 import { appendTrailingSlash } from "hono/trailing-slash";
 import { createHono } from "honox/factory";
 import { createApp } from "honox/server";
-import { auth } from "./auth";
+import { getAuth } from "./auth";
 
 const baseApp = createHono();
 
@@ -11,6 +11,7 @@ baseApp.use(appendTrailingSlash());
 
 // セッション情報を取得してコンテキストにセットするミドルウェア
 baseApp.use("*", async (c, next) => {
+  const auth = getAuth(c.env);
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
 
   if (!session) {
@@ -50,6 +51,7 @@ baseApp.use("*", async (c, next) => {
   }
 });
 
+// ログイン済みの場合はログインページにアクセスできないようにするミドルウェア
 baseApp.use("/login", async (c, next) => {
   const user = c.get("user");
 

@@ -1,18 +1,14 @@
 import { betterAuth } from "better-auth";
 
-export const auth = betterAuth({
-  trustedOrigins: ["http://localhost:5173"],
-  socialProviders: {
-    github: {
-      // clientId: process.env.GITHUB_CLIENT_ID as string,
-      // clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
-      clientId: import.meta.env.VITE_GITHUB_CLIENT_ID as string,
-      clientSecret: import.meta.env.VITE_GITHUB_CLIENT_SECRET as string,
+export const getAuth = (env: Cloudflare.Env) => {
+  return betterAuth({
+    trustedOrigins: ["http://localhost:5173"],
+    baseURL: env.BETTER_AUTH_URL,
+    socialProviders: {
+      github: {
+        clientId: env.GITHUB_CLIENT_ID,
+        clientSecret: env.GITHUB_CLIENT_SECRET,
+      },
     },
-  },
-});
-
-export type AuthType = {
-  user: typeof auth.$Infer.Session.user | null;
-  session: typeof auth.$Infer.Session.session | null;
+  });
 };

@@ -1,10 +1,11 @@
 import { Hono } from "hono";
-import { auth } from "../../../auth";
+import { getAuth } from "../../../auth";
 
-const authRoute = new Hono();
+const authRoute = new Hono<{ Bindings: Cloudflare.Env }>();
 
 authRoute.on(["GET", "POST"], "/*", (c) => {
-  console.log("Auth route accessed");
+  const auth = getAuth(c.env);
+
   return auth.handler(c.req.raw);
 });
 
