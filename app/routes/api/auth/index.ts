@@ -3,7 +3,8 @@ import { auth } from "../../../auth";
 
 const authRoute = new Hono();
 
-authRoute.on(["GET", "POST"], "/auth/*", (c) => {
+authRoute.on(["GET", "POST"], "/*", (c) => {
+  console.log("Auth route accessed");
   return auth.handler(c.req.raw);
 });
 

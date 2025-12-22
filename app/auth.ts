@@ -4,8 +4,10 @@ export const auth = betterAuth({
   trustedOrigins: ["http://localhost:5173"],
   socialProviders: {
     github: {
-      clientId: process.env.GITHUB_CLIENT_ID as string,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+      // clientId: process.env.GITHUB_CLIENT_ID as string,
+      // clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+      clientId: import.meta.env.VITE_GITHUB_CLIENT_ID as string,
+      clientSecret: import.meta.env.VITE_GITHUB_CLIENT_SECRET as string,
     },
   },
 });

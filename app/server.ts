@@ -33,11 +33,14 @@ baseApp.use("*", async (c, next) => {
   const publicPaths = [
     "/login",
     "/login/callback",
+    "/api/auth",
     "/favicon.ico",
     "/robots.txt",
     "/.well-known",
   ];
-  const isPublic = publicPaths.some((p) => c.req.path === p);
+  const isPublic = publicPaths.some(
+    (p) => c.req.path === p || c.req.path.startsWith(p),
+  );
 
   if (isPublic || user) {
     await next();
@@ -45,6 +48,16 @@ baseApp.use("*", async (c, next) => {
   } else {
     return c.redirect("/login");
   }
+});
+
+baseApp.use("/login", async (c, next) => {
+  const user = c.get("user");
+
+  if (user) {
+    return c.redirect("/");
+  }
+
+  await next();
 });
 
 const app = createApp({ app: baseApp });
