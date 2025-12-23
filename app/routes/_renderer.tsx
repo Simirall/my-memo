@@ -1,5 +1,6 @@
 import { jsxRenderer } from "hono/jsx-renderer";
 import { Link, Script } from "honox/server";
+import { RootLayout } from "../components/root-layout";
 
 export default jsxRenderer(({ children }) => {
   return (
@@ -11,7 +12,9 @@ export default jsxRenderer(({ children }) => {
         <Link href="/app/style.css" rel="stylesheet" />
         <Script async src="/app/client.ts" />
       </head>
-      <body>{children}</body>
+      <body>
+        <RootLayout>{children}</RootLayout>
+      </body>
     </html>
   );
 });
