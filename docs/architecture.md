@@ -13,7 +13,9 @@
 - TypeScript
 - Hono
   - Cloudflare Bindings を利用
-  - ページは SSR、hono/jsx でレンダリング
+- フルスタックフレームワークとしてHonoXを利用
+  - Island ComponentでClient Componentを実装
+  - レンダーはhono/jsx(hono/client)
 - Vite
   - Cloudflare Vite Plugin を利用
 - Tailwind CSS

@@ -9,12 +9,20 @@
     "cf-typegen": "wrangler types --env-interface CloudflareBindings"
   },
   "dependencies": {
-    "hono": "^4.11.1"
+    "@tailwindcss/vite": "^4.1.18",
+    "better-auth": "^1.4.7",
+    "daisyui": "^5.5.14",
+    "hono": "^4.11.1",
+    "honox": "^0.1.52",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.2.3",
+    "@biomejs/biome": "2.3.10",
+    "@hono/vite-build": "^1.8.0",
+    "@hono/vite-dev-server": "^0.23.0",
+    "@types/node": "^25.0.3",
+    "tailwindcss": "^4.1.18",
     "vite": "^7.3.0",
-    "vite-ssr-components": "^0.5.1",
     "wrangler": "^4.17.0"
   }
 }

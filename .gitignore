@@ -3,6 +3,9 @@ dist/
 dist-server/
 
 # dev
+.vite/
+.hono/
+.wrangler/
 .yarn/
 !.yarn/releases
 .vscode/*
@@ -14,8 +17,6 @@ dist-server/
 
 # deps
 node_modules/
-.wrangler
-.vite
 
 # env
 .env

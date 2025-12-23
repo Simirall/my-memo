@@ -15,25 +15,25 @@
 - [ ] `memo_tags` テーブル（中間テーブル）のマイグレーション作成 (`db/migrations/0005_create_memo_tags.sql`)
 - [ ] ローカル D1 へのマイグレーション適用
 
-### 2.2 バックエンド (Hono)
+### 2.2 バックエンド (HonoX)
 
-- [ ] カテゴリ機能の実装 (`src/features/category/`)
+- [ ] カテゴリ機能の実装 (`app/features/category/`, `app/routes/categories/`)
   - Repository: CRUD 処理
   - Routes: カテゴリ一覧取得、作成、削除 API
-- [ ] タグ機能の実装 (`src/features/tag/`)
+- [ ] タグ機能の実装 (`app/features/tag/`)
   - Repository: CRUD 処理、名前による検索または作成（FindOrCreate）
-- [ ] メモ機能の拡張 (`src/features/memo/`)
+- [ ] メモ機能の拡張 (`app/features/memo/`)
   - Repository: `create`, `update` 時にカテゴリ ID とタグ配列を処理するロジック追加
   - Repository: `findAll`, `findById` 時にカテゴリとタグ情報を JOIN して取得するロジック追加
   - Routes: リクエストボディのバリデーション更新
 
-### 2.3 フロントエンド (Hono/JSX)
+### 2.3 フロントエンド (HonoX)
 
-- [ ] カテゴリ管理画面 (`src/features/category/CategoryManagePage.tsx`)
-- [ ] メモフォームの拡張 (`src/features/memo/MemoFormPage.tsx`)
+- [ ] カテゴリ管理画面 (`app/routes/categories/index.tsx`)
+- [ ] メモフォームの拡張 (`app/routes/memos/new.tsx`, `app/routes/memos/[id]/edit.tsx`)
   - カテゴリ選択 UI 追加
   - タグ入力 UI 追加
-- [ ] メモ表示の拡張 (`src/features/memo/MemoCard.tsx`, `MemoDetailPage.tsx`)
+- [ ] メモ表示の拡張 (`app/components/MemoCard.tsx`, `app/routes/memos/[id].tsx`)
   - カテゴリ・タグのバッジ表示
 
 ## 3. 詳細設計
