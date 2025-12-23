@@ -1,46 +1,37 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
-import * as schema from "../schema";
+import * as schema from "../../schema";
 
 export default createRoute(async (c) => {
   const user = c.get("user");
   const db = drizzle(c.env.MY_MEMO_D1, { schema: schema });
+  const id = c.req.param("id") ?? "";
 
-  const result = await db.query.memosTable.findMany({
+  const result = await db.query.categoriesTable.findFirst({
+    where: and(eq(schema.categoriesTable.userEmail, user!.email), eq(schema.categoriesTable.id, id)),
     with: {
-      category: true,
-    },
-    where: eq(schema.memosTable.userEmail, user!.email),
+      memos: true,
+    }
   });
 
+  if (!result) {
+    return c.render(<div>Category not found</div>);
+  }
 
   return c.render(
     <div>
-      <div className="flex gap-4">
-        <a className="btn" href="/memos/create">
-          Create Memo
-        </a>
-        <a className="btn" href="/categories">
-          Categories
-        </a>
-      </div>
+      <h1 className="text-3xl font-bold">{result.name}</h1>
       <div className="flex flex-wrap gap-4 py-4">
-        {result.map((memo) => (
+        {result.memos.map((memo) => (
           <div
             className="card card-md w-96 bg-base-200 shadow-sm"
             key={memo.id}
           >
             <div className="card-body">
               <h2 className="card-title">{memo.title}</h2>
-              {memo.category && (
-                <a className="badge badge-xl badge-soft hover:translate-y-0.5" href={`/categories/${memo.category.id}`}>
-                  {memo.category.name}
-                </a>
-              )}
-              <p>{memo.content}</p>
               <form
-                action={`/api/memos/delete/${memo.id}`}
+                action={`/api/categories/delete/${memo.id}`}
                 className="card-actions justify-end"
                 method="post"
               >

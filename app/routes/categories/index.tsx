@@ -24,7 +24,7 @@ export default createRoute(async (c) => {
             key={category.id}
           >
             <div className="card-body">
-              <h2 className="card-title">{category.name}</h2>
+              <a className="card-title hover:underline" href={`/categories/${category.id}`}>{category.name}</a>
               <form
                 action={`/api/categories/delete/${category.id}`}
                 className="card-actions justify-end"
