@@ -9,7 +9,7 @@
 
 ### 2.1 データベース (D1)
 
-- [ ] `memos` テーブルのマイグレーションファイル作成 (`db/migrations/0002_create_memos.sql`)
+- [ ] `memos` テーブルのマイグレーションファイル作成 (`db/migrations/0001_create_memos.sql`)
 - [ ] ローカル D1 へのマイグレーション適用
 
 ### 2.2 バックエンド (HonoX)

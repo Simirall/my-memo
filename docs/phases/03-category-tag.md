@@ -10,9 +10,9 @@
 
 ### 2.1 データベース (D1)
 
-- [ ] `categories` テーブルのマイグレーション作成 (`db/migrations/0003_create_categories.sql`)
-- [ ] `tags` テーブルのマイグレーション作成 (`db/migrations/0004_create_tags.sql`)
-- [ ] `memo_tags` テーブル（中間テーブル）のマイグレーション作成 (`db/migrations/0005_create_memo_tags.sql`)
+- [ ] `categories` テーブルのマイグレーション作成 (`db/migrations/0002_create_categories.sql`)
+- [ ] `tags` テーブルのマイグレーション作成 (`db/migrations/0003_create_tags.sql`)
+- [ ] `memo_tags` テーブル（中間テーブル）のマイグレーション作成 (`db/migrations/0004_create_memo_tags.sql`)
 - [ ] ローカル D1 へのマイグレーション適用
 
 ### 2.2 バックエンド (HonoX)

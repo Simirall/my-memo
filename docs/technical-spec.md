@@ -69,26 +69,26 @@
 ### 2.1 ER 図
 
 ```
-┌──────────────┐       ┌──────────────┐       ┌──────────────┐
-│    users     │       │  categories  │       │    tags      │
-├──────────────┤       ├──────────────┤       ├──────────────┤
-│ id (PK)      │       │ id (PK)      │       │ id (PK)      │
-│ provider_id  │       │ user_id (FK) │───┐   │ user_id (FK) │───┐
-│ provider     │       │ name         │   │   │ name         │   │
-│ email        │       │ created_at   │   │   │ created_at   │   │
-│ name         │       │ updated_at   │   │   │ updated_at   │   │
-│ avatar_url   │       └──────────────┘   │   └──────────────┘   │
-│ created_at   │                          │                      │
-│ updated_at   │                          │                      │
-└──────────────┘                          │                      │
-       │                                  │                      │
-       │ 1:N                              │ 1:N                  │ 1:N
-       ▼                                  ▼                      ▼
+          ┌──────────────┐       ┌──────────────┐
+          │  categories  │       │    tags      │
+          ├──────────────┤       ├──────────────┤
+          │ id (PK)      │       │ id (PK)      │
+          │ user_id      │───┐   │ user_id      │───┐
+          │ name         │   │   │ name         │   │
+          │ created_at   │   │   │ created_at   │   │
+          │ updated_at   │   │   │ updated_at   │   │
+          └──────────────┘   │   └──────────────┘   │
+                             │                      │
+                             │                      │
+                             │                      │
+                             │                      │
+                             │ 1:N                  │ 1:N
+                             ▼                      ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │                            memos                                 │
 ├──────────────────────────────────────────────────────────────────┤
 │ id (PK)                                                          │
-│ user_id (FK) ─────────────────────────────────────────┐          │
+│ user_id ──────────────────────────────────────────────┐          │
 │ category_id (FK, nullable) ───────────────────────────┼──────────│
 │ content                                               │          │
 │ url (nullable)                                        │          │
@@ -123,31 +123,13 @@
 
 ### 2.2 テーブル定義
 
-#### users
-
-| カラム      | 型   | 制約                               | 説明                           |
-| ----------- | ---- | ---------------------------------- | ------------------------------ |
-| id          | TEXT | PRIMARY KEY                        | UUID v4                        |
-| provider_id | TEXT | NOT NULL                           | OAuth プロバイダの ユーザー ID |
-| provider    | TEXT | NOT NULL                           | github                      |
-| email       | TEXT | NOT NULL                           | メールアドレス                 |
-| name        | TEXT | NOT NULL                           | 表示名                         |
-| avatar_url  | TEXT |                                    | アバター画像 URL               |
-| created_at  | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時                       |
-| updated_at  | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 更新日時                       |
-
-**インデックス**:
-
-- `UNIQUE(provider, provider_id)`
-- `INDEX(email)`
-
 #### categories
 
-| カラム     | 型   | 制約                               | 説明         |
-| ---------- | ---- | ---------------------------------- | ------------ |
-| id         | TEXT | PRIMARY KEY                        | UUID v4      |
-| user_id    | TEXT | NOT NULL, FK → users(id)           | 所有ユーザー |
-| name       | TEXT | NOT NULL                           | カテゴリ名   |
+| カラム      | 型   | 制約                                | 説明         |
+| ---------- | ---- | ---------------------------------- | ----------- |
+| id         | TEXT | PRIMARY KEY                        | UUID v4     |
+| user_id    | TEXT | NOT NULL                           | 所有ユーザー  |
+| name       | TEXT | NOT NULL                           | カテゴリ名    |
 | created_at | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時     |
 | updated_at | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 更新日時     |
 
@@ -158,10 +140,10 @@
 
 #### tags
 
-| カラム     | 型   | 制約                               | 説明         |
-| ---------- | ---- | ---------------------------------- | ------------ |
-| id         | TEXT | PRIMARY KEY                        | UUID v4      |
-| user_id    | TEXT | NOT NULL, FK → users(id)           | 所有ユーザー |
+| カラム     | 型   | 制約                                 | 説明         |
+| ---------- | ---- | ---------------------------------- | ----------- |
+| id         | TEXT | PRIMARY KEY                        | UUID v4     |
+| user_id    | TEXT | NOT NULL                           | 所有ユーザー  |
 | name       | TEXT | NOT NULL                           | タグ名       |
 | created_at | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時     |
 | updated_at | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 更新日時     |
@@ -173,16 +155,16 @@
 
 #### memos
 
-| カラム      | 型   | 制約                               | 説明                         |
-| ----------- | ---- | ---------------------------------- | ---------------------------- |
-| id          | TEXT | PRIMARY KEY                        | UUID v4                      |
-| user_id     | TEXT | NOT NULL, FK → users(id)           | 所有ユーザー                 |
-| category_id | TEXT | FK → categories(id)                | カテゴリ（単一）             |
-| content     | TEXT | NOT NULL                           | メモ本文（最大 10,000 文字） |
-| url         | TEXT |                                    | 添付 URL                     |
-| url_summary | TEXT |                                    | AI 生成の要約                |
-| created_at  | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時                     |
-| updated_at  | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 更新日時                     |
+| カラム       | 型   | 制約                                | 説明                      |
+| ----------- | ---- | ---------------------------------- | ------------------------ |
+| id          | TEXT | PRIMARY KEY                        | UUID v4                  |
+| user_id     | TEXT | NOT NULL                           | 所有ユーザー               |
+| category_id | TEXT | FK → categories(id)                | カテゴリ（単一）              |
+| content     | TEXT | NOT NULL                           | メモ本文（最大 10,000 文字）  |
+| url         | TEXT |                                    | 添付 URL                  |
+| url_summary | TEXT |                                    | AI 生成の要約              |
+| created_at  | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時                   |
+| updated_at  | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 更新日時                   |
 
 **インデックス**:
 
@@ -192,7 +174,7 @@
 
 #### memo_tags
 
-| カラム     | 型   | 制約                               | 説明     |
+| カラム       | 型   | 制約                               | 説明     |
 | ---------- | ---- | ---------------------------------- | -------- |
 | memo_id    | TEXT | NOT NULL, FK → memos(id)           | メモ ID  |
 | tag_id     | TEXT | NOT NULL, FK → tags(id)            | タグ ID  |
@@ -233,29 +215,29 @@
 
 ### 3.1 認証（AUTH）
 
-| メソッド | パス                     | 機能 ID  | 説明                         |
-| -------- | ------------------------ | -------- | ---------------------------- |
+| メソッド   | パス                      | 機能 ID  | 説明                        |
+| -------- | ------------------------ | -------- | -------------------------- |
 | GET      | /auth/login              | AUTH-001 | ログイン画面表示             |
-| GET      | /auth/github             | AUTH-001 | GitHub OAuth 開始         |
-| GET      | /auth/github/callback    | AUTH-001 | GitHub OAuth コールバック |
+| GET      | /auth/github             | AUTH-001 | GitHub OAuth 開始          |
+| GET      | /auth/github/callback    | AUTH-001 | GitHub OAuth コールバック    |
 | POST     | /auth/logout             | AUTH-002 | ログアウト                   |
 
 ### 3.2 メモ（MEMO）
 
-| メソッド | パス              | 機能 ID  | 説明                                                             |
-| -------- | ----------------- | -------- | ---------------------------------------------------------------- |
-| GET      | /                 | MEMO-002 | メモ一覧画面                                                     |
-| GET      | /memos/new        | MEMO-001 | メモ作成画面                                                     |
-| POST     | /memos            | MEMO-001 | メモ作成処理（multipart/form-data 対応、画像同時アップロード可） |
-| GET      | /memos/:id        | MEMO-003 | メモ詳細画面                                                     |
-| GET      | /memos/:id/edit   | MEMO-004 | メモ編集画面                                                     |
+| メソッド   | パス               | 機能 ID  | 説明                                                       |
+| -------- | ----------------- | -------- | --------------------------------------------------------- |
+| GET      | /                 | MEMO-002 | メモ一覧画面                                                |
+| GET      | /memos/new        | MEMO-001 | メモ作成画面                                                |
+| POST     | /memos            | MEMO-001 | メモ作成処理（multipart/form-data 対応、画像同時アップロード可）    |
+| GET      | /memos/:id        | MEMO-003 | メモ詳細画面                                                |
+| GET      | /memos/:id/edit   | MEMO-004 | メモ編集画面                                                |
 | POST     | /memos/:id        | MEMO-004 | メモ更新処理（multipart/form-data 対応、画像追加可）             |
-| POST     | /memos/:id/delete | MEMO-005 | メモ削除処理                                                     |
+| POST     | /memos/:id/delete | MEMO-005 | メモ削除処理                                                |
 
 ### 3.3 カテゴリ（CAT）
 
-| メソッド | パス                   | 機能 ID | 説明             |
-| -------- | ---------------------- | ------- | ---------------- |
+| メソッド   | パス                    | 機能 ID | 説明           |
+| -------- | ---------------------- | ------- | ------------- |
 | GET      | /categories            | -       | カテゴリ管理画面 |
 | POST     | /categories            | CAT-001 | カテゴリ作成     |
 | POST     | /categories/:id        | CAT-002 | カテゴリ更新     |
@@ -263,21 +245,15 @@
 
 ### 3.4 タグ（TAG）
 
-| メソッド | パス             | 機能 ID | 説明         |
-| -------- | ---------------- | ------- | ------------ |
-| GET      | /tags            | -       | タグ管理画面 |
-| POST     | /tags/:id        | TAG-002 | タグ更新     |
-| POST     | /tags/:id/delete | TAG-003 | タグ削除     |
-
-**備考**: タグ作成（TAG-001）はメモ作成/編集時に自動実行されるため、独立したエンドポイントなし
+タグはメモ作成・編集時にのみ操作するため、独立した管理画面やAPIエンドポイントは持たない。
 
 ### 3.5 画像（IMG）
 
-| メソッド | パス                              | 機能 ID | 説明                         |
-| -------- | --------------------------------- | ------- | ---------------------------- |
-| GET      | /images/:key                      | IMG-002 | 画像取得                     |
-| POST     | /memos/:id/images                 | IMG-001 | 画像追加アップロード（単体） |
-| POST     | /memos/:id/images/:imageId/delete | IMG-003 | 画像削除                     |
+| メソッド   | パス                               | 機能 ID | 説明                     |
+| -------- | --------------------------------- | ------- | ----------------------- |
+| GET      | /images/:key                      | IMG-002 | 画像取得                 |
+| POST     | /memos/:id/images                 | IMG-001 | 画像追加アップロード（単体）  |
+| POST     | /memos/:id/images/:imageId/delete | IMG-003 | 画像削除                |
 
 **備考**: 新規作成時および編集時の画像アップロードは、メモ作成/更新 API (`POST /memos`, `POST /memos/:id`) でも受け付ける。
 
@@ -285,9 +261,9 @@
 
 | メソッド | パス                          | 機能 ID          | 説明             |
 | -------- | ----------------------------- | ---------------- | ---------------- |
-| POST     | /memos/:id/generate-summary | URL-003, URL-004 | 要約生成・再生成 |
+| POST     | /memos/:id/generate-summary | URL-003, URL-004 | 要約手動再生成 |
 
-**備考**: URL 投稿（URL-001）はメモ作成/更新時に行う。要約生成（URL-002〜004）は保存処理とは非同期（クライアントからのリクエスト等）で実行する。
+**備考**: URL 投稿（URL-001）はメモ作成/更新時に行う。要約生成（URL-002〜004）は保存処理のバックグラウンドタスクとして自動実行する。手動再生成も可能。
 
 ---
 
@@ -409,29 +385,28 @@ const auth = betterAuth({
 1. メモ保存時に URL が含まれている場合
    │
    ▼
-2. URL のみを保存してレスポンスを返却（要約は未生成）
+2. メモをDBに保存し、クライアントへレスポンスを返却（要約は未生成）
+   │
+   ├── (並行してバックグラウンド処理開始: context.executionCtx.waitUntil)
    │
    ▼
-3. クライアントから要約生成 API をコール（または詳細画面表示時に自動コール）
-   │
-   ▼
-4. URL からコンテンツを fetch
+3. URL からコンテンツを fetch
    │ - User-Agent を設定
    │ - タイムアウト: 10秒
    │ - 最大サイズ: 1MB
    │
    ▼
-5. HTML からテキストを抽出
+4. HTML からテキストを抽出
    │ - <script>, <style> を除去
    │ - メタ情報（title, description）を取得
    │
    ▼
-6. Workers AI で要約生成
+5. Workers AI で要約生成
    │ - 入力: 抽出テキスト（最大4000トークン相当）
    │ - 出力: 日本語要約（200〜400文字程度）
    │
    ▼
-7. 要約を memo.url_summary に保存
+6. 要約を memo.url_summary に保存 (DB Update)
 ```
 
 ### 6.3 プロンプト設計
@@ -469,79 +444,70 @@ Cloudflare Workers の `fetch` API はデフォルトでプライベートネッ
 
 ## 7. ディレクトリ構成
 
-### 7.1 co-location ベース構成
+### 7.1 ディレクトリ構成
 
 ```
-src/
-├── index.tsx                 # エントリーポイント（ルート集約）
-├── renderer.tsx              # 共通レンダラー
+app/
+├── auth.ts                   # Better Auth 設定
+├── client.ts                 # クライアントエントリーポイント
+├── server.ts                 # サーバーエントリーポイント
 ├── style.css                 # グローバルスタイル（Tailwind）
-│
-├── middleware/               # 共通ミドルウェア
-│   ├── auth.ts               # 認証ミドルウェア
-│   └── error.ts              # エラーハンドリング
-│
-├── lib/                      # 共通ユーティリティ
-│   ├── db.ts                 # D1 ヘルパー
-│   ├── r2.ts                 # R2 ヘルパー
-│   ├── ai.ts                 # Workers AI ヘルパー
-│   └── auth.ts               # Better Auth 設定
+├── global.d.ts               # グローバル型定義
 │
 ├── components/               # 共通 UI コンポーネント
-│   ├── Layout.tsx            # 共通レイアウト
-│   ├── Header.tsx            # ヘッダー
-│   ├── Button.tsx            # ボタン
-│   └── ...
+│   ├── header.tsx            # ヘッダー
+│   └── root-layout.tsx       # ルートレイアウト
 │
-├── features/                 # 機能別モジュール（co-location）
-│   ├── auth/                 # 認証機能
-│   │   ├── routes.ts         # /auth/* ルート定義
-│   │   ├── LoginPage.tsx     # ログイン画面
-│   │   └── handlers.ts       # OAuth ハンドラ
-│   │
-│   ├── memo/                 # メモ機能
-│   │   ├── routes.ts         # /memos/* ルート定義
-│   │   ├── MemoListPage.tsx  # 一覧画面
-│   │   ├── MemoDetailPage.tsx# 詳細画面
-│   │   ├── MemoFormPage.tsx  # 作成/編集画面
-│   │   ├── MemoCard.tsx      # メモカード
-│   │   ├── repository.ts     # DB アクセス
-│   │   └── types.ts          # 型定義
-│   │
-│   ├── category/             # カテゴリ機能
-│   │   ├── routes.ts
-│   │   ├── CategoryPage.tsx
-│   │   ├── repository.ts
-│   │   └── types.ts
-│   │
-│   ├── tag/                  # タグ機能
-│   │   ├── routes.ts
-│   │   ├── TagPage.tsx
-│   │   ├── repository.ts
-│   │   └── types.ts
-│   │
-│   └── image/                # 画像機能
-│       ├── routes.ts
-│       └── handlers.ts
+├── islands/                  # クライアントサイドコンポーネント（Islands）
+│   ├── login.tsx             # ログインボタン等
+│   ├── logout.tsx            # ログアウトボタン等
+│   ├── memo-form.tsx         # メモ作成・編集フォーム
+│   ├── image-uploader.tsx    # 画像アップロード
+│   ├── category-manager.tsx  # カテゴリ管理
+│   └── summary-generator.tsx # 要約生成ボタン
 │
-└── types/                    # グローバル型定義
-    ├── env.d.ts              # Cloudflare Bindings 型
-    └── index.ts
-
-db/
-├── migrations/               # D1 マイグレーション
-│   └── 0001_initial.sql
-└── schema.sql                # スキーマ定義（参照用）
+├── routes/                   # ファイルベースルーティング
+│   ├── _404.tsx              # 404 ページ
+│   ├── _error.tsx            # エラーページ
+│   ├── _renderer.tsx         # 共通レンダラー
+│   ├── index.tsx             # トップページ
+│   ├── (auth)/               # 認証関連ページ
+│   │   └── login.tsx         # ログインページ
+│   ├── memos/                # メモ機能
+│   │   ├── index.tsx         # メモ一覧
+│   │   ├── new.tsx           # メモ作成
+│   │   └── [id]/
+│   │       ├── index.tsx     # メモ詳細
+│   │       └── edit.tsx      # メモ編集
+│   ├── categories/           # カテゴリ機能
+│   │   └── index.tsx         # カテゴリ一覧・管理
+│   ├── images/               # 画像配信
+│   │   └── [key].ts          # 画像取得
+│   └── api/                  # API ルート
+│       ├── auth/
+│       │   └── index.ts      # 認証 API エンドポイント
+│       ├── memos/
+│       │   ├── index.ts      # メモ作成 API
+│       │   └── [id]/
+│       │       ├── index.ts  # メモ更新・削除 API
+│       │       └── images/
+│       │           ├── index.ts      # 画像追加 API
+│       │           └── [imageId].ts  # 画像削除 API
+│       └── categories/
+│           ├── index.ts      # カテゴリ作成 API
+│           └── [id].ts       # カテゴリ更新・削除 API
+│
+└── utils/                    # ユーティリティ
+    └── authClient.ts         # 認証クライアント
 ```
 
 ### 7.2 設計方針
 
 | 方針         | 説明                                               |
 | ------------ | -------------------------------------------------- |
-| co-location  | 機能に関連するファイルを同一ディレクトリにまとめる |
+| HonoX        | ファイルベースルーティングを使用                   |
+| Islands      | クライアントサイドのインタラクションは islands/ に配置 |
 | 単一責任     | 各ファイルは単一の責任を持つ                       |
-| 依存の方向   | features → lib → types の方向のみ依存              |
-| 循環参照禁止 | features 間での直接 import は禁止                  |
 
 ---
 
@@ -626,7 +592,7 @@ db/
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "my-memo",
   "compatibility_date": "2025-08-03",
-  "main": "./src/index.tsx",
+  "main": "./dist/index.js",
 
   // D1 Database
   "d1_databases": [

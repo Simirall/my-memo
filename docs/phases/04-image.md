@@ -15,7 +15,7 @@
 
 ### 2.2 データベース (D1)
 
-- [ ] `images` テーブルのマイグレーション作成 (`db/migrations/0006_create_images.sql`)
+- [ ] `images` テーブルのマイグレーション作成 (`db/migrations/0005_create_images.sql`)
 - [ ] ローカル D1 へのマイグレーション適用
 
 ### 2.3 バックエンド (HonoX)
