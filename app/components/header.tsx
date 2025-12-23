@@ -27,7 +27,7 @@ export const Header = () => {
             </div>
             <ul
               className="menu menu-sm dropdown-content z-1 mt-3 flex w-52 flex-col items-center rounded-box bg-base-100 p-2 shadow"
-              tabIndex="-1"
+              tabIndex={-1}
             >
               <LogoutButton />
             </ul>
