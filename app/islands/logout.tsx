@@ -12,11 +12,7 @@ export const LogoutButton = () => {
   };
 
   return (
-    <button
-      class="cursor-pointer rounded border border-gray-300 px-4 py-2"
-      onClick={handleLogout}
-      type="button"
-    >
+    <button class="btn" onClick={handleLogout} type="button">
       ログアウト
     </button>
   );
