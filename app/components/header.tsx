@@ -18,7 +18,7 @@ export const Header = () => {
             <div
               className="btn btn-ghost btn-circle avatar"
               elements="button"
-              // biome-ignore lint: daisyui
+              // biome-ignore lint: daisyui requires tabIndex={0} on the trigger element for dropdown keyboard navigation
               tabIndex={0}
             >
               <div className="w-10 rounded-full">
