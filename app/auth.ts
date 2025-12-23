@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 
 export const getAuth = (env: Cloudflare.Env) => {
   return betterAuth({
+    trustedOrigins: ["http://localhost:5173"],
     baseURL: env.BETTER_AUTH_URL,
     socialProviders: {
       github: {
