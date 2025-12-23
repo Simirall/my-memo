@@ -1,0 +1,43 @@
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
+import { createRoute } from "honox/factory";
+import { categoriesTable } from "../../schema";
+
+export default createRoute(async (c) => {
+  const user = c.get("user");
+  const db = drizzle(c.env.MY_MEMO_D1);
+
+  const result = await db
+    .select()
+    .from(categoriesTable)
+    .where(eq(categoriesTable.userEmail, user!.email));
+
+  return c.render(
+    <div>
+      <a className="btn" href="/categories/create2">
+        Create Category
+      </a>
+      <div className="flex flex-wrap gap-4 py-4">
+        {result.map((category) => (
+          <div
+            className="card card-md w-96 bg-base-200 shadow-sm"
+            key={category.id}
+          >
+            <div className="card-body">
+              <h2 className="card-title">{category.name}</h2>
+              <form
+                action={`/api/categories/delete/${category.id}`}
+                className="card-actions justify-end"
+                method="post"
+              >
+                <button className="btn btn-soft btn-error" type="submit">
+                  🗑️
+                </button>
+              </form>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>,
+  );
+});
