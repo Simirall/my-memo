@@ -24,7 +24,10 @@
   - Routes: 画像アップロード API (`app/routes/api/upload.ts`)
     - ファイルを受け取り R2 に保存
     - `images` テーブルにレコード作成
-  - Repository: 画像データの保存処理
+  - Routes: 画像削除 API (`app/routes/api/images/[id]/delete.ts`)
+    - R2 からファイルを削除
+    - `images` テーブルからレコード削除
+  - Repository: 画像データの保存・削除処理
 - [ ] メモ機能の拡張 (`app/features/memo/`)
   - Repository: メモ作成・更新時に、画像レコードの `memo_id` を更新して紐付ける処理
   - Repository: メモ取得時に画像リストを含める処理
@@ -38,6 +41,7 @@
 - [ ] メモフォームの拡張 (`app/routes/memos/new.tsx`, `app/routes/memos/[id]/edit.tsx`)
   - `ImageUploader` の組み込み
   - アップロード済み画像 ID の管理
+  - 既存画像の削除ボタン追加（編集画面）
 - [ ] メモ詳細の拡張 (`app/routes/memos/[id].tsx`)
   - 画像ギャラリー表示
 
@@ -75,6 +79,15 @@
   }
   ```
 
+#### POST /api/images/:id/delete
+
+- **メソッド**: POST (または DELETE)
+- **処理フロー**:
+  1. 指定された画像 ID がログインユーザーのものであるか確認
+  2. R2 からオブジェクトを削除
+  3. `images` テーブルからレコードを削除
+- **レスポンス**: 200 OK
+
 ### 3.3 UI コンポーネント設計
 
 #### ImageUploader.tsx
@@ -90,9 +103,13 @@
 #### MemoFormPage.tsx (拡張)
 
 - **状態管理**:
-  - `uploadedImageIds`: アップロードされた画像の ID 配列
+  - `uploadedImageIds`: 新規アップロードされた画像の ID 配列
+  - `existingImages`: 編集時に既存の画像リスト
 - **送信処理**:
   - メモ作成 API へのリクエストボディに `imageIds: string[]` を含める。
+- **画像削除（編集時）**:
+  - 既存画像の横に「削除」ボタンを表示。
+  - クリック時に `/api/images/:id/delete` を呼び出し、成功したら画面から削除。
 
 #### MemoDetailPage.tsx (拡張)
 

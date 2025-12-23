@@ -46,11 +46,12 @@
 | カラム      | 型   | 制約         | 説明                         |
 | ----------- | ---- | ------------ | ---------------------------- |
 | id          | TEXT | PRIMARY KEY  | UUID v4                      |
-| user_id     | TEXT | NOT NULL, FK | 所有ユーザー                 |
+| user_id     | TEXT | NOT NULL     | 所有ユーザー                 |
 | category_id | TEXT | FK           | カテゴリ（Phase 3 で使用）   |
+| title       | TEXT | NOT NULL     | メモタイトル                 |
 | content     | TEXT | NOT NULL     | メモ本文（最大 10,000 文字） |
 | url         | TEXT |              | 添付 URL（Phase 5 で使用）   |
-| url_summary | TEXT |              | AI 要約（Phase 5 で使用）    |
+| ai_generated | INTEGER | NOT NULL DEFAULT 0 | AI 生成フラグ（Phase 5 で使用）。要約テキストは `content` に保存 |
 | created_at  | TEXT | NOT NULL     | 作成日時                     |
 | updated_at  | TEXT | NOT NULL     | 更新日時                     |
 
@@ -64,9 +65,9 @@
 import { z } from "zod";
 
 export const createMemoSchema = z.object({
+  title: z.string().max(255, "255文字以内で入力してください"),
   content: z
     .string()
-    .min(1, "本文は必須です")
     .max(10000, "10,000文字以内で入力してください"),
 });
 
@@ -88,6 +89,7 @@ export type CreateMemoInput = z.infer<typeof createMemoSchema>;
 
 - **Props**: `{ memo }`
 - **表示内容**:
+  - タイトル
   - 本文の冒頭（3 行程度で省略）
   - 作成日時（相対時間表示: "2 時間前" など）
 - **アクション**: カード全体が詳細ページへのリンク
@@ -96,6 +98,7 @@ export type CreateMemoInput = z.infer<typeof createMemoSchema>;
 
 - **パス**: `/memos/new`, `/memos/:id/edit`
 - **フォーム要素**:
+  - タイトル入力欄 (`input[type="text"]`)
   - 本文入力エリア (`textarea`): 自動リサイズまたは十分な高さを確保
   - 保存ボタン
   - キャンセルボタン（一覧または詳細へ戻る）

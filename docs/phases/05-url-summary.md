@@ -10,7 +10,7 @@
 ### 2.1 インフラ (Cloudflare)
 
 - [ ] `wrangler.jsonc` への Workers AI バインディング設定
-- [ ] 使用モデルの決定（`@cf/meta/llama-3-8b-instruct` 等）
+- [ ] 使用モデルの決定（`@cf/qwen/qwen3-30b-a3b-fp8`）
 
 ### 2.2 バックエンド (HonoX)
 
@@ -19,30 +19,34 @@
   - 本文抽出（不要なタグの除去）
   - Workers AI による要約生成
 - [ ] メモ機能の拡張 (`app/features/memo/`)
-  - メモ作成・更新処理において、URL が存在する場合にバックグラウンドタスク (`c.executionCtx.waitUntil`) を起動
-  - タスク内で要約生成サービスを呼び出し、完了後に `memos` テーブルを更新
+  - URL 投稿専用のエンドポイント (`POST /memos/url`) を実装。リクエストで `url` とオプションの `category_id`（カテゴリ UUID）を受け付け、`category_id` が指定された場合は当該ユーザーのカテゴリであることを検証してから処理を進める。
+  - 要約生成サービスを呼び出し、結果を `memos` テーブルに新規保存 (`ai_generated: 1`)。`category_id` が妥当な場合は `memos.category_id` に保存する。
 
 ### 2.3 フロントエンド (HonoX)
 
-- [ ] メモフォームの拡張 (`app/routes/memos/new.tsx`, `app/routes/memos/[id]/edit.tsx`)
-  - URL 専用入力欄の追加（本文とは別管理とする場合）
-  - または本文内の URL 自動検出ロジック（今回はシンプルに専用欄を推奨）
+- [ ] URL 投稿専用画面の実装 (`app/routes/memos/url.tsx`)
+  - URL 入力欄
+  - カテゴリ選択 UI
 - [ ] メモ詳細の拡張 (`app/routes/memos/[id].tsx`)
   - AI 要約の表示エリア追加
   - ローディング状態や「要約生成中」の表示（必要であれば）
 
 ## 3. 詳細設計
 
-### 3.1 処理フロー（非同期処理）
+### 3.1 処理フロー（同期処理）
 
-1. **メモ保存リクエスト**: ユーザーが URL 付きでメモを保存。
-2. **DB 保存**: サーバーは `memos` テーブルにレコードを作成。`url_summary` は `NULL` または空文字。
-3. **レスポンス**: サーバーは即座に「保存成功」をクライアントに返す。
-4. **バックグラウンド処理** (`waitUntil`):
-   1. URL へアクセスし HTML を取得。
+1. **URL 投稿リクエスト**: ユーザーが URL 投稿専用画面から URL を送信。
+2. **スクレイピング & AI 要約**:
+   1. サーバー側で URL へアクセスし HTML を取得。
    2. HTML から `<script>`, `<style>` 等を除去し、テキストコンテンツを抽出。
-   3. Cloudflare Workers AI にテキストを送信し、要約をリクエスト。
-   4. 生成された要約テキストで `memos` テーブルの当該レコード (`url_summary`) を更新。
+   3. Cloudflare Workers AI にテキストを送信し、タイトルと要約を生成。
+3. **DB 保存**:
+   - `title`: AI 生成タイトル
+   - `content`: AI 生成要約
+   - `url`: 入力 URL
+   - `ai_generated`: 1
+   として `memos` テーブルに保存。
+4. **レスポンス**: 保存完了後、メモ詳細画面または一覧画面へリダイレクト。
 
 ### 3.2 AI プロンプト設計
 
@@ -54,25 +58,36 @@
 
 ### 3.3 UI コンポーネント設計
 
-#### MemoFormPage.tsx (拡張)
+#### UrlMemoPage.tsx (新規)
 
-- **URL 入力欄**:
-  - `<input type="url" class="input input-bordered" placeholder="https://example.com" />`
-  - 任意入力。
+- **パス**: `/memos/url`
+- **フォーム要素**:
+  - **URL 入力欄**:
+    - `<input type="url" class="input input-bordered" placeholder="https://example.com" required />`
+  - **カテゴリ選択（任意）**:
+    - `<select class="select select-bordered" name="category_id">
+        <option value="">未分類</option>
+        <!-- サーバーから取得したユーザーのカテゴリ一覧を表示 -->
+      </select>`
+    - クライアントは `/categories` 等からカテゴリ一覧を取得して選択肢を表示する。
+  - **送信ボタン**: 「要約して保存」
 
 #### MemoDetailPage.tsx (拡張)
 
 - **要約表示エリア**:
-  - `url_summary` カラムに値がある場合のみ表示。
-  - daisyUI の `chat-bubble` や `alert` コンポーネントを活用して、AI 生成コンテンツであることを明示する。
+  - `aiGenerated` が `1` の場合、AI 生成コンテンツであることを明示する。
+  - 可能ならカテゴリ名も表示してユーザーがどのカテゴリに保存されたかを明示する（`memo.category_id` → カテゴリ名を表示）。
+  - daisyUI の `chat-bubble` や `alert` コンポーネントを活用する。
   - 例:
     ```tsx
     {
-      memo.urlSummary && (
+      memo.aiGenerated === 1 && (
         <div className="alert alert-soft alert-info mt-4">
           <div className="flex flex-col">
             <span className="font-bold text-xs">✨ AI Summary</span>
-            <div className="text-sm whitespace-pre-wrap">{memo.urlSummary}</div>
+            <div className="text-sm whitespace-pre-wrap">{memo.content}</div>
+            {/* カテゴリ名表示 */}
+            <div className="text-xs text-muted">Category: {memo.categoryName ?? '未分類'}</div>
           </div>
         </div>
       );

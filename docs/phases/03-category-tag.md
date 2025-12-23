@@ -48,6 +48,7 @@
 | user_id    | TEXT | NOT NULL, FK | 所有ユーザー |
 | name       | TEXT | NOT NULL     | カテゴリ名   |
 | created_at | TEXT | NOT NULL     |              |
+| updated_at | TEXT | NOT NULL     |              |
 
 #### tags テーブル
 
@@ -57,6 +58,7 @@
 | user_id    | TEXT | NOT NULL, FK | 所有ユーザー |
 | name       | TEXT | NOT NULL     | タグ名       |
 | created_at | TEXT | NOT NULL     |              |
+| updated_at | TEXT | NOT NULL     |              |
 
 #### memo_tags テーブル
 
@@ -81,6 +83,7 @@ export const createCategorySchema = z.object({
 
 // メモ作成（更新）
 export const createMemoSchema = z.object({
+  title: z.string().max(255).optional(),
   content: z.string().min(1).max(10000),
   categoryId: z.string().optional(), // 選択されたカテゴリID
   tags: z.string().optional(), // カンマまたはスペース区切りの文字列として受け取り、サーバー側でパースする

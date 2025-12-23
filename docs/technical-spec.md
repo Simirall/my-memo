@@ -90,38 +90,49 @@
 │ id (PK)                                                          │
 │ user_id ──────────────────────────────────────────────┐          │
 │ category_id (FK, nullable) ───────────────────────────┼──────────│
+│ title                                                 │          │
 │ content                                               │          │
 │ url (nullable)                                        │          │
-│ url_summary (nullable)                                │          │
+│ ai_generated (INT, NOT NULL DEFAULT 0)                │          │
 │ created_at                                            │          │
 │ updated_at                                            │          │
 └──────────────────────────────────────────────────────────────────┘
-       │
-       │ N:M
-       ▼
-┌──────────────┐
-│  memo_tags   │
-├──────────────┤
-│ memo_id (FK) │
-│ tag_id (FK)  │
-│ created_at   │
-└──────────────┘
-
-┌──────────────────────────────────────────────────────────────────┐
-│                         memo_images                              │
-├──────────────────────────────────────────────────────────────────┤
-│ id (PK)                                                          │
-│ memo_id (FK)                                                     │
-│ r2_key                                                           │
-│ filename                                                         │
-│ content_type                                                     │
-│ size_bytes                                                       │
-│ order_index                                                      │
-│ created_at                                                       │
-└──────────────────────────────────────────────────────────────────┘
+       │                                    │
+       │ N:M                                │ 1:N
+       ▼                                    ▼
+┌──────────────┐                    ┌──────────────┐
+│  memo_tags   │                    │    images    │
+├──────────────┤                    ├──────────────┤
+│ memo_id (FK) │                    │ id (PK)      │
+│ tag_id (FK)  │                    │ user_id      │
+│ created_at   │                    │ memo_id (FK) │
+└──────────────┘                    │ file_path    │
+                                    │ public_url   │
+                                    │ created_at   │
+                                    └──────────────┘
 ```
 
 ### 2.2 テーブル定義
+
+#### memos
+
+| カラム       | 型   | 制約                                | 説明                      |
+| ----------- | ---- | ---------------------------------- | ------------------------ |
+| id          | TEXT | PRIMARY KEY                        | UUID v4                  |
+| user_id     | TEXT | NOT NULL                           | 所有ユーザー               |
+| category_id | TEXT | FK → categories(id)                | カテゴリ（単一）              |
+| title       | TEXT |                                    | メモタイトル                 |
+| content     | TEXT | NOT NULL                           | メモ本文（最大 10,000 文字）  |
+| url         | TEXT |                                    | 添付 URL                  |
+| ai_generated| INTEGER | NOT NULL DEFAULT 0              | AI生成フラグ (0:手動, 1:AI) |
+| created_at  | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時                   |
+| updated_at  | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 更新日時                   |
+
+**インデックス**:
+
+- `INDEX(user_id)`
+- `INDEX(user_id, category_id)`
+- `INDEX(user_id, created_at DESC)`
 
 #### categories
 
@@ -153,25 +164,6 @@
 - `UNIQUE(user_id, name)`
 - `INDEX(user_id)`
 
-#### memos
-
-| カラム       | 型   | 制約                                | 説明                      |
-| ----------- | ---- | ---------------------------------- | ------------------------ |
-| id          | TEXT | PRIMARY KEY                        | UUID v4                  |
-| user_id     | TEXT | NOT NULL                           | 所有ユーザー               |
-| category_id | TEXT | FK → categories(id)                | カテゴリ（単一）              |
-| content     | TEXT | NOT NULL                           | メモ本文（最大 10,000 文字）  |
-| url         | TEXT |                                    | 添付 URL                  |
-| url_summary | TEXT |                                    | AI 生成の要約              |
-| created_at  | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時                   |
-| updated_at  | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 更新日時                   |
-
-**インデックス**:
-
-- `INDEX(user_id)`
-- `INDEX(user_id, category_id)`
-- `INDEX(user_id, created_at DESC)`
-
 #### memo_tags
 
 | カラム       | 型   | 制約                               | 説明     |
@@ -185,23 +177,21 @@
 - `PRIMARY KEY(memo_id, tag_id)`
 - `INDEX(tag_id)`
 
-#### memo_images
+#### images
 
-| カラム       | 型      | 制約                               | 説明                |
-| ------------ | ------- | ---------------------------------- | ------------------- |
-| id           | TEXT    | PRIMARY KEY                        | UUID v4             |
-| memo_id      | TEXT    | NOT NULL, FK → memos(id)           | 所属メモ            |
-| r2_key       | TEXT    | NOT NULL                           | R2 オブジェクトキー |
-| filename     | TEXT    | NOT NULL                           | 元ファイル名        |
-| content_type | TEXT    | NOT NULL                           | MIME タイプ         |
-| size_bytes   | INTEGER | NOT NULL                           | ファイルサイズ      |
-| order_index  | INTEGER | NOT NULL DEFAULT 0                 | 表示順序            |
-| created_at   | TEXT    | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時            |
+| カラム       | 型   | 制約                                | 説明                      |
+| ----------- | ---- | ---------------------------------- | ------------------------ |
+| id          | TEXT | PRIMARY KEY                        | UUID v4                  |
+| user_id     | TEXT | NOT NULL                           | 所有ユーザー               |
+| memo_id     | TEXT | NOT NULL, FK → memos(id)           | メモ ID                  |
+| file_path   | TEXT | NOT NULL                           | R2 オブジェクトキー         |
+| public_url  | TEXT |                                    | 公開 URL (任意)            |
+| created_at  | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時                   |
 
 **インデックス**:
 
 - `INDEX(memo_id)`
-- `UNIQUE(r2_key)`
+- `INDEX(user_id)`
 
 ### 2.3 マイグレーション方針
 
@@ -261,9 +251,10 @@
 
 | メソッド | パス                          | 機能 ID          | 説明             |
 | -------- | ----------------------------- | ---------------- | ---------------- |
-| POST     | /memos/:id/generate-summary | URL-003, URL-004 | 要約手動再生成 |
+| GET      | /memos/url                    | URL-001          | URL 投稿画面     |
+| POST     | /memos/url                    | URL-002          | URL 投稿・要約生成・保存処理（オプション: `category_id`） |
 
-**備考**: URL 投稿（URL-001）はメモ作成/更新時に行う。要約生成（URL-002〜004）は保存処理のバックグラウンドタスクとして自動実行する。手動再生成も可能。
+**備考**: URL 投稿専用画面から URL を送信し、サーバー側で要約生成を行ってからメモとして保存する。POST `/memos/url` はオプションで `category_id`（カテゴリの UUID 文字列）を受け付けます。`category_id` が指定された場合はリクエストユーザーのカテゴリであることを検証し、問題があれば 400 を返します。正常な場合は `memos.category_id` に保存します。
 
 ---
 
@@ -382,41 +373,45 @@ const auth = betterAuth({
 ### 6.2 処理フロー
 
 ```
-1. メモ保存時に URL が含まれている場合
+1. URL 投稿リクエスト
    │
    ▼
-2. メモをDBに保存し、クライアントへレスポンスを返却（要約は未生成）
-   │
-   ├── (並行してバックグラウンド処理開始: context.executionCtx.waitUntil)
-   │
-   ▼
-3. URL からコンテンツを fetch
+2. URL からコンテンツを fetch
    │ - User-Agent を設定
    │ - タイムアウト: 10秒
    │ - 最大サイズ: 1MB
    │
    ▼
-4. HTML からテキストを抽出
+3. HTML からテキストを抽出
    │ - <script>, <style> を除去
    │ - メタ情報（title, description）を取得
    │
    ▼
-5. Workers AI で要約生成
+4. Workers AI で要約生成
    │ - 入力: 抽出テキスト（最大4000トークン相当）
-   │ - 出力: 日本語要約（200〜400文字程度）
+   │ - 出力: タイトル、日本語要約（200〜400文字程度）
    │
    ▼
-6. 要約を memo.url_summary に保存 (DB Update)
+5. メモとして DB に保存
+   │ - title: AI 生成タイトル
+   │ - content: AI 生成要約
+   │ - url: 入力 URL
+   │ - category_id: (任意) ユーザーが選択したカテゴリの UUID（指定があれば検証の上保存）
+   │ - ai_generated: 1
+   │
+   ▼
+6. 完了画面または詳細画面へリダイレクト
 ```
 
 ### 6.3 プロンプト設計
 
 ```
-以下のWebページの内容を日本語で簡潔に要約してください。
-重要なポイントを箇条書きで3〜5点にまとめてください。
+あなたは優秀なアシスタントです。渡された Web 記事のテキストを読み、以下の JSON 形式で出力してください。
 
-タイトル: {title}
-URL: {url}
+{
+  "title": "記事の適切な日本語タイトル",
+  "summary": "記事の内容の日本語要約（3点の箇条書き）"
+}
 
 本文:
 {content}
@@ -426,10 +421,9 @@ URL: {url}
 
 | ケース                     | 対応                             |
 | -------------------------- | -------------------------------- |
-| URL アクセス失敗           | `url_summary = null`、メモは保存 |
-| コンテンツ取得タイムアウト | `url_summary = null`、メモは保存 |
-| AI 要約生成失敗            | `url_summary = null`、メモは保存 |
-| 再生成リクエスト           | 上記エラー時のみ再生成ボタン表示 |
+| URL アクセス失敗           | エラーメッセージを表示し、保存しない |
+| コンテンツ取得タイムアウト | エラーメッセージを表示し、保存しない |
+| AI 要約生成失敗            | エラーメッセージを表示し、保存しない |
 
 ### 6.5 セキュリティ対策（SSRF）
 
