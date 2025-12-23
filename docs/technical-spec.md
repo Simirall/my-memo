@@ -73,7 +73,7 @@
           │  categories  │       │    tags      │
           ├──────────────┤       ├──────────────┤
           │ id (PK)      │       │ id (PK)      │
-          │ user_id      │───┐   │ user_id      │───┐
+          │ user_email   │───┐   │ user_email   │───┐
           │ name         │   │   │ name         │   │
           │ created_at   │   │   │ created_at   │   │
           │ updated_at   │   │   │ updated_at   │   │
@@ -88,7 +88,7 @@
 │                            memos                                 │
 ├──────────────────────────────────────────────────────────────────┤
 │ id (PK)                                                          │
-│ user_id ──────────────────────────────────────────────┐          │
+│ user_email ───────────────────────────────────────────┐          │
 │ category_id (FK, nullable) ───────────────────────────┼──────────│
 │ title                                                 │          │
 │ content                                               │          │
@@ -104,7 +104,7 @@
 │  memo_tags   │                    │    images    │
 ├──────────────┤                    ├──────────────┤
 │ memo_id (FK) │                    │ id (PK)      │
-│ tag_id (FK)  │                    │ user_id      │
+│ tag_id (FK)  │                    │ user_email   │
 │ created_at   │                    │ memo_id (FK) │
 └──────────────┘                    │ file_path    │
                                     │ public_url   │
@@ -119,7 +119,7 @@
 | カラム       | 型   | 制約                                | 説明                      |
 | ----------- | ---- | ---------------------------------- | ------------------------ |
 | id          | TEXT | PRIMARY KEY                        | UUID v4                  |
-| user_id     | TEXT | NOT NULL                           | 所有ユーザー               |
+| user_email  | TEXT | NOT NULL                           | 所有ユーザー（メールアドレス） |
 | category_id | TEXT | FK → categories(id)                | カテゴリ（単一）              |
 | title       | TEXT |                                    | メモタイトル                 |
 | content     | TEXT | NOT NULL                           | メモ本文（最大 10,000 文字）  |
@@ -130,39 +130,37 @@
 
 **インデックス**:
 
-- `INDEX(user_id)`
-- `INDEX(user_id, category_id)`
-- `INDEX(user_id, created_at DESC)`
+- `INDEX(user_email, created_at DESC)`
 
 #### categories
 
 | カラム      | 型   | 制約                                | 説明         |
 | ---------- | ---- | ---------------------------------- | ----------- |
 | id         | TEXT | PRIMARY KEY                        | UUID v4     |
-| user_id    | TEXT | NOT NULL                           | 所有ユーザー  |
+| user_email | TEXT | NOT NULL                           | 所有ユーザー（メールアドレス） |
 | name       | TEXT | NOT NULL                           | カテゴリ名    |
 | created_at | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時     |
 | updated_at | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 更新日時     |
 
 **インデックス**:
 
-- `UNIQUE(user_id, name)`
-- `INDEX(user_id)`
+- `UNIQUE(user_email, name)`
+- `INDEX(user_email)`
 
 #### tags
 
 | カラム     | 型   | 制約                                 | 説明         |
 | ---------- | ---- | ---------------------------------- | ----------- |
 | id         | TEXT | PRIMARY KEY                        | UUID v4     |
-| user_id    | TEXT | NOT NULL                           | 所有ユーザー  |
+| user_email | TEXT | NOT NULL                           | 所有ユーザー（メールアドレス） |
 | name       | TEXT | NOT NULL                           | タグ名       |
 | created_at | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時     |
 | updated_at | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 更新日時     |
 
 **インデックス**:
 
-- `UNIQUE(user_id, name)`
-- `INDEX(user_id)`
+- `UNIQUE(user_email, name)`
+- `INDEX(user_email)`
 
 #### memo_tags
 
@@ -182,7 +180,7 @@
 | カラム       | 型   | 制約                                | 説明                      |
 | ----------- | ---- | ---------------------------------- | ------------------------ |
 | id          | TEXT | PRIMARY KEY                        | UUID v4                  |
-| user_id     | TEXT | NOT NULL                           | 所有ユーザー               |
+| user_email  | TEXT | NOT NULL                           | 所有ユーザー（メールアドレス） |
 | memo_id     | TEXT | NOT NULL, FK → memos(id)           | メモ ID                  |
 | file_path   | TEXT | NOT NULL                           | R2 オブジェクトキー         |
 | public_url  | TEXT |                                    | 公開 URL (任意)            |
@@ -191,7 +189,7 @@
 **インデックス**:
 
 - `INDEX(memo_id)`
-- `INDEX(user_id)`
+- `INDEX(user_email)`
 
 ### 2.3 マイグレーション方針
 
@@ -338,10 +336,12 @@ const auth = betterAuth({
 ### 5.2 オブジェクトキー命名規則
 
 ```
-{user_id}/{memo_id}/{uuid}.{ext}
+{user_email}/{memo_id}/{uuid}.{ext}
 ```
 
-例: `550e8400-e29b-41d4-a716-446655440000/123e4567-e89b-12d3-a456-426614174000/7c9e6679-7425-40de-944b-e07fc1f90ae7.jpg`
+例: `user%40example.com/123e4567-e89b-12d3-a456-426614174000/7c9e6679-7425-40de-944b-e07fc1f90ae7.jpg`
+
+※ `user_email` はパスとして安全に扱えるよう、必要に応じて URL エンコードした値を利用する。
 
 ### 5.3 画像仕様
 
@@ -649,4 +649,5 @@ interface CloudflareBindings {
 | 版  | 日付       | 内容     |
 | --- | ---------- | -------- |
 | 0.1 | 2025-12-18 | 初版作成 |
-| 0.1 | 2025-12-19 | OAuthプロバイダー変更 |
+| 0.2 | 2025-12-19 | OAuthプロバイダー変更 |
+| 0.3 | 2025-12-23 | ユーザー識別子を email に変更 |

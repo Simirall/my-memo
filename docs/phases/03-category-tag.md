@@ -45,7 +45,7 @@
 | カラム     | 型   | 制約         | 説明         |
 | ---------- | ---- | ------------ | ------------ |
 | id         | TEXT | PRIMARY KEY  | UUID v4      |
-| user_id    | TEXT | NOT NULL, FK | 所有ユーザー |
+| user_email | TEXT | NOT NULL, FK | 所有ユーザー（メールアドレス） |
 | name       | TEXT | NOT NULL     | カテゴリ名   |
 | created_at | TEXT | NOT NULL     |              |
 | updated_at | TEXT | NOT NULL     |              |
@@ -55,7 +55,7 @@
 | カラム     | 型   | 制約         | 説明         |
 | ---------- | ---- | ------------ | ------------ |
 | id         | TEXT | PRIMARY KEY  | UUID v4      |
-| user_id    | TEXT | NOT NULL, FK | 所有ユーザー |
+| user_email | TEXT | NOT NULL, FK | 所有ユーザー（メールアドレス） |
 | name       | TEXT | NOT NULL     | タグ名       |
 | created_at | TEXT | NOT NULL     |              |
 | updated_at | TEXT | NOT NULL     |              |

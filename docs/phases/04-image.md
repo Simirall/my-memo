@@ -54,7 +54,7 @@
 | カラム     | 型   | 制約         | 説明                                                       |
 | ---------- | ---- | ------------ | ---------------------------------------------------------- |
 | id         | TEXT | PRIMARY KEY  | UUID v4                                                    |
-| user_id    | TEXT | NOT NULL, FK | 所有ユーザー                                               |
+| user_email | TEXT | NOT NULL, FK | 所有ユーザー（メールアドレス）                              |
 | memo_id    | TEXT | FK           | 紐付くメモ ID（アップロード直後は NULL、メモ保存時に更新） |
 | file_path  | TEXT | NOT NULL     | R2 内のパス (key)                                          |
 | public_url | TEXT | NOT NULL     | 表示用 URL                                                 |
