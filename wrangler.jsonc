@@ -21,7 +21,15 @@
       "persist": true,
       "head_sampling_rate": 1
     }
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "MY_MEMO_D1",
+      "database_name": "my_memo_d1",
+      "database_id": "f34065e0-4ea3-437e-b447-a312b9d4cfc3",
+      "migrations_dir": "migrations"
+    }
+  ]
   // "vars": {
   //   "MY_VAR": "my-variable"
   // },
@@ -35,13 +43,6 @@
   //   {
   //     "binding": "MY_BUCKET",
   //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
   //   }
   // ],
   // "ai": {

@@ -11,5 +11,11 @@ export const getAuth = (env: Cloudflare.Env) => {
         clientSecret: env.GITHUB_CLIENT_SECRET,
       },
     },
+    session: {
+      cookieCache: {
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        refreshCache: true,
+      },
+    },
   });
 };

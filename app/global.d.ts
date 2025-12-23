@@ -1,8 +1,11 @@
-import type {} from "hono";
+import type { Session, User } from "better-auth";
 
 declare module "hono" {
   interface Env {
-    Variables: Env.Variables;
     Bindings: Env.Bindings;
+  }
+  interface ContextVariableMap {
+    user: User | null;
+    session: Session | null;
   }
 }
