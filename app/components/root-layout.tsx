@@ -3,9 +3,9 @@ import { Header } from "./header";
 
 export const RootLayout = ({ children }: { children: Child }) => {
   return (
-    <main>
+    <>
       <Header />
-      {children}
-    </main>
+      <main className="min-h-[calc(100svh-4rem)] p-8">{children}</main>
+    </>
   );
 };

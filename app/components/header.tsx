@@ -6,7 +6,7 @@ export const Header = () => {
   const user = c.get("user");
 
   return (
-    <div className="navbar sticky top-0 z-10 bg-base-100 shadow-sm">
+    <header className="navbar sticky top-0 z-10 bg-base-100 shadow-sm">
       <div className="flex-1">
         <a className="btn btn-ghost text-xl" href="/">
           My Memo
@@ -22,7 +22,7 @@ export const Header = () => {
               tabIndex={0}
             >
               <div className="w-10 rounded-full">
-                <img alt="User avatar" src={user.image} />
+                <img alt="User avatar" src={user.image!} />
               </div>
             </div>
             <ul
@@ -34,6 +34,6 @@ export const Header = () => {
           </div>
         )}
       </div>
-    </div>
+    </header>
   );
 };
