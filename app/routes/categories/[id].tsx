@@ -21,17 +21,36 @@ export default createRoute(async (c) => {
 
   return c.render(
     <div>
-      <h1 className="text-3xl font-bold">{result.name}</h1>
+      <div className="badge badge-xl badge-soft badge-primary">
+        {result.name}
+      </div>
       <div className="flex flex-wrap gap-4 py-4">
         {result.memos.map((memo) => (
           <div
-            className="card card-md w-96 bg-base-200 shadow-sm"
+            className="card card-md w-120 bg-base-200 shadow-sm"
             key={memo.id}
           >
             <div className="card-body">
-              <h2 className="card-title">{memo.title}</h2>
+              {memo.url ? (
+                <a
+                  className="card-title text-info text-xl hover:underline"
+                  href={memo.url}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  {memo.title}
+                </a>
+              ) : (
+                <h2 className="card-title text-xl">{memo.title}</h2>
+              )}
+              {memo.aiGenerated === 1 && (
+                <div className="badge badge-soft badge-info">
+                  ✨ AI Generated
+                </div>
+              )}
+              <p className="whitespace-pre-wrap">{memo.content}</p>
               <form
-                action={`/api/categories/delete/${memo.id}`}
+                action={`/api/memos/delete/${memo.id}`}
                 className="card-actions justify-end"
                 method="post"
               >

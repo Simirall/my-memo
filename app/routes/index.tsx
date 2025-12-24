@@ -14,12 +14,14 @@ export default createRoute(async (c) => {
     where: eq(schema.memosTable.userEmail, user!.email),
   });
 
-
   return c.render(
     <div>
       <div className="flex gap-4">
         <a className="btn" href="/memos/create">
           Create Memo
+        </a>
+        <a className="btn" href="/memos/url-summary">
+          Create WebPage Summary
         </a>
         <a className="btn" href="/categories">
           Categories
@@ -28,17 +30,38 @@ export default createRoute(async (c) => {
       <div className="flex flex-wrap gap-4 py-4">
         {result.map((memo) => (
           <div
-            className="card card-md w-96 bg-base-200 shadow-sm"
+            className="card card-md w-120 bg-base-200 shadow-sm"
             key={memo.id}
           >
             <div className="card-body">
-              <h2 className="card-title">{memo.title}</h2>
-              {memo.category && (
-                <a className="badge badge-xl badge-soft hover:translate-y-0.5" href={`/categories/${memo.category.id}`}>
-                  {memo.category.name}
+              {memo.url ? (
+                <a
+                  className="card-title text-info text-xl hover:underline"
+                  href={memo.url}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  {memo.title}
                 </a>
+              ) : (
+                <h2 className="card-title text-xl">{memo.title}</h2>
               )}
-              <p>{memo.content}</p>
+              <div className="flex items-center gap-2">
+                {memo.category && (
+                  <a
+                    className="badge badge-soft badge-primary badge-xl hover:translate-y-0.5"
+                    href={`/categories/${memo.category.id}`}
+                  >
+                    {memo.category.name}
+                  </a>
+                )}
+                {memo.aiGenerated === 1 && (
+                  <div className="badge badge-soft badge-info">
+                    ✨ AI Generated
+                  </div>
+                )}
+              </div>
+              <p className="whitespace-pre-wrap">{memo.content}</p>
               <form
                 action={`/api/memos/delete/${memo.id}`}
                 className="card-actions justify-end"

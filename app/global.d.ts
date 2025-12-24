@@ -2,7 +2,7 @@ import type { Session, User } from "better-auth";
 
 declare module "hono" {
   interface Env {
-    Bindings: Env.Bindings;
+    Bindings: CloudflareBindings;
   }
   interface ContextVariableMap {
     user: User | null;

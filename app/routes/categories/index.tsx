@@ -20,11 +20,11 @@ export default createRoute(async (c) => {
       <div className="flex flex-wrap gap-4 py-4">
         {result.map((category) => (
           <div
-            className="card card-md w-96 bg-base-200 shadow-sm"
+            className="card card-md w-40 bg-base-200 shadow-sm"
             key={category.id}
           >
             <div className="card-body">
-              <a className="card-title hover:underline" href={`/categories/${category.id}`}>{category.name}</a>
+              <a className="card-title text-info hover:underline" href={`/categories/${category.id}`}>{category.name}</a>
               <form
                 action={`/api/categories/delete/${category.id}`}
                 className="card-actions justify-end"

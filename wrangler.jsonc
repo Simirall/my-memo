@@ -29,7 +29,10 @@
       "database_id": "f34065e0-4ea3-437e-b447-a312b9d4cfc3",
       "migrations_dir": "migrations"
     }
-  ]
+  ],
+  "ai": {
+    "binding": "AI"
+  }
   // "vars": {
   //   "MY_VAR": "my-variable"
   // },
@@ -45,7 +48,4 @@
   //     "bucket_name": "my-bucket"
   //   }
   // ],
-  // "ai": {
-  //   "binding": "AI"
-  // }
 }

@@ -1,4 +1,5 @@
 import { createInsertSchema } from "drizzle-zod";
+import z from "zod";
 import { memosTable } from "../../../schema";
 
 export const memoSchema = {
@@ -11,5 +12,15 @@ export const memoSchema = {
         if (val === "") return null;
         return val;
       }),
+  }),
+  url: z.object({
+    url: z.url("有効なURLを入力してください"),
+    category: z
+      .string()
+      .transform((val) => {
+        if (val === "") return null;
+        return val;
+      })
+      .optional(),
   }),
 };
