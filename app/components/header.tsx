@@ -26,9 +26,10 @@ export const Header = () => {
               </div>
             </div>
             <ul
-              className="menu menu-sm dropdown-content z-1 mt-3 flex w-52 flex-col items-center rounded-box bg-base-100 p-2 shadow"
+              className="menu menu-sm dropdown-content z-1 mt-3 flex w-52 flex-col items-center space-y-2 rounded-box bg-base-100 p-2 shadow"
               tabIndex={-1}
             >
+              <li className="font-bold text-lg">GitHub: {user.name}</li>
               <LogoutButton />
             </ul>
           </div>
