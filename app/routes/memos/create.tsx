@@ -34,6 +34,7 @@ export default createRoute(async (c) => {
               placeholder="Content"
               required
             />
+            <input className="input" name="url" placeholder="URL" type="text" />
             {result.length > 0 && (
               <select className="select" name="categoryId">
                 <option value="">Select Category</option>

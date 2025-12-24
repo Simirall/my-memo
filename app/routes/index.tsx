@@ -17,13 +17,13 @@ export default createRoute(async (c) => {
   return c.render(
     <div>
       <div className="flex gap-4">
-        <a className="btn" href="/memos/create">
+        <a className="btn btn-primary" href="/memos/create">
           Create Memo
         </a>
-        <a className="btn" href="/memos/url-summary">
+        <a className="btn btn-secondary" href="/memos/url-summary">
           Create WebPage Summary
         </a>
-        <a className="btn" href="/categories">
+        <a className="btn btn-accent" href="/categories">
           Categories
         </a>
       </div>
