@@ -7,6 +7,12 @@
   "assets": {
     "directory": "./dist"
   },
+  "routes": [
+    {
+      "pattern": "my-memo.partial.cc",
+      "custom_domain": true
+    }
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,
