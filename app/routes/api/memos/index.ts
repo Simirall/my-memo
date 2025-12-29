@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { memosTable } from "../../../schema";
 import { decodeHtmlEntities } from "../../../utils/decodeHtmlEntities";
+import { decodeHtmlWithCorrectEncoding } from "../../../utils/decodeHtmlWithCorrectEncoding";
 import { memoSchema } from "./memoSchema";
 
 const memosRoute = new Hono<{ Bindings: CloudflareBindings }>();
@@ -53,10 +54,16 @@ memosRoute
 
     const response = await fetch(url);
 
+    // HTMLを正しいエンコーディングでデコード
+    const htmlText = await decodeHtmlWithCorrectEncoding(response);
+
+    // UTF-8のBlobとして再生成してAIに渡す
+    const utf8Blob = new Blob([htmlText], { type: "text/html; charset=utf-8" });
+
     const [markdown] = await c.env.AI.toMarkdown([
       {
         name: url,
-        blob: await response.blob(),
+        blob: utf8Blob,
       },
     ]);
 
