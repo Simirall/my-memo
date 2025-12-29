@@ -28,7 +28,7 @@ export default createRoute(async (c) => {
       <div className="badge badge-xl badge-soft badge-primary">
         {result.name}
       </div>
-      <div className="flex flex-wrap gap-4 py-4">
+      <div className="flex flex-wrap items-start justify-center gap-4 py-4">
         {result.memos.map((memo) => (
           <Memo key={memo.id} memo={memo} />
         ))}
