@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
+import { marked } from "marked";
 import * as schema from "../schema";
 
 export default createRoute(async (c) => {
@@ -36,7 +37,7 @@ export default createRoute(async (c) => {
             <div className="card-body">
               {memo.url ? (
                 <a
-                  className="card-title text-info text-xl hover:underline"
+                  className="card-title break-all text-info text-xl hover:underline"
                   href={memo.url}
                   rel="noopener noreferrer"
                   target="_blank"
@@ -61,7 +62,13 @@ export default createRoute(async (c) => {
                   </div>
                 )}
               </div>
-              <p className="whitespace-pre-wrap">{memo.content}</p>
+              <div className="*:space-y-4 [&_h1,&_h2]:font-bold [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_p]:whitespace-pre-wrap [&_ul]:list-inside [&_ul]:list-disc">
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: marked.parse(memo.content) as string,
+                  }}
+                />
+              </div>
               <form
                 action={`/api/memos/delete/${memo.id}`}
                 className="card-actions justify-end"

@@ -69,7 +69,7 @@ memosRoute
 
     const summaryResponse = await c.env.AI.run("@cf/openai/gpt-oss-20b", {
       input:
-        "以下の内容を、日本語で3行程度の箇条書きで要約してください。\n\n" +
+        "以下の内容を、日本語で400文字程度の概要と2~5個の箇条書きで、markdown形式にまとめてください。出力形式は概要と箇条書きのみで、タイトルセクション等は含めないでください。\n\n" +
         markdown.data,
     });
 
