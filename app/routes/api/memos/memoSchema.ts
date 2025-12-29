@@ -1,8 +1,9 @@
-import { createInsertSchema } from "drizzle-zod";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import z from "zod";
 import { memosTable } from "../../../schema";
 
 export const memoSchema = {
+  read: createSelectSchema(memosTable),
   create: createInsertSchema(memosTable, {
     userEmail: (schema) => schema.optional(),
     title: (schema) => schema.max(255, "255文字以内で入力してください"),
