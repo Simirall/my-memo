@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
+import { DeleteButton } from "../../islands/delete-button";
 import { categoriesTable } from "../../schema";
 
 export default createRoute(async (c) => {
@@ -24,16 +25,13 @@ export default createRoute(async (c) => {
             key={category.id}
           >
             <div className="card-body">
-              <a className="card-title text-info hover:underline" href={`/categories/${category.id}`}>{category.name}</a>
-              <form
-                action={`/api/categories/delete/${category.id}`}
-                className="card-actions justify-end"
-                method="post"
+              <a
+                className="card-title text-info hover:underline"
+                href={`/categories/${category.id}`}
               >
-                <button className="btn btn-soft btn-error" type="submit">
-                  🗑️
-                </button>
-              </form>
+                {category.name}
+              </a>
+              <DeleteButton action={`/api/categories/delete/${category.id}`} />
             </div>
           </div>
         ))}

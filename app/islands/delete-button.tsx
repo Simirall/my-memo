@@ -1,11 +1,11 @@
 import { useState } from "hono/jsx";
 
-export const DeleteButton = ({ memoId }: { memoId: string }) => {
+export const DeleteButton = ({ action }: { action: string }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   return (
     <form
-      action={`/api/memos/delete/${memoId}`}
+      action={action}
       className="card-actions justify-end"
       method="post"
       onSubmit={() => {

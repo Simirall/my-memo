@@ -1,6 +1,6 @@
 import { marked } from "marked";
 import type z from "zod";
-import { DeleteButton } from "../islands/memos/delete-button";
+import { DeleteButton } from "../islands/delete-button";
 import type { categorySchema } from "../routes/api/categories/categoriesSchema";
 import type { memoSchema } from "../routes/api/memos/memoSchema";
 import { sanitizeHtml } from "../utils/sanitizeHtml";
@@ -47,7 +47,7 @@ export const Memo = ({
             }}
           />
         </div>
-        <DeleteButton memoId={memo.id} />
+        <DeleteButton action={`/api/memos/delete/${memo.id}`} />
       </div>
     </div>
   );
