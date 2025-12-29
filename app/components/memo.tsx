@@ -3,6 +3,7 @@ import type z from "zod";
 import { DeleteButton } from "../islands/memos/delete-button";
 import type { categorySchema } from "../routes/api/categories/categoriesSchema";
 import type { memoSchema } from "../routes/api/memos/memoSchema";
+import { sanitizeHtml } from "../utils/sanitizeHtml";
 
 export const Memo = ({
   memo,
@@ -42,7 +43,7 @@ export const Memo = ({
         <div className="*:space-y-4 [&_h1,&_h2]:font-bold [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_p]:whitespace-pre-wrap [&_ul]:list-inside [&_ul]:list-disc">
           <div
             dangerouslySetInnerHTML={{
-              __html: marked.parse(memo.content) as string,
+              __html: sanitizeHtml(marked.parse(memo.content) as string),
             }}
           />
         </div>
