@@ -1,5 +1,6 @@
 import { marked } from "marked";
 import type z from "zod";
+import { DeleteButton } from "../islands/memos/delete-button";
 import type { categorySchema } from "../routes/api/categories/categoriesSchema";
 import type { memoSchema } from "../routes/api/memos/memoSchema";
 
@@ -45,15 +46,7 @@ export const Memo = ({
             }}
           />
         </div>
-        <form
-          action={`/api/memos/delete/${memo.id}`}
-          className="card-actions justify-end"
-          method="post"
-        >
-          <button className="btn btn-soft btn-error" type="submit">
-            🗑️
-          </button>
-        </form>
+        <DeleteButton memoId={memo.id} />
       </div>
     </div>
   );

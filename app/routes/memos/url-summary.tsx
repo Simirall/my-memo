@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
+import UrlSummaryForm from "../../islands/memos/url-summary-form";
 import { categoriesTable } from "../../schema";
 
 export default createRoute(async (c) => {
@@ -16,32 +17,7 @@ export default createRoute(async (c) => {
     <div className="flex justify-center p-8">
       <div className="card w-96 bg-base-100 shadow-sm">
         <div className="card-body">
-          <form
-            action="/api/memos/url"
-            className="flex flex-col gap-4"
-            method="post"
-          >
-            <input
-              className="input"
-              name="url"
-              placeholder="URL"
-              required
-              type="text"
-            />
-            {result.length > 0 && (
-              <select className="select" name="category">
-                <option value="">Select Category</option>
-                {result.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button className="btn" type="submit">
-              Summarize Page
-            </button>
-          </form>
+          <UrlSummaryForm categories={result} />
         </div>
       </div>
     </div>,
