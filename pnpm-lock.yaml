@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: ^0.7.6
-        version: 0.7.6(hono@4.11.1)(zod@4.2.1)
+        version: 0.7.6(hono@4.11.4)(zod@4.2.1)
       '@tailwindcss/vite':
         specifier: ^4.1.18
         version: 4.1.18(vite@7.3.0(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2))
@@ -27,11 +27,11 @@ importers:
         specifier: ^0.8.3
         version: 0.8.3(drizzle-orm@0.45.1(kysely@0.28.9))(zod@4.2.1)
       hono:
-        specifier: ^4.11.1
-        version: 4.11.1
+        specifier: ^4.11.4
+        version: 4.11.4
       honox:
         specifier: ^0.1.52
-        version: 0.1.52(hono@4.11.1)(miniflare@4.20251217.0)(wrangler@4.56.0)
+        version: 0.1.52(hono@4.11.4)(miniflare@4.20251217.0)(wrangler@4.56.0)
       marked:
         specifier: ^17.0.1
         version: 17.0.1
@@ -44,10 +44,10 @@ importers:
         version: 2.3.10
       '@hono/vite-build':
         specifier: ^1.8.0
-        version: 1.8.0(hono@4.11.1)
+        version: 1.8.0(hono@4.11.4)
       '@hono/vite-dev-server':
         specifier: ^0.23.0
-        version: 0.23.0(hono@4.11.1)(miniflare@4.20251217.0)(wrangler@4.56.0)
+        version: 0.23.0(hono@4.11.4)(miniflare@4.20251217.0)(wrangler@4.56.0)
       '@types/node':
         specifier: ^25.0.3
         version: 25.0.3
@@ -1655,8 +1655,8 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  hono@4.11.1:
-    resolution: {integrity: sha512-KsFcH0xxHes0J4zaQgWbYwmz3UPOOskdqZmItstUG93+Wk1ePBLkLGwbP9zlmh1BFUiL8Qp+Xfu9P7feJWpGNg==}
+  hono@4.11.4:
+    resolution: {integrity: sha512-U7tt8JsyrxSRKspfhtLET79pU8K+tInj5QZXs1jSugO1Vq5dFj3kmZsRldo29mTBfcjDRVRXrEZ6LS63Cog9ZA==}
     engines: {node: '>=16.9.0'}
 
   honox@0.1.52:
@@ -1980,6 +1980,7 @@ packages:
   wrangler@4.56.0:
     resolution: {integrity: sha512-Nqi8duQeRbA+31QrD6QlWHW3IZVnuuRxMy7DEg46deUzywivmaRV/euBN5KKXDPtA24VyhYsK7I0tkb7P5DM2w==}
     engines: {node: '>=20.0.0'}
+    deprecated: Version 4.55.0 and 4.56.0 can incorrectly automatically delegate 'wrangler deploy' to 'opennextjs-cloudflare'. Use an older or newer version.
     hasBin: true
     peerDependencies:
       '@cloudflare/workers-types': ^4.20251217.0
@@ -2474,26 +2475,26 @@ snapshots:
   '@esbuild/win32-x64@0.27.2':
     optional: true
 
-  '@hono/node-server@1.19.7(hono@4.11.1)':
+  '@hono/node-server@1.19.7(hono@4.11.4)':
     dependencies:
-      hono: 4.11.1
+      hono: 4.11.4
 
-  '@hono/vite-build@1.8.0(hono@4.11.1)':
+  '@hono/vite-build@1.8.0(hono@4.11.4)':
     dependencies:
-      hono: 4.11.1
+      hono: 4.11.4
 
-  '@hono/vite-dev-server@0.23.0(hono@4.11.1)(miniflare@4.20251217.0)(wrangler@4.56.0)':
+  '@hono/vite-dev-server@0.23.0(hono@4.11.4)(miniflare@4.20251217.0)(wrangler@4.56.0)':
     dependencies:
-      '@hono/node-server': 1.19.7(hono@4.11.1)
-      hono: 4.11.1
+      '@hono/node-server': 1.19.7(hono@4.11.4)
+      hono: 4.11.4
       minimatch: 9.0.5
     optionalDependencies:
       miniflare: 4.20251217.0
       wrangler: 4.56.0
 
-  '@hono/zod-validator@0.7.6(hono@4.11.1)(zod@4.2.1)':
+  '@hono/zod-validator@0.7.6(hono@4.11.4)(zod@4.2.1)':
     dependencies:
-      hono: 4.11.1
+      hono: 4.11.4
       zod: 4.2.1
 
   '@img/sharp-darwin-arm64@0.33.5':
@@ -3145,16 +3146,16 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  hono@4.11.1: {}
+  hono@4.11.4: {}
 
-  honox@0.1.52(hono@4.11.1)(miniflare@4.20251217.0)(wrangler@4.56.0):
+  honox@0.1.52(hono@4.11.4)(miniflare@4.20251217.0)(wrangler@4.56.0):
     dependencies:
       '@babel/generator': 7.25.6
       '@babel/parser': 7.25.6
       '@babel/traverse': 7.25.6
       '@babel/types': 7.25.6
-      '@hono/vite-dev-server': 0.23.0(hono@4.11.1)(miniflare@4.20251217.0)(wrangler@4.56.0)
-      hono: 4.11.1
+      '@hono/vite-dev-server': 0.23.0(hono@4.11.4)(miniflare@4.20251217.0)(wrangler@4.56.0)
+      hono: 4.11.4
       jsonc-parser: 3.3.1
       precinct: 12.2.0
     optionalDependencies:
