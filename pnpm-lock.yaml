@@ -1321,8 +1321,9 @@ packages:
     resolution: {integrity: sha512-WHw67kLXYbZuHTmcdbIrVArCq5wxo6NEuj3hiYAWr8mwJeC+C2mMCIBIWCiDoCye/OF/xelc+teJ1ERoWmnEIA==}
     engines: {node: '>=18'}
 
-  balanced-match@1.0.2:
-    resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
+  balanced-match@4.0.4:
+    resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
+    engines: {node: 18 || 20 || >=22}
 
   better-auth@1.4.8:
     resolution: {integrity: sha512-YFqkj7cjxzMdsWtMmIIfShoRIbr0zzn+tafv/FuHyBExxeH1BlEWg7LQ/9GjIv8f9lkoTxEGvfzrfGtc904oHg==}
@@ -1394,8 +1395,9 @@ packages:
   blake3-wasm@2.1.5:
     resolution: {integrity: sha512-F1+K8EbfOZE49dtoPtmxUQrpXaBIl3ICvasLh+nJta0xkz+9kF/7uet9fLnwKqhDrmj6g+6K3Tw9yQPUg2ka5g==}
 
-  brace-expansion@2.0.2:
-    resolution: {integrity: sha512-Jt0vHyM+jmUBqojB7E1NIYadt0vI0Qxjxd2TErW94wDz+E2LAm5vKMXXwg6ZZBTHPuUlDgQHKXvjGBdfcF1ZDQ==}
+  brace-expansion@5.0.3:
+    resolution: {integrity: sha512-fy6KJm2RawA5RcHkLa1z/ScpBeA762UF9KmZQxwIbDtRJrgLzM10depAiEQ+CXYcoiqW1/m96OAAoke2nE9EeA==}
+    engines: {node: 18 || 20 || >=22}
 
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
@@ -1807,8 +1809,8 @@ packages:
     engines: {node: '>=18.0.0'}
     hasBin: true
 
-  minimatch@9.0.5:
-    resolution: {integrity: sha512-G6T0ZX48xgozx7587koeX9Ys2NYy6Gmv//P89sEte9V9whIapMNF4idKxnW2QtCcLiTWlb/wfCabAtAFWhhBow==}
+  minimatch@9.0.8:
+    resolution: {integrity: sha512-reYkDYtj/b19TeqbNZCV4q9t+Yxylf/rYBsLb42SXJatTv4/ylq5lEiAmhA/IToxO7NI2UzNMghHoHuaqDkAjw==}
     engines: {node: '>=16 || 14 >=14.17'}
 
   minimist@1.2.8:
@@ -2501,7 +2503,7 @@ snapshots:
     dependencies:
       '@hono/node-server': 1.19.7(hono@4.11.10)
       hono: 4.11.10
-      minimatch: 9.0.5
+      minimatch: 9.0.8
     optionalDependencies:
       miniflare: 4.20260111.0
       wrangler: 4.59.1
@@ -2815,7 +2817,7 @@ snapshots:
       '@typescript-eslint/types': 8.50.1
       '@typescript-eslint/visitor-keys': 8.50.1
       debug: 4.4.3
-      minimatch: 9.0.5
+      minimatch: 9.0.8
       semver: 7.7.3
       tinyglobby: 0.2.15
       ts-api-utils: 2.1.0(typescript@5.9.3)
@@ -2866,7 +2868,7 @@ snapshots:
 
   ast-module-types@6.0.1: {}
 
-  balanced-match@1.0.2: {}
+  balanced-match@4.0.4: {}
 
   better-auth@1.4.8(drizzle-kit@0.31.8)(drizzle-orm@0.45.1(kysely@0.28.9)):
     dependencies:
@@ -2897,9 +2899,9 @@ snapshots:
 
   blake3-wasm@2.1.5: {}
 
-  brace-expansion@2.0.2:
+  brace-expansion@5.0.3:
     dependencies:
-      balanced-match: 1.0.2
+      balanced-match: 4.0.4
 
   buffer-from@1.1.2: {}
 
@@ -3279,9 +3281,9 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  minimatch@9.0.5:
+  minimatch@9.0.8:
     dependencies:
-      brace-expansion: 2.0.2
+      brace-expansion: 5.0.3
 
   minimist@1.2.8: {}
 
