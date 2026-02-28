@@ -29,6 +29,5 @@
     "tailwindcss": "^4.1.18",
     "vite": "^7.3.0",
     "wrangler": "^4.59.1"
-  },
-  "packageManager": "pnpm@10.26.1"
+  }
 }
