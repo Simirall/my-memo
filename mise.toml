@@ -1,2 +1,6 @@
 [tools]
 pnpm = "latest"
+
+[tasks.sync-ai]
+description = "Sync AI instruction files"
+file = "git::ssh://git@github.com/Simirall/ai-files.git//sync.sh?ref=main"
