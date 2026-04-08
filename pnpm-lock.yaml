@@ -16,16 +16,16 @@ importers:
         version: 4.1.18(vite@7.3.2(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2))
       better-auth:
         specifier: ^1.4.9
-        version: 1.4.9(drizzle-kit@0.31.8)(drizzle-orm@0.45.1(kysely@0.28.15))
+        version: 1.4.9(drizzle-kit@0.31.8)(drizzle-orm@0.45.2(kysely@0.28.15))
       daisyui:
         specifier: ^5.5.14
         version: 5.5.14
       drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(kysely@0.28.15)
+        specifier: ^0.45.2
+        version: 0.45.2(kysely@0.28.15)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.1(kysely@0.28.15))(zod@4.2.1)
+        version: 0.8.3(drizzle-orm@0.45.2(kysely@0.28.15))(zod@4.2.1)
       hono:
         specifier: ^4.12.12
         version: 4.12.12
@@ -1499,8 +1499,8 @@ packages:
     resolution: {integrity: sha512-O9EC/miwdnRDY10qRxM8P3Pg8hXe3LyU4ZipReKOgTwn4OqANmftj8XJz1UPUAS6NMHf0E2htjsbQujUTkncCg==}
     hasBin: true
 
-  drizzle-orm@0.45.1:
-    resolution: {integrity: sha512-Te0FOdKIistGNPMq2jscdqngBRfBpC8uMFVwqjf6gtTVJHIQ/dosgV/CLBU2N4ZJBsXL5savCba9b0YJskKdcA==}
+  drizzle-orm@0.45.2:
+    resolution: {integrity: sha512-kY0BSaTNYWnoDMVoyY8uxmyHjpJW1geOmBMdSSicKo9CIIWkSxMIj2rkeSR51b8KAPB7m+qysjuHme5nKP+E5Q==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -2902,7 +2902,7 @@ snapshots:
 
   balanced-match@4.0.4: {}
 
-  better-auth@1.4.9(drizzle-kit@0.31.8)(drizzle-orm@0.45.1(kysely@0.28.15)):
+  better-auth@1.4.9(drizzle-kit@0.31.8)(drizzle-orm@0.45.2(kysely@0.28.15)):
     dependencies:
       '@better-auth/core': 1.4.9(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@4.2.1))(jose@6.2.2)(kysely@0.28.15)(nanostores@1.2.0)
       '@better-auth/telemetry': 1.4.9(@better-auth/core@1.4.9(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@4.2.1))(jose@6.2.2)(kysely@0.28.15)(nanostores@1.2.0))
@@ -2918,7 +2918,7 @@ snapshots:
       zod: 4.2.1
     optionalDependencies:
       drizzle-kit: 0.31.8
-      drizzle-orm: 0.45.1(kysely@0.28.15)
+      drizzle-orm: 0.45.2(kysely@0.28.15)
 
   better-call@1.1.7(zod@4.2.1):
     dependencies:
@@ -3018,13 +3018,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.45.1(kysely@0.28.15):
+  drizzle-orm@0.45.2(kysely@0.28.15):
     optionalDependencies:
       kysely: 0.28.15
 
-  drizzle-zod@0.8.3(drizzle-orm@0.45.1(kysely@0.28.15))(zod@4.2.1):
+  drizzle-zod@0.8.3(drizzle-orm@0.45.2(kysely@0.28.15))(zod@4.2.1):
     dependencies:
-      drizzle-orm: 0.45.1(kysely@0.28.15)
+      drizzle-orm: 0.45.2(kysely@0.28.15)
       zod: 4.2.1
 
   enhanced-resolve@5.18.4:
