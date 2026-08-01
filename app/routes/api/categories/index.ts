@@ -15,7 +15,7 @@ categoriesRoute
     const validated = c.req.valid("form");
     await db.insert(categoriesTable).values({
       ...validated,
-      userEmail: user!.email,
+      userId: user!.id,
     });
 
     return c.redirect("/categories");
@@ -30,7 +30,7 @@ categoriesRoute
       .from(categoriesTable)
       .where(
         and(
-          eq(categoriesTable.userEmail, user!.email),
+          eq(categoriesTable.userId, user!.id),
           eq(categoriesTable.id, memoId),
         ),
       )
@@ -41,7 +41,7 @@ categoriesRoute
         .delete(categoriesTable)
         .where(
           and(
-            eq(categoriesTable.userEmail, user!.email),
+            eq(categoriesTable.userId, user!.id),
             eq(categoriesTable.id, memoId),
           ),
         );

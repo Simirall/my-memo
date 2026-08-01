@@ -5,7 +5,7 @@ import { memosTable } from "../../../schema";
 export const memoSchema = {
   read: createSelectSchema(memosTable),
   create: createInsertSchema(memosTable, {
-    userEmail: (schema) => schema.optional(),
+    userId: (schema) => schema.optional(),
     title: (schema) => schema.max(255, "255文字以内で入力してください"),
     content: (schema) => schema.max(10000, "10,000文字以内で入力してください"),
     url: (schema) =>

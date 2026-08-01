@@ -12,7 +12,7 @@ export default createRoute(async (c) => {
     with: {
       category: true,
     },
-    where: eq(schema.memosTable.userEmail, user!.email),
+    where: eq(schema.memosTable.userId, user!.id),
   });
 
   return c.render(

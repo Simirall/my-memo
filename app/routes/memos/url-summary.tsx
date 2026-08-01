@@ -11,7 +11,7 @@ export default createRoute(async (c) => {
   const result = await db
     .select()
     .from(categoriesTable)
-    .where(eq(categoriesTable.userEmail, user!.email));
+    .where(eq(categoriesTable.userId, user!.id));
 
   return c.render(
     <div className="flex justify-center p-8">

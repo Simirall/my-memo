@@ -11,7 +11,7 @@ export default createRoute(async (c) => {
 
   const result = await db.query.categoriesTable.findFirst({
     where: and(
-      eq(schema.categoriesTable.userEmail, user!.email),
+      eq(schema.categoriesTable.userId, user!.id),
       eq(schema.categoriesTable.id, id),
     ),
     with: {

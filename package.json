@@ -7,6 +7,9 @@
     "preview": "$npm_execpath run build && vite preview",
     "deploy": "$npm_execpath run build && wrangler deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "db:local:migrate": "wrangler d1 migrations apply my_memo_d1 --local",
+    "db:local:reset": "rm -rf .wrangler/state/v3/d1",
+    "db:remote:migrate": "wrangler d1 migrations apply my_memo_d1 --remote",
     "ai-config": "mise run --no-cache sync-ai"
   },
   "dependencies": {

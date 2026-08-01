@@ -10,9 +10,9 @@
 
 ### 2.1 データベース (D1)
 
-- [ ] `categories` テーブルのマイグレーション作成 (`db/migrations/0002_create_categories.sql`)
-- [ ] `tags` テーブルのマイグレーション作成 (`db/migrations/0003_create_tags.sql`)
-- [ ] `memo_tags` テーブル（中間テーブル）のマイグレーション作成 (`db/migrations/0004_create_memo_tags.sql`)
+- [x] `categories` テーブルのマイグレーション作成（`migrations/0000_fixed_paladin.sql`に統合）
+- [ ] `tags` テーブルのマイグレーション作成（未実装）
+- [ ] `memo_tags` テーブル（中間テーブル）のマイグレーション作成（未実装）
 - [ ] ローカル D1 へのマイグレーション適用
 
 ### 2.2 バックエンド (HonoX)
@@ -45,7 +45,7 @@
 | カラム     | 型   | 制約         | 説明         |
 | ---------- | ---- | ------------ | ------------ |
 | id         | TEXT | PRIMARY KEY  | UUID v4      |
-| user_email | TEXT | NOT NULL, FK | 所有ユーザー（メールアドレス） |
+| user_id    | TEXT | NOT NULL, FK → user(id) | 所有ユーザー |
 | name       | TEXT | NOT NULL     | カテゴリ名   |
 | created_at | TEXT | NOT NULL     |              |
 | updated_at | TEXT | NOT NULL     |              |
@@ -55,7 +55,7 @@
 | カラム     | 型   | 制約         | 説明         |
 | ---------- | ---- | ------------ | ------------ |
 | id         | TEXT | PRIMARY KEY  | UUID v4      |
-| user_email | TEXT | NOT NULL, FK | 所有ユーザー（メールアドレス） |
+| user_id    | TEXT | NOT NULL, FK → user(id) | 所有ユーザー |
 | name       | TEXT | NOT NULL     | タグ名       |
 | created_at | TEXT | NOT NULL     |              |
 | updated_at | TEXT | NOT NULL     |              |

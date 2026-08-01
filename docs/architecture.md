@@ -24,5 +24,5 @@
 - Zod
   - バリデーションに利用
 - Auth
-  - Better Auth のステートレス認証を利用
-  - https://www.better-auth.com/docs/concepts/session-management#stateless-session-management
+  - Better Auth のデータベースセッション認証を利用
+  - セッション・ユーザー・OAuthアカウント情報をCloudflare D1に保存

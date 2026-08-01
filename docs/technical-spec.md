@@ -50,7 +50,7 @@
 | Database       | Cloudflare D1                  | SQLite ベースの DB   |
 | Storage        | Cloudflare R2                  | 画像ストレージ       |
 | AI             | Cloudflare Workers AI          | URL 要約生成         |
-| Authentication | Better Auth                    | ステートレス認証     |
+| Authentication | Better Auth                    | D1データベースセッション認証 |
 
 ### 1.3 リクエストフロー
 
@@ -73,7 +73,7 @@
           │  categories  │       │    tags      │
           ├──────────────┤       ├──────────────┤
           │ id (PK)      │       │ id (PK)      │
-          │ user_email   │───┐   │ user_email   │───┐
+          │ user_id      │───┐   │ user_id      │───┐
           │ name         │   │   │ name         │   │
           │ created_at   │   │   │ created_at   │   │
           │ updated_at   │   │   │ updated_at   │   │
@@ -88,7 +88,7 @@
 │                            memos                                 │
 ├──────────────────────────────────────────────────────────────────┤
 │ id (PK)                                                          │
-│ user_email ───────────────────────────────────────────┐          │
+│ user_id ──────────────────────────────────────────────┐          │
 │ category_id (FK, nullable) ───────────────────────────┼──────────│
 │ title                                                 │          │
 │ content                                               │          │
@@ -104,7 +104,7 @@
 │  memo_tags   │                    │    images    │
 ├──────────────┤                    ├──────────────┤
 │ memo_id (FK) │                    │ id (PK)      │
-│ tag_id (FK)  │                    │ user_email   │
+│ tag_id (FK)  │                    │ user_id      │
 │ created_at   │                    │ memo_id (FK) │
 └──────────────┘                    │ file_path    │
                                     │ public_url   │
@@ -114,12 +114,25 @@
 
 ### 2.2 テーブル定義
 
+#### Better Auth 管理テーブル
+
+Better AuthのDrizzleアダプターが以下のテーブルをD1で管理する。
+
+| テーブル | 主なカラム | 用途 |
+| -------- | ---------- | ---- |
+| user | id, name, email, email_verified, image, created_at, updated_at | ユーザー情報 |
+| session | id, expires_at, token, user_id, created_at, updated_at, ip_address, user_agent | データベースセッション |
+| account | id, account_id, provider_id, user_id, access_token, refresh_token, created_at, updated_at | GitHub OAuthアカウント |
+| verification | id, identifier, value, expires_at, created_at, updated_at | 認証検証情報 |
+
+`memos.user_id`と`categories.user_id`は`user.id`を参照する外部キーである。
+
 #### memos
 
 | カラム       | 型   | 制約                                | 説明                      |
 | ----------- | ---- | ---------------------------------- | ------------------------ |
 | id          | TEXT | PRIMARY KEY                        | UUID v4                  |
-| user_email  | TEXT | NOT NULL                           | 所有ユーザー（メールアドレス） |
+| user_id     | TEXT | NOT NULL, FK → user(id)            | 所有ユーザー |
 | category_id | TEXT | FK → categories(id)                | カテゴリ（単一）              |
 | title       | TEXT |                                    | メモタイトル                 |
 | content     | TEXT | NOT NULL                           | メモ本文（最大 10,000 文字）  |
@@ -130,37 +143,37 @@
 
 **インデックス**:
 
-- `INDEX(user_email, created_at DESC)`
+- `INDEX(user_id, created_at DESC)`
 
 #### categories
 
 | カラム      | 型   | 制約                                | 説明         |
 | ---------- | ---- | ---------------------------------- | ----------- |
 | id         | TEXT | PRIMARY KEY                        | UUID v4     |
-| user_email | TEXT | NOT NULL                           | 所有ユーザー（メールアドレス） |
+| user_id    | TEXT | NOT NULL, FK → user(id)            | 所有ユーザー |
 | name       | TEXT | NOT NULL                           | カテゴリ名    |
 | created_at | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時     |
 | updated_at | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 更新日時     |
 
 **インデックス**:
 
-- `UNIQUE(user_email, name)`
-- `INDEX(user_email)`
+- `UNIQUE(user_id, name)`
+- `INDEX(user_id)`
 
 #### tags
 
 | カラム     | 型   | 制約                                 | 説明         |
 | ---------- | ---- | ---------------------------------- | ----------- |
 | id         | TEXT | PRIMARY KEY                        | UUID v4     |
-| user_email | TEXT | NOT NULL                           | 所有ユーザー（メールアドレス） |
+| user_id    | TEXT | NOT NULL, FK → user(id)            | 所有ユーザー |
 | name       | TEXT | NOT NULL                           | タグ名       |
 | created_at | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時     |
 | updated_at | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 更新日時     |
 
 **インデックス**:
 
-- `UNIQUE(user_email, name)`
-- `INDEX(user_email)`
+- `UNIQUE(user_id, name)`
+- `INDEX(user_id)`
 
 #### memo_tags
 
@@ -180,7 +193,7 @@
 | カラム       | 型   | 制約                                | 説明                      |
 | ----------- | ---- | ---------------------------------- | ------------------------ |
 | id          | TEXT | PRIMARY KEY                        | UUID v4                  |
-| user_email  | TEXT | NOT NULL                           | 所有ユーザー（メールアドレス） |
+| user_id     | TEXT | NOT NULL, FK → user(id)            | 所有ユーザー |
 | memo_id     | TEXT | NOT NULL, FK → memos(id)           | メモ ID                  |
 | file_path   | TEXT | NOT NULL                           | R2 オブジェクトキー         |
 | public_url  | TEXT |                                    | 公開 URL (任意)            |
@@ -189,12 +202,12 @@
 **インデックス**:
 
 - `INDEX(memo_id)`
-- `INDEX(user_email)`
+- `INDEX(user_id)`
 
 ### 2.3 マイグレーション方針
 
-- マイグレーションファイルは `db/migrations/` に配置
-- 命名規則: `YYYYMMDDHHMMSS_description.sql`
+- マイグレーションファイルは `migrations/` に配置
+- Drizzle Kitで生成し、D1のマイグレーションとして管理
 - D1 の `wrangler d1 migrations` コマンドで管理
 
 ---
@@ -205,10 +218,8 @@
 
 | メソッド   | パス                      | 機能 ID  | 説明                        |
 | -------- | ------------------------ | -------- | -------------------------- |
-| GET      | /auth/login              | AUTH-001 | ログイン画面表示             |
-| GET      | /auth/github             | AUTH-001 | GitHub OAuth 開始          |
-| GET      | /auth/github/callback    | AUTH-001 | GitHub OAuth コールバック    |
-| POST     | /auth/logout             | AUTH-002 | ログアウト                   |
+| GET      | /login                   | AUTH-001 | ログイン画面表示             |
+| GET/POST | /api/auth/*              | AUTH-001/002 | Better Auth OAuth・セッションAPI |
 
 ### 3.2 メモ（MEMO）
 
@@ -260,8 +271,8 @@
 
 ### 4.1 認証方式
 
-- **セッション管理**: ステートレスセッション（JWT ベース）
-- **トークン保存**: HTTP-only Cookie
+- **セッション管理**: D1データベースセッション（Better Auth）
+- **セッションCookie**: HTTP-only Cookie（セッション識別用トークン）
 - **セッション有効期限**: 7 日間（設定可能）
 
 ### 4.2 OAuth フロー
@@ -301,12 +312,28 @@
 ### 4.3 Better Auth 設定
 
 ```typescript
-// 設定イメージ（概要）
+// app/auth.ts（概要）
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { drizzle } from "drizzle-orm/d1";
+import * as schema from "./schema";
+
+const db = drizzle(env.MY_MEMO_D1, { schema });
 const auth = betterAuth({
-  database: d1Adapter(env.DB),
+  database: drizzleAdapter(db, {
+    provider: "sqlite",
+    schema: {
+      user: schema.userTable,
+      session: schema.sessionTable,
+      account: schema.accountTable,
+      verification: schema.verificationTable,
+    },
+  }),
   session: {
-    strategy: "stateless",
-    expiresIn: 60 * 60 * 24 * 7, // 7日
+    cookieCache: {
+      maxAge: 60 * 60 * 24 * 7, // 7日
+      refreshCache: true,
+    },
   },
   socialProviders: {
     github: {
@@ -319,8 +346,8 @@ const auth = betterAuth({
 
 ### 4.4 認証ミドルウェア
 
-- 全ルート（`/auth/*` を除く）で認証チェック
-- 未認証の場合は `/auth/login` へリダイレクト
+- 全ルート（`/login*`、`/api/auth/*` 等の公開パスを除く）で認証チェック
+- 未認証の場合は `/login` へリダイレクト
 - 認証済みの場合は `c.set('user', user)` でユーザー情報を Context に設定
 
 ---
@@ -336,12 +363,12 @@ const auth = betterAuth({
 ### 5.2 オブジェクトキー命名規則
 
 ```
-{user_email}/{memo_id}/{uuid}.{ext}
+{user_id}/{memo_id}/{uuid}.{ext}
 ```
 
-例: `user%40example.com/123e4567-e89b-12d3-a456-426614174000/7c9e6679-7425-40de-944b-e07fc1f90ae7.jpg`
+例: `user_abc123/123e4567-e89b-12d3-a456-426614174000/7c9e6679-7425-40de-944b-e07fc1f90ae7.jpg`
 
-※ `user_email` はパスとして安全に扱えるよう、必要に応じて URL エンコードした値を利用する。
+※ Better Authの`user.id`を使用し、メールアドレスをストレージキーに含めない。
 
 ### 5.3 画像仕様
 
@@ -512,7 +539,7 @@ app/
 | 項目       | 仕様                                   |
 | ---------- | -------------------------------------- |
 | 認証方式   | OAuth 2.0（GitHub）         |
-| セッション | JWT（HTTP-only Cookie）                |
+| セッション | D1データベースセッション（HTTP-only Cookie） |
 | 認可       | ユーザーは自分のデータのみアクセス可能 |
 
 ### 8.2 CSRF 対策
@@ -585,23 +612,16 @@ app/
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "my-memo",
-  "compatibility_date": "2025-08-03",
+  "compatibility_date": "2025-11-17",
   "main": "./dist/index.js",
 
   // D1 Database
   "d1_databases": [
     {
-      "binding": "DB",
-      "database_name": "my-memo-db",
-      "database_id": "<D1_DATABASE_ID>"
-    }
-  ],
-
-  // R2 Bucket
-  "r2_buckets": [
-    {
-      "binding": "BUCKET",
-      "bucket_name": "memo-images"
+       "binding": "MY_MEMO_D1",
+       "database_name": "my_memo_d1",
+       "database_id": "<D1_DATABASE_ID>",
+       "migrations_dir": "migrations"
     }
   ],
 
@@ -618,14 +638,16 @@ app/
 | ----------------------- | ------------------------------ |
 | GITHUB_CLIENT_ID       | GitHub OAuth Client ID      |
 | GITHUB_CLIENT_SECRET   | GitHub OAuth Secret         |
-| AUTH_SECRET            | Better Auth 署名用シークレット |
+| BETTER_AUTH_URL       | Better AuthのベースURL       |
+| BETTER_AUTH_SECRET     | Better Auth署名用シークレット |
 
 ### 10.3 シークレット設定コマンド
 
 ```bash
 wrangler secret put GITHUB_CLIENT_ID
 wrangler secret put GITHUB_CLIENT_SECRET
-wrangler secret put AUTH_SECRET
+wrangler secret put BETTER_AUTH_URL
+wrangler secret put BETTER_AUTH_SECRET
 ```
 
 ### 10.4 Cloudflare Bindings 型定義
@@ -633,12 +655,12 @@ wrangler secret put AUTH_SECRET
 ```typescript
 // src/types/env.d.ts
 interface CloudflareBindings {
-  DB: D1Database;
-  BUCKET: R2Bucket;
+  MY_MEMO_D1: D1Database;
   AI: Ai;
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;
-  AUTH_SECRET: string;
+  BETTER_AUTH_URL: string;
+  BETTER_AUTH_SECRET: string;
 }
 ```
 
@@ -651,3 +673,4 @@ interface CloudflareBindings {
 | 0.1 | 2025-12-18 | 初版作成 |
 | 0.2 | 2025-12-19 | OAuthプロバイダー変更 |
 | 0.3 | 2025-12-23 | ユーザー識別子を email に変更 |
+| 0.4 | 2026-08-01 | D1データベースセッション、Better Authテーブル、user_id設計を反映 |

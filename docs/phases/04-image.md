@@ -15,7 +15,7 @@
 
 ### 2.2 データベース (D1)
 
-- [ ] `images` テーブルのマイグレーション作成 (`db/migrations/0005_create_images.sql`)
+- [ ] `images` テーブルのマイグレーション作成（未実装）
 - [ ] ローカル D1 へのマイグレーション適用
 
 ### 2.3 バックエンド (HonoX)
@@ -54,7 +54,7 @@
 | カラム     | 型   | 制約         | 説明                                                       |
 | ---------- | ---- | ------------ | ---------------------------------------------------------- |
 | id         | TEXT | PRIMARY KEY  | UUID v4                                                    |
-| user_email | TEXT | NOT NULL, FK | 所有ユーザー（メールアドレス）                              |
+| user_id    | TEXT | NOT NULL, FK → user(id) | 所有ユーザー                              |
 | memo_id    | TEXT | FK           | 紐付くメモ ID（アップロード直後は NULL、メモ保存時に更新） |
 | file_path  | TEXT | NOT NULL     | R2 内のパス (key)                                          |
 | public_url | TEXT | NOT NULL     | 表示用 URL                                                 |

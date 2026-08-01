@@ -17,7 +17,7 @@ memosRoute
     const validated = c.req.valid("form");
     await db.insert(memosTable).values({
       ...validated,
-      userEmail: user!.email,
+      userId: user!.id,
     });
 
     return c.redirect("/");
@@ -31,7 +31,7 @@ memosRoute
       .select()
       .from(memosTable)
       .where(
-        and(eq(memosTable.userEmail, user!.email), eq(memosTable.id, memoId)),
+        and(eq(memosTable.userId, user!.id), eq(memosTable.id, memoId)),
       )
       .get();
 
@@ -39,7 +39,7 @@ memosRoute
       await db
         .delete(memosTable)
         .where(
-          and(eq(memosTable.userEmail, user!.email), eq(memosTable.id, memoId)),
+          and(eq(memosTable.userId, user!.id), eq(memosTable.id, memoId)),
         );
     }
 
@@ -93,7 +93,7 @@ memosRoute
     await db.insert(memosTable).values({
       title: decodeHtmlEntities(title || "No Title"),
       content: summary.text,
-      userEmail: user!.email,
+      userId: user!.id,
       aiGenerated: 1,
       url: url,
       categoryId: validated.category,

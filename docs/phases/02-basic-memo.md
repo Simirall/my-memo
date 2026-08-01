@@ -9,14 +9,14 @@
 
 ### 2.1 データベース (D1)
 
-- [x] `memos` テーブルのマイグレーションファイル作成 (`db/migrations/0001_create_memos.sql`)
+- [x] `memos` テーブルのマイグレーションファイル作成（`migrations/0000_fixed_paladin.sql`に統合）
 - [x] ローカル D1 へのマイグレーション適用
 
 ### 2.2 バックエンド (HonoX)
 
 - [ ] メモ機能用ディレクトリ構成の整備 (`app/routes/memos/`)
 - [ ] DB アクセス層（Repository）の実装 (`app/features/memo/repository.ts`)
-  - `findAllByUserEmail(userEmail)`
+  - `findAllByUserId(userId)`
   - `findById(id)`
   - `create(data)`
   - `update(id, data)`
@@ -46,7 +46,7 @@
 | カラム      | 型   | 制約         | 説明                         |
 | ----------- | ---- | ------------ | ---------------------------- |
 | id          | TEXT | PRIMARY KEY  | UUID v4                      |
-| user_email  | TEXT | NOT NULL     | 所有ユーザー（メールアドレス） |
+| user_id     | TEXT | NOT NULL, FK → user(id) | 所有ユーザー |
 | category_id | TEXT | FK           | カテゴリ（Phase 3 で使用）   |
 | title       | TEXT | NOT NULL     | メモタイトル                 |
 | content     | TEXT | NOT NULL     | メモ本文（最大 10,000 文字） |
@@ -57,7 +57,7 @@
 
 **インデックス**:
 
-- `INDEX(user_email, created_at DESC)`
+- `INDEX(user_id, created_at DESC)`
 
 ### 3.2 型定義 (Zod)
 
