@@ -3,10 +3,102 @@ import {
   index,
   int,
   integer,
+  check,
+  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+
+// ============================================================
+// 認可・プラン
+// ============================================================
+
+export const plansTable = sqliteTable(
+  "plans",
+  {
+    id: text("id").primaryKey(),
+    code: text("code").notNull().unique(),
+    name: text("name").notNull(),
+    isDefault: integer("is_default", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("plans_default_unique")
+      .on(table.isDefault)
+      .where(sql`${table.isDefault} = 1`),
+    index("plans_active_idx").on(table.isActive),
+  ],
+);
+
+export const planLimitsTable = sqliteTable(
+  "plan_limits",
+  {
+    planId: text("plan_id")
+      .notNull()
+      .references(() => plansTable.id, { onDelete: "cascade" }),
+    metric: text("metric").notNull(),
+    limitValue: integer("limit_value"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.planId, table.metric] }),
+    check(
+      "plan_limits_limit_value_non_negative",
+      sql`${table.limitValue} IS NULL OR ${table.limitValue} >= 0`,
+    ),
+  ],
+);
+
+export const usageCountersTable = sqliteTable(
+  "usage_counters",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => userTable.id, { onDelete: "cascade" }),
+    metric: text("metric").notNull(),
+    periodStart: text("period_start").notNull(),
+    used: integer("used").notNull().default(0),
+    updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.userId, table.metric, table.periodStart],
+    }),
+  ],
+);
+
+export const authorizationAuditLogsTable = sqliteTable(
+  "authorization_audit_logs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    actorUserId: text("actor_user_id").references(() => userTable.id, {
+      onDelete: "set null",
+    }),
+    targetUserId: text("target_user_id").references(() => userTable.id, {
+      onDelete: "set null",
+    }),
+    action: text("action").notNull(),
+    previousValue: text("previous_value"),
+    currentValue: text("current_value"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("authorization_audit_logs_target_idx").on(
+      table.targetUserId,
+      table.createdAt,
+    ),
+    index("authorization_audit_logs_actor_idx").on(
+      table.actorUserId,
+      table.createdAt,
+    ),
+  ],
+);
 
 // ============================================================
 // Better Auth 必須テーブル
@@ -18,6 +110,13 @@ export const userTable = sqliteTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: integer("email_verified", { mode: "boolean" }).notNull(),
   image: text("image"),
+  role: text("role").notNull().default("user"),
+  banned: integer("banned", { mode: "boolean" }).notNull().default(false),
+  banReason: text("ban_reason"),
+  banExpires: integer("ban_expires", { mode: "timestamp" }),
+  planId: text("plan_id")
+    .notNull()
+    .references(() => plansTable.id, { onDelete: "restrict" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
@@ -30,6 +129,7 @@ export const sessionTable = sqliteTable("session", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
+  impersonatedBy: text("impersonated_by"),
   userId: text("user_id")
     .notNull()
     .references(() => userTable.id, { onDelete: "cascade" }),

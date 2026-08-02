@@ -120,10 +120,21 @@ Better AuthのDrizzleアダプターが以下のテーブルをD1で管理する
 
 | テーブル | 主なカラム | 用途 |
 | -------- | ---------- | ---- |
-| user | id, name, email, email_verified, image, created_at, updated_at | ユーザー情報 |
-| session | id, expires_at, token, user_id, created_at, updated_at, ip_address, user_agent | データベースセッション |
+| user | id, name, email, email_verified, image, role, banned, ban_reason, ban_expires, plan_id, created_at, updated_at | ユーザー・管理者role・プラン |
+| session | id, expires_at, token, user_id, created_at, updated_at, ip_address, user_agent, impersonated_by | データベースセッション |
 | account | id, account_id, provider_id, user_id, access_token, refresh_token, created_at, updated_at | GitHub OAuthアカウント |
 | verification | id, identifier, value, expires_at, created_at, updated_at | 認証検証情報 |
+
+#### 認可・プランテーブル
+
+| テーブル | 主なカラム | 用途 |
+| -------- | ---------- | ---- |
+| plans | id, code, name, is_default, is_active | プラン定義 |
+| plan_limits | plan_id, metric, limit_value | プランごとの機能上限。`NULL`は無制限 |
+| usage_counters | user_id, metric, period_start, used | AI要約など期間単位の使用量 |
+| authorization_audit_logs | actor_user_id, target_user_id, action, previous_value, current_value, created_at | 管理者・プラン変更の監査履歴 |
+
+`user.plan_id`はプランを必須とする。新規ユーザー作成時に、`plans.is_default = 1`かつ`is_active = 1`のプランをDBから選択して割り当てる。初期seedの既定プランは`free`だが、既定プランの変更は`is_default`の更新で行い、アプリケーションコードや`user.plan_id`のDBデフォルト値にプランIDを固定しない。既定プランが存在しない場合、または必須limitが不足する場合はユーザー作成を失敗させる。SQLiteのALTER TABLE制約を補うため、migrationではプラン参照と必須性をトリガーでも検証する。
 
 `memos.user_id`と`categories.user_id`は`user.id`を参照する外部キーである。
 
@@ -540,7 +551,10 @@ app/
 | ---------- | -------------------------------------- |
 | 認証方式   | OAuth 2.0（GitHub）         |
 | セッション | D1データベースセッション（HTTP-only Cookie） |
-| 認可       | ユーザーは自分のデータのみアクセス可能 |
+| 認可       | ユーザー自身のデータのみアクセス可能。管理者はroleにより管理機能へアクセス可能 |
+| 管理者role | Better Auth Adminプラグインの`user`/`admin` |
+| 権限変更   | 標準Admin APIを無効化し、監査対象の独自APIに限定 |
+| プラン上限 | メモ100件、AI要約10回/月（free初期値） |
 
 ### 8.2 CSRF 対策
 
