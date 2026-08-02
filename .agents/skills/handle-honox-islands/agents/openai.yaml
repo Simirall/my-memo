@@ -1,0 +1,4 @@
+interface:
+  display_name: "HonoX Island Components"
+  short_description: "Handle HonoX island wrappers and hydration safely"
+  default_prompt: "Use $handle-honox-islands to diagnose and implement a HonoX island component without wrapper or hydration surprises."
