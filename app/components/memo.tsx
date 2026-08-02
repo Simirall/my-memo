@@ -4,13 +4,16 @@ import { DeleteButton } from "../islands/delete-button";
 import type { categorySchema } from "../routes/api/categories/categoriesSchema";
 import type { memoSchema } from "../routes/api/memos/memoSchema";
 import { sanitizeHtml } from "../utils/sanitizeHtml";
+import { FolderOpenIcon } from "./folder-open-icon";
 
 export const Memo = ({
   memo,
+  showCategory = true,
 }: {
   memo: z.infer<typeof memoSchema.read> & {
     category?: z.infer<typeof categorySchema.read> | null;
   };
+  showCategory?: boolean;
 }) => {
   return (
     <div className="card card-md w-120 bg-base-200 shadow-sm" key={memo.id}>
@@ -27,15 +30,16 @@ export const Memo = ({
         ) : (
           <h2 className="card-title text-xl">{memo.title}</h2>
         )}
+        {showCategory && memo.category && (
+          <a
+            className="flex w-fit items-center gap-1 text-primary hover:underline"
+            href={`/categories/${memo.category.id}`}
+          >
+            <FolderOpenIcon />
+            {memo.category.name}
+          </a>
+        )}
         <div className="flex items-center gap-2">
-          {memo.category && (
-            <a
-              className="badge badge-soft badge-primary badge-xl hover:translate-y-0.5"
-              href={`/categories/${memo.category.id}`}
-            >
-              {memo.category.name}
-            </a>
-          )}
           {memo.aiGenerated === 1 && (
             <div className="badge badge-soft badge-info">✨ AI Generated</div>
           )}
