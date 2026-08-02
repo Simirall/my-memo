@@ -1,4 +1,3 @@
-import folderOpenIcon from "@phosphor-icons/core/assets/regular/folder-open.svg?raw";
 import globeIcon from "@phosphor-icons/core/assets/regular/globe.svg?raw";
 import notePencilIcon from "@phosphor-icons/core/assets/regular/note-pencil.svg?raw";
 import plusIcon from "@phosphor-icons/core/assets/regular/plus.svg?raw";
@@ -55,6 +54,5 @@ export const ActionFab = () => (
       label="Create WebPage Summary"
       svg={globeIcon}
     />
-    <FabAction href="/categories" label="Categories" svg={folderOpenIcon} />
   </aside>
 );

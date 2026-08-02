@@ -18,7 +18,7 @@ categoriesRoute
       userId: user!.id,
     });
 
-    return c.redirect("/categories");
+    return c.redirect("/settings/categories");
   })
   .post("/delete/:id", async (c) => {
     const user = c.get("user");
@@ -47,7 +47,7 @@ categoriesRoute
         );
     }
 
-    return c.redirect("/categories");
+    return c.redirect("/settings/categories");
   });
 
 export default categoriesRoute;

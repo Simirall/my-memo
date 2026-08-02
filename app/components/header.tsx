@@ -1,5 +1,8 @@
+import gearIcon from "@phosphor-icons/core/assets/regular/gear.svg?raw";
+import usersThreeIcon from "@phosphor-icons/core/assets/regular/users-three.svg?raw";
 import { useRequestContext } from "hono/jsx-renderer";
 import { LogoutButton } from "../islands/logout";
+import { PhosphorIcon } from "./phosphor-icon";
 
 export const Header = () => {
   const c = useRequestContext();
@@ -23,20 +26,44 @@ export const Header = () => {
               tabIndex={0}
             >
               <div className="w-10 rounded-full">
-                <img alt="User avatar" src={user.image!} />
+                {user.image ? (
+                  <img alt="User avatar" src={user.image} />
+                ) : (
+                  <span className="flex size-full items-center justify-center bg-base-300 font-bold">
+                    {user.name.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
               </div>
             </div>
+            {/* HonoX wraps LogoutButton in honox-island. Make that wrapper full-width so mx-auto can center the button. */}
             <ul
-              className="menu menu-sm dropdown-content z-1 mt-3 flex w-52 flex-col items-center space-y-2 rounded-box bg-base-100 p-2 shadow"
+              className="menu dropdown-content z-1 mt-3 flex w-52 flex-col items-stretch space-y-2 rounded-box bg-base-100 p-2 shadow [&>honox-island]:flex [&>honox-island]:w-full [&>honox-island]:justify-center"
               tabIndex={-1}
             >
-              <li className="font-bold text-lg">GitHub: {user.name}</li>
-              <li>
-                <a href="/account/plan">Account plan</a>
+              <li className="w-full">
+                <a
+                  className="flex min-h-12 w-full items-center justify-start gap-2 px-4 text-base"
+                  href="/settings/account"
+                >
+                  <PhosphorIcon
+                    className="inline-flex shrink-0 [&_svg]:size-5"
+                    svg={gearIcon}
+                  />
+                  設定
+                </a>
               </li>
               {userRole === "admin" && (
-                <li>
-                  <a href="/admin/users">User management</a>
+                <li className="w-full">
+                  <a
+                    className="flex min-h-12 w-full items-center justify-start gap-2 px-4 text-base"
+                    href="/admin/users"
+                  >
+                    <PhosphorIcon
+                      className="inline-flex shrink-0 [&_svg]:size-5"
+                      svg={usersThreeIcon}
+                    />
+                    ユーザー管理
+                  </a>
                 </li>
               )}
               <LogoutButton />

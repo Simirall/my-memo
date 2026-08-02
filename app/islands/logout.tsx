@@ -12,7 +12,7 @@ export const LogoutButton = () => {
   };
 
   return (
-    <button class="btn" onClick={handleLogout} type="button">
+    <button class="btn mx-auto" onClick={handleLogout} type="button">
       ログアウト
     </button>
   );

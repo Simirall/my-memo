@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
 import { CategoryTabs } from "../../app/components/category-tabs";
 import { Memo } from "../../app/components/memo";
+import { SettingsLayout } from "../../app/components/settings-layout";
 import { ActionFab } from "../../app/islands/action-fab";
 
 const category = {
@@ -38,6 +39,30 @@ afterEach(() => {
 });
 
 describe("カテゴリUI", () => {
+  it("設定メニューをURLリンクとして表示し現在地を示す", async () => {
+    mount(
+      <SettingsLayout activeSection="categories">
+        <h1>カテゴリー</h1>
+      </SettingsLayout>,
+    );
+
+    await expect
+      .element(page.getByRole("link", { name: "アカウント" }))
+      .toHaveAttribute("href", "/settings/account");
+    await expect
+      .element(page.getByRole("link", { name: "プラン" }))
+      .toHaveAttribute("href", "/settings/plan");
+    await expect
+      .element(page.getByRole("link", { name: "カテゴリー" }))
+      .toHaveAttribute("aria-current", "page");
+    await expect
+      .element(page.getByLabelText("設定メニューを開く"))
+      .toBeInTheDocument();
+    expect(
+      document.querySelectorAll('nav[aria-label="設定"] a svg'),
+    ).toHaveLength(3);
+  });
+
   it("操作メニューをFABのSpeed Dialとして表示する", async () => {
     mount(<ActionFab />);
 
@@ -50,7 +75,7 @@ describe("カテゴリUI", () => {
       .toHaveAttribute("href", "/memos/url-summary");
     await expect
       .element(page.getByRole("link", { name: "Categories" }))
-      .toHaveAttribute("href", "/categories");
+      .not.toBeInTheDocument();
     await expect
       .element(page.getByRole("button", { name: "Open quick actions" }))
       .toHaveClass("btn-primary");
