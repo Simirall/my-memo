@@ -4,6 +4,11 @@ import plusIcon from "@phosphor-icons/core/assets/regular/plus.svg?raw";
 import xIcon from "@phosphor-icons/core/assets/regular/x.svg?raw";
 import { PhosphorIcon } from "../components/phosphor-icon";
 
+const fabLabelClassName =
+  "badge whitespace-nowrap border-base-content bg-base-content text-base-100 shadow-sm";
+const fabActionClassName =
+  "btn btn-lg btn-circle border-base-content bg-base-content text-base-100 shadow-md hover:bg-base-content hover:text-base-100";
+
 const FabIcon = ({ svg }: { svg: string }) => (
   <PhosphorIcon className="inline-flex shrink-0 [&_svg]:size-6" svg={svg} />
 );
@@ -18,8 +23,8 @@ const FabAction = ({
   svg: string;
 }) => (
   <div>
-    <span>{label}</span>
-    <a aria-label={label} className="btn btn-lg btn-circle" href={href}>
+    <span className={fabLabelClassName}>{label}</span>
+    <a aria-label={label} className={fabActionClassName} href={href}>
       <FabIcon svg={svg} />
     </a>
   </div>
@@ -36,7 +41,7 @@ export const ActionFab = () => (
       <FabIcon svg={plusIcon} />
     </button>
     <div className="fab-close">
-      <span>Close</span>
+      <span className={fabLabelClassName}>Close</span>
       <button
         aria-label="Close quick actions"
         className="btn btn-error btn-lg btn-circle"
