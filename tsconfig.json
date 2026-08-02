@@ -6,7 +6,12 @@
     "strict": true,
     "skipLibCheck": true,
     "lib": ["ESNext", "DOM"],
-    "types": ["vite/client", "@types/node", "./worker-configuration.d.ts"],
+    "types": [
+      "vite/client",
+      "@types/node",
+      "@cloudflare/vitest-pool-workers/types",
+      "./worker-configuration.d.ts"
+    ],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx"
   },
