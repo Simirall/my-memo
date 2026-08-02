@@ -1,13 +1,13 @@
 import { showRoutes } from "hono/dev";
-import { appendTrailingSlash } from "hono/trailing-slash";
+import { trimTrailingSlash } from "hono/trailing-slash";
 import { createHono } from "honox/factory";
 import { createApp } from "honox/server";
 import { getAuth } from "./auth";
 
 const baseApp = createHono();
 
-// リクエストの末尾に/を追加するミドルウェア
-baseApp.use(appendTrailingSlash());
+// URLは末尾スラッシュなしに統一する
+baseApp.use(trimTrailingSlash());
 
 // セッション情報を取得してコンテキストにセットするミドルウェア
 baseApp.use("*", async (c, next) => {

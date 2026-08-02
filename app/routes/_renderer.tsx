@@ -10,7 +10,7 @@ export default jsxRenderer(({ children }) => {
         <meta content="width=device-width, initial-scale=1.0" name="viewport" />
         <link href="/favicon.ico" rel="icon" />
         <Link href="/app/style.css" rel="stylesheet" />
-        <Script async src="/app/client.ts" />
+        <Script src="/app/client.ts" />
       </head>
       <body>
         <RootLayout>{children}</RootLayout>

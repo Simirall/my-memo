@@ -4,6 +4,7 @@ import { LogoutButton } from "../islands/logout";
 export const Header = () => {
   const c = useRequestContext();
   const user = c.get("user");
+  const userRole = user ? (user as { role?: string }).role : undefined;
 
   return (
     <header className="navbar sticky top-0 z-10 bg-base-100 shadow-sm">
@@ -30,6 +31,14 @@ export const Header = () => {
               tabIndex={-1}
             >
               <li className="font-bold text-lg">GitHub: {user.name}</li>
+              <li>
+                <a href="/account/plan">Account plan</a>
+              </li>
+              {userRole === "admin" && (
+                <li>
+                  <a href="/admin/users">User management</a>
+                </li>
+              )}
               <LogoutButton />
             </ul>
           </div>

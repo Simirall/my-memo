@@ -1,56 +1,144 @@
 import { zValidator } from "@hono/zod-validator";
 import { and, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import type { Context } from "hono";
 import { Hono } from "hono";
 import { memosTable } from "../../../schema";
+import {
+  getAppDb,
+  getEntitlement,
+  getUsage,
+  PLAN_METRICS,
+} from "../../../utils/authorization";
 import { decodeHtmlEntities } from "../../../utils/decodeHtmlEntities";
 import { decodeHtmlWithCorrectEncoding } from "../../../utils/decodeHtmlWithCorrectEncoding";
+import {
+  insertMemoWithinQuota,
+  reserveAiSummaryQuota,
+} from "../../../utils/quota";
 import { memoSchema } from "./memoSchema";
 
 const memosRoute = new Hono<{ Bindings: CloudflareBindings }>();
+type MemosContext = Context<{ Bindings: CloudflareBindings }>;
+
+const wantsJson = (c: MemosContext) =>
+  c.req.header("Accept")?.includes("application/json") ?? false;
+
+const quotaError = (
+  c: MemosContext,
+  redirectPath: string,
+  message: string,
+  code = "QUOTA_EXCEEDED",
+) => {
+  if (wantsJson(c)) {
+    return c.json({ code, message }, 403);
+  }
+  return c.redirect(`${redirectPath}?error=${encodeURIComponent(message)}`);
+};
 
 memosRoute
   .post("/create", zValidator("form", memoSchema.create), async (c) => {
     const user = c.get("user");
-    const db = drizzle(c.env.MY_MEMO_D1);
+    if (!user) return c.redirect("/login");
+    const db = getAppDb(c.env);
 
     const validated = c.req.valid("form");
-    await db.insert(memosTable).values({
-      ...validated,
-      userId: user!.id,
+    const entitlement = await getEntitlement(
+      db,
+      user.id,
+      PLAN_METRICS.memoTotal,
+    );
+    if (!entitlement) {
+      return quotaError(
+        c,
+        "/memos/create",
+        "プランのメモ上限が設定されていません。",
+        "PLAN_CONFIGURATION_ERROR",
+      );
+    }
+
+    const usage = await getUsage(db, user.id, PLAN_METRICS.memoTotal);
+    if (entitlement.limit !== null && usage >= entitlement.limit) {
+      return quotaError(
+        c,
+        "/memos/create",
+        `メモの上限（${entitlement.limit}件）に達しています。`,
+      );
+    }
+
+    const inserted = await insertMemoWithinQuota(c.env.MY_MEMO_D1, {
+      id: crypto.randomUUID(),
+      userId: user.id,
+      title: validated.title,
+      content: validated.content,
+      url: validated.url ?? null,
+      categoryId: validated.categoryId ?? null,
+      aiGenerated: 0,
     });
+    if (!inserted) {
+      return quotaError(
+        c,
+        "/memos/create",
+        "メモの上限に達しました。最新の利用状況を確認してください。",
+      );
+    }
 
     return c.redirect("/");
   })
   .post("/delete/:id", async (c) => {
     const user = c.get("user");
+    if (!user) return c.redirect("/login");
     const memoId = c.req.param("id");
-    const db = drizzle(c.env.MY_MEMO_D1);
+    const db = getAppDb(c.env);
 
     const memo = await db
       .select()
       .from(memosTable)
-      .where(
-        and(eq(memosTable.userId, user!.id), eq(memosTable.id, memoId)),
-      )
+      .where(and(eq(memosTable.userId, user.id), eq(memosTable.id, memoId)))
       .get();
 
     if (memo) {
       await db
         .delete(memosTable)
-        .where(
-          and(eq(memosTable.userId, user!.id), eq(memosTable.id, memoId)),
-        );
+        .where(and(eq(memosTable.userId, user.id), eq(memosTable.id, memoId)));
     }
 
     return c.redirect("/");
   })
   .post("/url", zValidator("form", memoSchema.url), async (c) => {
     const user = c.get("user");
-    const db = drizzle(c.env.MY_MEMO_D1);
+    if (!user) return c.redirect("/login");
+    const db = getAppDb(c.env);
 
     const validated = c.req.valid("form");
     const url = validated.url;
+
+    const memoEntitlement = await getEntitlement(
+      db,
+      user.id,
+      PLAN_METRICS.memoTotal,
+    );
+    const aiEntitlement = await getEntitlement(
+      db,
+      user.id,
+      PLAN_METRICS.aiSummaryMonthly,
+    );
+    if (!memoEntitlement || !aiEntitlement) {
+      return quotaError(
+        c,
+        "/memos/url-summary",
+        "プランの上限設定が不足しています。",
+        "PLAN_CONFIGURATION_ERROR",
+      );
+    }
+
+    const memoUsage = await getUsage(db, user.id, PLAN_METRICS.memoTotal);
+    if (memoEntitlement.limit !== null && memoUsage >= memoEntitlement.limit) {
+      return quotaError(
+        c,
+        "/memos/url-summary",
+        `メモの上限（${memoEntitlement.limit}件）に達しています。`,
+      );
+    }
 
     const response = await fetch(url);
 
@@ -59,6 +147,15 @@ memosRoute
 
     // UTF-8のBlobとして再生成してAIに渡す
     const utf8Blob = new Blob([htmlText], { type: "text/html; charset=utf-8" });
+
+    const reserved = await reserveAiSummaryQuota(c.env.MY_MEMO_D1, user.id);
+    if (!reserved) {
+      return quotaError(
+        c,
+        "/memos/url-summary",
+        `AI要約の今月の上限（${aiEntitlement.limit ?? "無制限"}回）に達しています。`,
+      );
+    }
 
     const [markdown] = await c.env.AI.toMarkdown([
       {
@@ -80,24 +177,34 @@ memosRoute
         markdown.data,
     });
 
-    const [summary] = (
-      summaryResponse.output?.find(
-        (o) => o.status === "completed",
-      ) as ResponseOutputMessage
-    ).content;
+    const completed = summaryResponse.output?.find(
+      (o) => o.status === "completed",
+    );
+    if (completed?.status !== "completed") {
+      return c.redirect("/");
+    }
+    const [summary] = (completed as ResponseOutputMessage).content;
 
     if (summary.type === "refusal") {
       return c.redirect("/");
     }
 
-    await db.insert(memosTable).values({
+    const inserted = await insertMemoWithinQuota(c.env.MY_MEMO_D1, {
+      id: crypto.randomUUID(),
       title: decodeHtmlEntities(title || "No Title"),
       content: summary.text,
-      userId: user!.id,
+      userId: user.id,
       aiGenerated: 1,
-      url: url,
-      categoryId: validated.category,
+      url,
+      categoryId: validated.category ?? null,
     });
+    if (!inserted) {
+      return quotaError(
+        c,
+        "/memos/url-summary",
+        "メモの上限に達したため、要約を保存できませんでした。",
+      );
+    }
 
     return c.redirect("/");
   });

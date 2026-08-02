@@ -17,7 +17,7 @@ export default createRoute(async (c) => {
     <div className="flex justify-center p-8">
       <div className="card w-96 bg-base-100 shadow-sm">
         <div className="card-body">
-          <CreateMemoForm categories={result} />
+          <CreateMemoForm categories={result} error={c.req.query("error")} />
         </div>
       </div>
     </div>,
