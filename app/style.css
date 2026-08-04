@@ -1,6 +1,8 @@
 @import "tailwindcss" source("../app");
 @plugin "daisyui" {
-  themes: autumn --default, dim --prefersdark;
+  themes:
+    autumn --default,
+    dim --prefersdark;
 }
 
 @theme {

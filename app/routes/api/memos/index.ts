@@ -1,8 +1,8 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { Hono } from "hono";
-import { memosTable } from "../../../schema";
+import { memosTable, memoTagsTable, tagsTable } from "../../../schema";
 import {
   getAppDb,
   getEntitlement,
@@ -15,7 +15,8 @@ import {
   insertMemoWithinQuota,
   reserveAiSummaryQuota,
 } from "../../../utils/quota";
-import { memoSchema } from "./memoSchema";
+import { normalizeTagNames, replaceMemoTags } from "../../../utils/tags";
+import { memoSchema, tagUpdateSchema } from "./memoSchema";
 
 const memosRoute = new Hono<{ Bindings: CloudflareBindings }>();
 type MemosContext = Context<{ Bindings: CloudflareBindings }>;
@@ -73,6 +74,7 @@ memosRoute
       url: validated.url ?? null,
       categoryId: validated.categoryId ?? null,
       aiGenerated: 0,
+      tags: validated.tags,
     });
     if (!inserted) {
       return quotaError(
@@ -103,6 +105,35 @@ memosRoute
     }
 
     return c.redirect("/");
+  })
+  .post("/:id/tags", zValidator("json", tagUpdateSchema), async (c) => {
+    const user = c.get("user");
+    if (!user) return c.json({ message: "認証が必要です。" }, 401);
+
+    const memoId = c.req.param("id");
+    const db = getAppDb(c.env);
+    const memo = await db
+      .select({ id: memosTable.id })
+      .from(memosTable)
+      .where(and(eq(memosTable.id, memoId), eq(memosTable.userId, user.id)))
+      .get();
+    if (!memo) return c.json({ message: "メモが見つかりません。" }, 404);
+
+    const validated = c.req.valid("json");
+    const normalized = normalizeTagNames(validated.tags);
+    if (!normalized.ok) return c.json({ message: normalized.message }, 400);
+
+    await replaceMemoTags(c.env.MY_MEMO_D1, memoId, user.id, normalized.names);
+    const tags = await db
+      .select({ id: tagsTable.id, name: tagsTable.name })
+      .from(tagsTable)
+      .innerJoin(memoTagsTable, eq(memoTagsTable.tagId, tagsTable.id))
+      .where(
+        and(eq(memoTagsTable.memoId, memoId), eq(tagsTable.userId, user.id)),
+      )
+      .orderBy(asc(tagsTable.name));
+
+    return c.json({ tags });
   })
   .post("/url", zValidator("form", memoSchema.url), async (c) => {
     const user = c.get("user");
@@ -197,6 +228,7 @@ memosRoute
       aiGenerated: 1,
       url,
       categoryId: validated.category ?? null,
+      tags: validated.tags,
     });
     if (!inserted) {
       return quotaError(

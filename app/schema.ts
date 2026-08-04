@@ -1,9 +1,9 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  check,
   index,
   int,
   integer,
-  check,
   primaryKey,
   sqliteTable,
   text,
@@ -213,13 +213,65 @@ export const categoriesTable = sqliteTable(
   ],
 );
 
+export const tagsTable = sqliteTable(
+  "tags",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => userTable.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("tags_user_id_idx").on(table.userId),
+    uniqueIndex("tags_user_id_name_unique").on(table.userId, table.name),
+  ],
+);
+
+export const memoTagsTable = sqliteTable(
+  "memo_tags",
+  {
+    memoId: text("memo_id")
+      .notNull()
+      .references(() => memosTable.id, { onDelete: "cascade" }),
+    tagId: text("tag_id")
+      .notNull()
+      .references(() => tagsTable.id, { onDelete: "cascade" }),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.memoId, table.tagId] }),
+    index("memo_tags_tag_id_idx").on(table.tagId),
+  ],
+);
+
 export const categoriesRelations = relations(categoriesTable, ({ many }) => ({
   memos: many(memosTable),
 }));
 
-export const memosRelations = relations(memosTable, ({ one }) => ({
+export const tagsRelations = relations(tagsTable, ({ many }) => ({
+  memoTags: many(memoTagsTable),
+}));
+
+export const memoTagsRelations = relations(memoTagsTable, ({ one }) => ({
+  memo: one(memosTable, {
+    fields: [memoTagsTable.memoId],
+    references: [memosTable.id],
+  }),
+  tag: one(tagsTable, {
+    fields: [memoTagsTable.tagId],
+    references: [tagsTable.id],
+  }),
+}));
+
+export const memosRelations = relations(memosTable, ({ one, many }) => ({
   category: one(categoriesTable, {
     fields: [memosTable.categoryId],
     references: [categoriesTable.id],
   }),
+  memoTags: many(memoTagsTable),
 }));

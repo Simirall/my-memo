@@ -2,8 +2,10 @@ import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import {
   memosTable,
+  memoTagsTable,
   planLimitsTable,
   plansTable,
+  tagsTable,
   usageCountersTable,
   userTable,
 } from "../schema";
@@ -22,6 +24,8 @@ export const getAppDb = (env: Cloudflare.Env) =>
       memosTable,
       planLimitsTable,
       plansTable,
+      memoTagsTable,
+      tagsTable,
       usageCountersTable,
       userTable,
     },

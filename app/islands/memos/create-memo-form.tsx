@@ -1,12 +1,16 @@
 import { useState } from "hono/jsx";
 import type z from "zod";
+import { TagInput } from "../../components/tag-input";
 import type { categorySchema } from "../../routes/api/categories/categoriesSchema";
+import type { Tag } from "../../utils/tags";
 
 export default function CreateMemoForm({
   categories,
+  tags = [],
   error: initialError,
 }: {
   categories: ReadonlyArray<z.infer<typeof categorySchema.read>>;
+  tags?: ReadonlyArray<Tag>;
   error?: string;
 }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -87,6 +91,10 @@ export default function CreateMemoForm({
           </select>
         </label>
       )}
+      <label className="flex flex-col gap-1" htmlFor="memo-tags">
+        Tags
+        <TagInput availableTags={tags} inputId="memo-tags" />
+      </label>
       <button className="btn" disabled={isLoading} type="submit">
         {isLoading ? (
           <span className="loading loading-spinner" />

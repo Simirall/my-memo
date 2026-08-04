@@ -1,9 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
 import { CategoryTabs } from "../../components/category-tabs";
 import { Memo } from "../../components/memo";
 import { ActionFab } from "../../islands/action-fab";
+import MemoTagEditor from "../../islands/memos/tag-editor";
 import * as schema from "../../schema";
 
 export default createRoute(async (c) => {
@@ -15,18 +16,23 @@ export default createRoute(async (c) => {
   const db = drizzle(c.env.MY_MEMO_D1, { schema: schema });
   const id = c.req.param("id") ?? "";
 
-  const [categories, result] = await Promise.all([
+  const [categories, tags, result] = await Promise.all([
     db
       .select()
       .from(schema.categoriesTable)
       .where(eq(schema.categoriesTable.userId, user.id)),
+    db
+      .select({ id: schema.tagsTable.id, name: schema.tagsTable.name })
+      .from(schema.tagsTable)
+      .where(eq(schema.tagsTable.userId, user.id))
+      .orderBy(asc(schema.tagsTable.name)),
     db.query.categoriesTable.findFirst({
       where: and(
         eq(schema.categoriesTable.userId, user.id),
         eq(schema.categoriesTable.id, id),
       ),
       with: {
-        memos: true,
+        memos: { with: { memoTags: { with: { tag: true } } } },
       },
     }),
   ]);
@@ -44,6 +50,7 @@ export default createRoute(async (c) => {
           <Memo key={memo.id} memo={memo} showCategory={false} />
         ))}
       </div>
+      <MemoTagEditor availableTags={tags} />
       <ActionFab />
     </div>,
   );

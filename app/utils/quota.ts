@@ -8,43 +8,73 @@ type MemoInsert = {
   url: string | null;
   categoryId: string | null;
   aiGenerated: 0 | 1;
+  tags?: readonly string[];
 };
 
 export async function insertMemoWithinQuota(
   db: D1Database,
   memo: MemoInsert,
 ): Promise<boolean> {
-  const result = await db
-    .prepare(
-      `INSERT INTO memos
-        (id, user_id, title, content, url, category_id, ai_generated)
-       SELECT ?, ?, ?, ?, ?, ?, ?
-       WHERE EXISTS (
-         SELECT 1
-         FROM user AS u
-         INNER JOIN plan_limits AS pl ON pl.plan_id = u.plan_id
-         WHERE u.id = ?
-           AND pl.metric = 'memo.total'
-           AND (
-             pl.limit_value IS NULL
-             OR (SELECT COUNT(*) FROM memos WHERE user_id = ?) < pl.limit_value
-           )
-       )`,
-    )
-    .bind(
-      memo.id,
-      memo.userId,
-      memo.title,
-      memo.content,
-      memo.url,
-      memo.categoryId,
-      memo.aiGenerated,
-      memo.userId,
-      memo.userId,
-    )
-    .run();
+  const statements = [
+    db
+      .prepare(
+        `INSERT INTO memos
+          (id, user_id, title, content, url, category_id, ai_generated)
+         SELECT ?, ?, ?, ?, ?, ?, ?
+         WHERE EXISTS (
+           SELECT 1
+           FROM user AS u
+           INNER JOIN plan_limits AS pl ON pl.plan_id = u.plan_id
+           WHERE u.id = ?
+             AND pl.metric = 'memo.total'
+             AND (
+               pl.limit_value IS NULL
+               OR (SELECT COUNT(*) FROM memos WHERE user_id = ?) < pl.limit_value
+             )
+         )`,
+      )
+      .bind(
+        memo.id,
+        memo.userId,
+        memo.title,
+        memo.content,
+        memo.url,
+        memo.categoryId,
+        memo.aiGenerated,
+        memo.userId,
+        memo.userId,
+      ),
+  ];
 
-  return result.meta.changes === 1;
+  for (const name of memo.tags ?? []) {
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO tags (id, user_id, name)
+           SELECT ?, ?, ?
+           WHERE EXISTS (SELECT 1 FROM memos WHERE id = ? AND user_id = ?)
+           ON CONFLICT(user_id, name) DO NOTHING`,
+        )
+        .bind(crypto.randomUUID(), memo.userId, name, memo.id, memo.userId),
+    );
+  }
+
+  for (const name of memo.tags ?? []) {
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO memo_tags (memo_id, tag_id)
+           SELECT ?, id
+           FROM tags
+           WHERE user_id = ? AND name = ?
+             AND EXISTS (SELECT 1 FROM memos WHERE id = ? AND user_id = ?)`,
+        )
+        .bind(memo.id, memo.userId, name, memo.id, memo.userId),
+    );
+  }
+
+  const results = await db.batch(statements);
+  return results[0]?.meta.changes === 1;
 }
 
 export async function reserveAiSummaryQuota(

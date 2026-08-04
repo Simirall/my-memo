@@ -10,18 +10,20 @@ const categoriesRoute = new Hono<{ Bindings: CloudflareBindings }>();
 categoriesRoute
   .post("/create", zValidator("form", categorySchema.create), async (c) => {
     const user = c.get("user");
+    if (!user) return c.redirect("/login");
     const db = drizzle(c.env.MY_MEMO_D1);
 
     const validated = c.req.valid("form");
     await db.insert(categoriesTable).values({
       ...validated,
-      userId: user!.id,
+      userId: user.id,
     });
 
     return c.redirect("/settings/categories");
   })
   .post("/delete/:id", async (c) => {
     const user = c.get("user");
+    if (!user) return c.redirect("/login");
     const memoId = c.req.param("id");
     const db = drizzle(c.env.MY_MEMO_D1);
 
@@ -30,7 +32,7 @@ categoriesRoute
       .from(categoriesTable)
       .where(
         and(
-          eq(categoriesTable.userId, user!.id),
+          eq(categoriesTable.userId, user.id),
           eq(categoriesTable.id, memoId),
         ),
       )
@@ -41,7 +43,7 @@ categoriesRoute
         .delete(categoriesTable)
         .where(
           and(
-            eq(categoriesTable.userId, user!.id),
+            eq(categoriesTable.userId, user.id),
             eq(categoriesTable.id, memoId),
           ),
         );

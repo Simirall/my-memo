@@ -82,7 +82,9 @@ beforeEach(async () => {
   await db.batch([
     db.prepare("DELETE FROM authorization_audit_logs"),
     db.prepare("DELETE FROM usage_counters"),
+    db.prepare("DELETE FROM memo_tags"),
     db.prepare("DELETE FROM memos"),
+    db.prepare("DELETE FROM tags"),
     db.prepare("DELETE FROM categories"),
     db.prepare("DELETE FROM account"),
     db.prepare("DELETE FROM session"),

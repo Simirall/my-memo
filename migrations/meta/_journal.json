@@ -22,6 +22,13 @@
       "when": 1785659256429,
       "tag": "0002_crazy_sleepwalker",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785758809871,
+      "tag": "0003_greedy_spitfire",
+      "breakpoints": true
     }
   ]
 }

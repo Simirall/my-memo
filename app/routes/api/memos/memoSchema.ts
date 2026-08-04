@@ -1,9 +1,32 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import z from "zod";
 import { memosTable } from "../../../schema";
+import { normalizeTagNames, parseTagNamesField } from "../../../utils/tags";
+
+const tagNamesField = z.preprocess((value) => {
+  const result = parseTagNamesField(value);
+  if (!result.ok) return z.NEVER;
+  return result.names;
+}, z.array(z.string()));
+
+const memoReadSchema = createSelectSchema(memosTable);
+export const memoWithTagsSchema = memoReadSchema.extend({
+  tags: z.array(z.object({ id: z.string(), name: z.string() })),
+});
+
+export const tagUpdateSchema = z
+  .object({
+    tags: z.array(z.string()),
+  })
+  .superRefine((value, ctx) => {
+    const result = normalizeTagNames(value.tags);
+    if (!result.ok) {
+      ctx.addIssue({ code: "custom", message: result.message, path: ["tags"] });
+    }
+  });
 
 export const memoSchema = {
-  read: createSelectSchema(memosTable),
+  read: memoReadSchema,
   create: createInsertSchema(memosTable, {
     userId: (schema) => schema.optional(),
     title: (schema) => schema.max(255, "255文字以内で入力してください"),
@@ -15,7 +38,7 @@ export const memoSchema = {
         if (val === "") return null;
         return val;
       }),
-  }),
+  }).extend({ tags: tagNamesField }),
   url: z.object({
     url: z.url("有効なURLを入力してください"),
     category: z
@@ -25,5 +48,6 @@ export const memoSchema = {
         return val;
       })
       .optional(),
+    tags: tagNamesField,
   }),
 };
