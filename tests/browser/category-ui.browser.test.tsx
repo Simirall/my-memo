@@ -56,11 +56,26 @@ describe("カテゴリUI", () => {
       .element(page.getByRole("link", { name: "カテゴリー" }))
       .toHaveAttribute("aria-current", "page");
     await expect
+      .element(page.getByRole("link", { name: "タグ" }))
+      .toHaveAttribute("href", "/settings/tags");
+    await expect
       .element(page.getByLabelText("設定メニューを開く"))
       .toBeInTheDocument();
     expect(
       document.querySelectorAll('nav[aria-label="設定"] a svg'),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
+  });
+
+  it("タグ設定ではタグの現在地を示す", async () => {
+    mount(
+      <SettingsLayout activeSection="tags">
+        <h1>タグ</h1>
+      </SettingsLayout>,
+    );
+
+    await expect
+      .element(page.getByRole("link", { name: "タグ" }))
+      .toHaveAttribute("aria-current", "page");
   });
 
   it("操作メニューをFABのSpeed Dialとして表示する", async () => {
