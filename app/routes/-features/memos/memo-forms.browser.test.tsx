@@ -109,6 +109,37 @@ describe("メモ作成フォーム", () => {
     await expect.element(url).toHaveValue("https://example.com/article");
   });
 
+  it("AI要約の部分応答を画面に表示してストリームエラーを通知する", async () => {
+    const encoder = new TextEncoder();
+    const events = [
+      'event: status\ndata: {"message":"要約を生成しています…"}\n\n',
+      'event: chunk\ndata: {"text":"概要"}\n\n',
+      'event: chunk\ndata: {"text":"\\n- 要点"}\n\n',
+      'event: error\ndata: {"message":"AI要約に失敗しました。"}\n\n',
+    ];
+    vi.spyOn(window, "fetch").mockResolvedValue(
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            for (const event of events)
+              controller.enqueue(encoder.encode(event));
+            controller.close();
+          },
+        }),
+        { headers: { "Content-Type": "text/event-stream" } },
+      ),
+    );
+    mount(<UrlSummaryForm categories={[]} />);
+
+    await page.getByLabelText("URL").fill("https://example.com/article");
+    await page.getByRole("button", { name: "Summarize Page" }).click();
+
+    await expect.element(page.getByText("概要\n- 要点")).toBeVisible();
+    await expect
+      .element(page.getByRole("alert"))
+      .toHaveTextContent("AI要約に失敗しました。");
+  });
+
   it("共有URLをAI要約フォームの初期値へ復元して一時データを消費する", async () => {
     window.history.replaceState({}, "", "/memos/url-summary?shared=1");
     window.sessionStorage.setItem(
