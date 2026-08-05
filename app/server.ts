@@ -36,7 +36,10 @@ baseApp.use("*", async (c, next) => {
     "/login/callback",
     "/api/auth",
     "/favicon.ico",
+    "/manifest.webmanifest",
     "/robots.txt",
+    "/service-worker.js",
+    "/share",
     "/.well-known",
   ];
   const isPublic = publicPaths.some(

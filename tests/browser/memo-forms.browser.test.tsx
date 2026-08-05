@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import CreateMemoForm from "../../app/islands/memos/create-memo-form";
 import UrlSummaryForm from "../../app/islands/memos/url-summary-form";
+import { SHARE_STORAGE_KEY } from "../../app/utils/share";
 
 function mount(node: Parameters<typeof render>[0]) {
   const container = document.createElement("div");
@@ -13,6 +14,8 @@ function mount(node: Parameters<typeof render>[0]) {
 
 afterEach(() => {
   document.body.replaceChildren();
+  window.history.replaceState({}, "", "/");
+  window.sessionStorage.removeItem(SHARE_STORAGE_KEY);
   vi.restoreAllMocks();
 });
 
@@ -62,6 +65,31 @@ describe("メモ作成フォーム", () => {
       .toHaveTextContent("失敗しました。");
   });
 
+  it("共有テキストを通常メモの初期値へ復元して一時データを消費する", async () => {
+    window.history.replaceState({}, "", "/memos/create?shared=1");
+    window.sessionStorage.setItem(
+      SHARE_STORAGE_KEY,
+      JSON.stringify({
+        title: "共有タイトル",
+        text: "共有本文\nhttps://example.com/article",
+        url: "",
+        receivedAt: Date.now(),
+      }),
+    );
+    mount(<CreateMemoForm categories={[]} />);
+
+    await expect
+      .element(page.getByLabelText("Title"))
+      .toHaveValue("共有タイトル");
+    await expect
+      .element(page.getByLabelText("Content"))
+      .toHaveValue("共有本文\nhttps://example.com/article");
+    await expect
+      .element(page.getByLabelText("URL (optional)"))
+      .toHaveValue("https://example.com/article");
+    expect(window.sessionStorage.getItem(SHARE_STORAGE_KEY)).toBeNull();
+  });
+
   it("AI要約の月次上限到達時にURLを保持してエラーを通知する", async () => {
     vi.spyOn(window, "fetch").mockResolvedValue(
       Response.json(
@@ -79,5 +107,24 @@ describe("メモ作成フォーム", () => {
       .element(page.getByRole("alert"))
       .toHaveTextContent("AI要約の今月の上限です。");
     await expect.element(url).toHaveValue("https://example.com/article");
+  });
+
+  it("共有URLをAI要約フォームの初期値へ復元して一時データを消費する", async () => {
+    window.history.replaceState({}, "", "/memos/url-summary?shared=1");
+    window.sessionStorage.setItem(
+      SHARE_STORAGE_KEY,
+      JSON.stringify({
+        title: "ページタイトル",
+        text: "",
+        url: "https://example.com/article",
+        receivedAt: Date.now(),
+      }),
+    );
+    mount(<UrlSummaryForm categories={[]} />);
+
+    await expect
+      .element(page.getByLabelText("URL"))
+      .toHaveValue("https://example.com/article");
+    expect(window.sessionStorage.getItem(SHARE_STORAGE_KEY)).toBeNull();
   });
 });

@@ -1,5 +1,6 @@
 import { createRoute } from "honox/factory";
 import { SettingsLayout } from "../../components/settings-layout";
+import InstallPrompt from "../../islands/install-prompt";
 
 export default createRoute((c) => {
   const user = c.get("user");
@@ -53,6 +54,8 @@ export default createRoute((c) => {
             <span className="badge badge-success">連携済み</span>
           </div>
         </section>
+
+        <InstallPrompt mode="settings" />
       </div>
     </SettingsLayout>,
   );

@@ -1,20 +1,38 @@
-import { useState } from "hono/jsx";
+import { useEffect, useState } from "hono/jsx";
 import type z from "zod";
 import { TagInput } from "../../components/tag-input";
 import type { categorySchema } from "../../routes/api/categories/categoriesSchema";
+import { getShareDestination } from "../../utils/share";
+import { clearPendingShare, readPendingShare } from "../../utils/share-client";
 import type { Tag } from "../../utils/tags";
 
 export default function UrlSummaryForm({
   categories,
   tags = [],
   error: initialError,
+  initialUrl,
 }: {
   categories: ReadonlyArray<z.infer<typeof categorySchema.read>>;
   tags?: ReadonlyArray<Tag>;
   error?: string;
+  initialUrl?: string;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(initialError);
+  const [url, setUrl] = useState(initialUrl ?? "");
+
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has("shared")) return;
+
+    const pendingShare = readPendingShare();
+    if (!pendingShare) return;
+
+    const destination = getShareDestination(pendingShare);
+    if (destination.kind !== "url-summary") return;
+
+    setUrl(destination.url);
+    clearPendingShare();
+  }, []);
 
   const submit = async (event: Event) => {
     event.preventDefault();
@@ -59,8 +77,12 @@ export default function UrlSummaryForm({
           className="input"
           id="summary-url"
           name="url"
+          onInput={(event) =>
+            setUrl((event.currentTarget as HTMLInputElement).value)
+          }
           required
           type="url"
+          value={url}
         />
       </label>
       {categories.length > 0 && (

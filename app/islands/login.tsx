@@ -1,8 +1,9 @@
 import { authClient } from "../utils/authClient";
 
-export const LoginButton = () => {
+export const LoginButton = ({ callbackURL }: { callbackURL?: string }) => {
   const handleLogin = async () => {
     await authClient.signIn.social({
+      callbackURL,
       provider: "github",
     });
   };
