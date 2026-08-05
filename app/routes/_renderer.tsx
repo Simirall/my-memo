@@ -1,6 +1,6 @@
 import { jsxRenderer } from "hono/jsx-renderer";
 import { Link, Script } from "honox/server";
-import { RootLayout } from "../components/root-layout";
+import { RootLayout } from "@/routes/-shared";
 
 export default jsxRenderer(({ children }) => {
   return (

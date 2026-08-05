@@ -3,8 +3,8 @@ import { eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { z } from "zod";
-import { plansTable } from "../../../../schema";
-import { getAppDb, getFreshUser } from "../../../../utils/authorization";
+import { plansTable } from "@/schema";
+import { getAppDb, getFreshUser } from "@/utils/authorization";
 
 const userChangeSchema = z.object({
   role: z.enum(["user", "admin"]),

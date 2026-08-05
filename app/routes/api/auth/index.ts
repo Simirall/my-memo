@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { getAuth } from "../../../auth";
+import { getAuth } from "@/auth";
 
 const authRoute = new Hono<{ Bindings: Cloudflare.Env }>();
 

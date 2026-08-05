@@ -2,21 +2,21 @@ import { zValidator } from "@hono/zod-validator";
 import { and, asc, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { Hono } from "hono";
-import { memosTable, memoTagsTable, tagsTable } from "../../../schema";
+import {
+  decodeHtmlEntities,
+  decodeHtmlWithCorrectEncoding,
+  memoSchema,
+  tagUpdateSchema,
+} from "@/routes/-features/memos";
+import { normalizeTagNames, replaceMemoTags } from "@/routes/-features/tags";
+import { memosTable, memoTagsTable, tagsTable } from "@/schema";
 import {
   getAppDb,
   getEntitlement,
   getUsage,
   PLAN_METRICS,
-} from "../../../utils/authorization";
-import { decodeHtmlEntities } from "../../../utils/decodeHtmlEntities";
-import { decodeHtmlWithCorrectEncoding } from "../../../utils/decodeHtmlWithCorrectEncoding";
-import {
-  insertMemoWithinQuota,
-  reserveAiSummaryQuota,
-} from "../../../utils/quota";
-import { normalizeTagNames, replaceMemoTags } from "../../../utils/tags";
-import { memoSchema, tagUpdateSchema } from "./memoSchema";
+} from "@/utils/authorization";
+import { insertMemoWithinQuota, reserveAiSummaryQuota } from "@/utils/quota";
 
 const memosRoute = new Hono<{ Bindings: CloudflareBindings }>();
 type MemosContext = Context<{ Bindings: CloudflareBindings }>;

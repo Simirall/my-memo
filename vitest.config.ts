@@ -6,6 +6,11 @@ import {
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": path.resolve(import.meta.dirname, "app"),
+    },
+  },
   plugins: [
     cloudflareTest(async () => ({
       miniflare: {
@@ -21,7 +26,12 @@ export default defineConfig({
     })),
   ],
   test: {
-    include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
+    include: ["app/**/*.integration.test.ts"],
+    includeSource: [
+      "app/routes/-features/sharing/share.ts",
+      "app/routes/-features/tags/tags.ts",
+      "app/utils/authorization.ts",
+    ],
     setupFiles: ["./tests/setup/apply-migrations.ts"],
   },
 });

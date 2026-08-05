@@ -2,8 +2,8 @@ import { zValidator } from "@hono/zod-validator";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
-import { categoriesTable } from "../../../schema";
-import { categorySchema } from "./categoriesSchema";
+import { categorySchema } from "@/routes/-features/categories";
+import { categoriesTable } from "@/schema";
 
 const categoriesRoute = new Hono<{ Bindings: CloudflareBindings }>();
 

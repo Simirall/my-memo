@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
 import { CategoryTabs } from "@/routes/-features/categories";
@@ -12,6 +12,7 @@ export default createRoute(async (c) => {
   }
 
   const db = drizzle(c.env.MY_MEMO_D1, { schema: schema });
+  const id = c.req.param("id") ?? "";
 
   const [categories, tags, result] = await Promise.all([
     db
@@ -23,22 +24,28 @@ export default createRoute(async (c) => {
       .from(schema.tagsTable)
       .where(eq(schema.tagsTable.userId, user.id))
       .orderBy(asc(schema.tagsTable.name)),
-    db.query.memosTable.findMany({
+    db.query.categoriesTable.findFirst({
+      where: and(
+        eq(schema.categoriesTable.userId, user.id),
+        eq(schema.categoriesTable.id, id),
+      ),
       with: {
-        category: true,
-        memoTags: { with: { tag: true } },
+        memos: { with: { memoTags: { with: { tag: true } } } },
       },
-      where: eq(schema.memosTable.userId, user.id),
     }),
   ]);
 
+  if (!result) {
+    return c.render(<div>Category not found</div>);
+  }
+
   return c.render(
     <div>
-      <h1 className="sr-only">Memos</h1>
-      <CategoryTabs activeCategoryId={null} categories={categories} />
+      <h1 className="sr-only">{result.name}</h1>
+      <CategoryTabs activeCategoryId={result.id} categories={categories} />
       <div className="flex flex-wrap items-start justify-center gap-4 py-4">
-        {result.map((memo) => (
-          <Memo key={memo.id} memo={memo} />
+        {result.memos.map((memo) => (
+          <Memo key={memo.id} memo={memo} showCategory={false} />
         ))}
       </div>
       <MemoTagEditor availableTags={tags} />
