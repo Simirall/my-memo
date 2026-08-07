@@ -65,6 +65,17 @@ describe("タグUI", () => {
     await expect.element(page.getByText("#仕事")).not.toBeInTheDocument();
   });
 
+  it("タグ候補を入力欄の下に重ねて表示する", async () => {
+    mount(<TagInput availableTags={[tag]} inputId="tags" />);
+
+    await page.getByRole("textbox").fill("仕");
+
+    const listbox = document.querySelector('[role="listbox"]');
+    expect(listbox).toHaveClass("absolute");
+    expect(listbox).toHaveClass("top-full");
+    expect(listbox?.parentElement).toHaveClass("relative");
+  });
+
   it("既存タグと完全一致する入力では新規候補を表示しない", async () => {
     mount(<TagInput availableTags={[tag]} inputId="tags" />);
 
@@ -180,6 +191,9 @@ describe("タグUI", () => {
     await page
       .getByRole("button", { name: "タグを編集: タグなしメモ" })
       .click();
+    expect(document.querySelector("dialog .modal-box")).toHaveClass(
+      "overflow-visible",
+    );
     await page.getByRole("textbox").fill("windows");
     await page
       .getByRole("option", { name: "#windowsを新しいタグとして追加" })

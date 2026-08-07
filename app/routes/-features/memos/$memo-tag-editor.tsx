@@ -167,7 +167,7 @@ export default function MemoTagEditor({
       }}
       ref={dialogRef}
     >
-      <div className="modal-box">
+      <div className="modal-box overflow-visible">
         <h2 className="font-bold text-lg" id="memo-tags-title">
           タグを編集
         </h2>

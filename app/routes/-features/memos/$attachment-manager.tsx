@@ -188,7 +188,9 @@ export default function AttachmentManager({
 
   return (
     <section className="mt-4 space-y-3" data-attachment-manager={memoId}>
-      <h3 className="font-semibold">添付ファイル</h3>
+      {(!readOnly || attachments.length > 0) && (
+        <h3 className="font-semibold">添付ファイル</h3>
+      )}
       {attachments.length > 0 && (
         <ul className="space-y-3">
           {attachments.map((attachment) => {

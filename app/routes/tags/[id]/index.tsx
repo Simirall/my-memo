@@ -61,7 +61,7 @@ export default createRoute(async (c) => {
           {memos.length}件
         </p>
       </header>
-      <div className="flex flex-wrap items-start justify-center gap-4">
+      <div className="grid w-full auto-rows-auto grid-cols-[repeat(auto-fit,minmax(min(100%,30rem),30rem))] items-stretch justify-center gap-4">
         {memos.map((memo) => (
           <Memo key={memo.id} memo={memo} returnTo={c.req.path} showCategory />
         ))}

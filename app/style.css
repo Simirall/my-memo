@@ -14,3 +14,13 @@
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
 }
+
+@utility memo-card-grid {
+  display: grid;
+  grid-template-rows: auto auto;
+  grid-template-rows: subgrid;
+}
+
+@utility memo-card-grid-row {
+  grid-row: span 2;
+}

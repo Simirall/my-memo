@@ -78,54 +78,91 @@ export const TagInput = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="input h-auto min-h-10 w-full flex-wrap gap-2 p-2">
-        {selected.map((tag) => (
-          <span
-            className={`badge gap-1 pr-0 ${
-              tag.name === freeformName
-                ? "badge-soft badge-primary"
-                : "badge-soft badge-info"
-            }`}
-            data-tag-chip={tag.name}
-            key={tag.name}
-          >
-            #{tag.name}
-            <button
-              aria-label={`${tag.name}を外す`}
-              className="btn btn-circle btn-ghost btn-xs p-0 text-xs leading-none"
-              onClick={() => removeTag(tag.name)}
-              type="button"
+      <div className="relative">
+        <div className="input h-auto min-h-10 w-full flex-wrap gap-2 p-2">
+          {selected.map((tag) => (
+            <span
+              className={`badge gap-1 pr-0 ${
+                tag.name === freeformName
+                  ? "badge-soft badge-primary"
+                  : "badge-soft badge-info"
+              }`}
+              data-tag-chip={tag.name}
+              key={tag.name}
             >
-              <span aria-hidden="true">×</span>
-            </button>
-          </span>
-        ))}
-        <input
-          aria-autocomplete="list"
-          aria-controls={`${inputId}-suggestions`}
-          aria-describedby={error ? `${inputId}-error` : undefined}
-          className="min-w-32 flex-1 border-0 bg-transparent p-0 outline-none"
-          id={inputId}
-          maxLength={MAX_TAG_NAME_LENGTH}
-          onInput={(event) => {
-            setQuery((event.currentTarget as HTMLInputElement).value);
-            setError(undefined);
-          }}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter") return;
-            event.preventDefault();
-            if (selected.length >= MAX_TAGS_PER_MEMO) {
-              setError(
-                `1つのメモに設定できるタグは${MAX_TAGS_PER_MEMO}個までです。`,
-              );
-              return;
-            }
-            addTag(query);
-          }}
-          placeholder={selected.length === 0 ? "タグを入力" : "タグを追加"}
-          type="text"
-          value={query}
-        />
+              #{tag.name}
+              <button
+                aria-label={`${tag.name}を外す`}
+                className="btn btn-circle btn-ghost btn-xs p-0 text-xs leading-none"
+                onClick={() => removeTag(tag.name)}
+                type="button"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </span>
+          ))}
+          <input
+            aria-autocomplete="list"
+            aria-controls={`${inputId}-suggestions`}
+            aria-describedby={error ? `${inputId}-error` : undefined}
+            className="min-w-32 flex-1 border-0 bg-transparent p-0 outline-none"
+            id={inputId}
+            maxLength={MAX_TAG_NAME_LENGTH}
+            onInput={(event) => {
+              setQuery((event.currentTarget as HTMLInputElement).value);
+              setError(undefined);
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              if (selected.length >= MAX_TAGS_PER_MEMO) {
+                setError(
+                  `1つのメモに設定できるタグは${MAX_TAGS_PER_MEMO}個までです。`,
+                );
+                return;
+              }
+              addTag(query);
+            }}
+            placeholder={selected.length === 0 ? "タグを入力" : "タグを追加"}
+            type="text"
+            value={query}
+          />
+        </div>
+        {query && selected.length < MAX_TAGS_PER_MEMO && hasSuggestions && (
+          <div
+            className="menu absolute inset-x-0 top-full z-10 mt-1 rounded-box border border-base-300 bg-base-100 p-1 shadow-sm"
+            id={`${inputId}-suggestions`}
+            role="listbox"
+          >
+            {canCreateFreeform && (
+              <button
+                className="btn btn-ghost btn-sm justify-start"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  addTag(freeformName);
+                }}
+                role="option"
+                type="button"
+              >
+                #{freeformName}を新しいタグとして追加
+              </button>
+            )}
+            {candidates.slice(0, 8).map((tag) => (
+              <button
+                className="btn btn-ghost btn-sm justify-start"
+                key={tag.id}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  addTag(tag.name);
+                }}
+                role="option"
+                type="button"
+              >
+                #{tag.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       {error && (
         <p
@@ -135,41 +172,6 @@ export const TagInput = ({
         >
           {error}
         </p>
-      )}
-      {query && selected.length < MAX_TAGS_PER_MEMO && hasSuggestions && (
-        <div
-          className="menu rounded-box border border-base-300 bg-base-100 p-1 shadow-sm"
-          id={`${inputId}-suggestions`}
-          role="listbox"
-        >
-          {canCreateFreeform && (
-            <button
-              className="btn btn-ghost btn-sm justify-start"
-              onClick={(event) => {
-                event.stopPropagation();
-                addTag(freeformName);
-              }}
-              role="option"
-              type="button"
-            >
-              #{freeformName}を新しいタグとして追加
-            </button>
-          )}
-          {candidates.slice(0, 8).map((tag) => (
-            <button
-              className="btn btn-ghost btn-sm justify-start"
-              key={tag.id}
-              onClick={(event) => {
-                event.stopPropagation();
-                addTag(tag.name);
-              }}
-              role="option"
-              type="button"
-            >
-              #{tag.name}
-            </button>
-          ))}
-        </div>
       )}
       <input
         name={name}

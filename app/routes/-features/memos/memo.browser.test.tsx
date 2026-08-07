@@ -36,6 +36,64 @@ afterEach(() => {
 });
 
 describe("メモ表示", () => {
+  it("メモカードを本体とフッターに分けた一覧用のサブグリッドとして構成する", async () => {
+    mount(<Memo memo={memo} />);
+
+    const card = document.querySelector('[data-memo-card="memo-1"]');
+    expect(card).toHaveClass("memo-card-grid");
+    expect(card).toHaveClass("memo-card-grid-row");
+    expect(card?.children).toHaveLength(2);
+  });
+
+  it("カテゴリとAI Generatedバッジを同じ行に表示する", async () => {
+    mount(<Memo memo={{ ...memo, aiGenerated: 1 }} />);
+
+    const categoryLink = document.querySelector(
+      'a[href="/categories/category-1"]',
+    );
+    const aiBadge = document.querySelector(".badge");
+    expect(categoryLink?.parentElement).toBe(aiBadge?.parentElement);
+  });
+
+  it("タグとタグ編集ボタンを同じ行に表示する", async () => {
+    mount(<Memo memo={memo} />);
+
+    const tagList = document.querySelector("[data-memo-tag-list]");
+    const tagEditButton = document.querySelector("[data-memo-tag-edit]");
+    expect(tagList?.parentElement).toBe(tagEditButton?.parentElement);
+  });
+
+  it("タグがない場合はタグ編集ボタンにラベルを表示する", async () => {
+    mount(<Memo memo={memo} />);
+
+    const tagEditButton = document.querySelector("[data-memo-tag-edit]");
+    expect(tagEditButton?.textContent).toContain("タグを編集");
+    expect(tagEditButton).not.toHaveClass("btn-square");
+  });
+
+  it("タグがある場合はタグ編集ボタンをアイコンだけで表示する", async () => {
+    mount(
+      <Memo
+        memo={{
+          ...memo,
+          tags: [{ id: "tag-1", name: "仕事" }],
+        }}
+      />,
+    );
+
+    const tagEditButton = document.querySelector("[data-memo-tag-edit]");
+    expect(tagEditButton?.textContent).not.toContain("タグを編集");
+    expect(tagEditButton).toHaveClass("btn-square");
+  });
+
+  it("添付ファイルがない一覧カードでは見出しを表示しない", async () => {
+    mount(<Memo memo={memo} />);
+
+    expect(
+      document.querySelector('[data-attachment-manager="memo-1"] h3'),
+    ).toBeNull();
+  });
+
   it("全件表示ではカテゴリをfolder-open付きテキストで表示する", async () => {
     mount(<Memo memo={memo} />);
 
@@ -68,5 +126,10 @@ describe("メモ表示", () => {
     await expect
       .element(page.getByRole("button", { name: "削除" }))
       .toBeVisible();
+    expect(
+      document.querySelector(
+        '[data-memo-card="memo-1"] button[aria-label="削除"] svg',
+      ),
+    ).not.toBeNull();
   });
 });

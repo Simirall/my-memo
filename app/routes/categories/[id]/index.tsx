@@ -48,7 +48,7 @@ export default createRoute(async (c) => {
     <div>
       <h1 className="sr-only">{result.name}</h1>
       <CategoryTabs activeCategoryId={result.id} categories={categories} />
-      <div className="flex flex-wrap items-start justify-center gap-4 py-4">
+      <div className="grid w-full auto-rows-auto grid-cols-[repeat(auto-fit,minmax(min(100%,30rem),30rem))] items-stretch justify-center gap-4 py-4">
         {result.memos.map((memo) => (
           <Memo
             key={memo.id}

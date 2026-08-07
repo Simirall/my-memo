@@ -1,4 +1,6 @@
+import trashIcon from "@phosphor-icons/core/assets/regular/trash.svg?raw";
 import { useState } from "hono/jsx";
+import { PhosphorIcon } from "../components/phosphor-icon";
 
 export const DeleteButton = ({
   action,
@@ -33,7 +35,7 @@ export const DeleteButton = ({
         {isLoading ? (
           <span className="loading loading-spinner text-error" />
         ) : (
-          <span aria-hidden="true">🗑️</span>
+          <PhosphorIcon svg={trashIcon} />
         )}
       </button>
     </form>
