@@ -19,7 +19,7 @@ export type SharedMemoPrefill = {
 };
 
 export type ShareDestination =
-  | { kind: "url-summary"; url: string }
+  | { kind: "url"; url: string; memoPrefill: SharedMemoPrefill }
   | { kind: "memo"; prefill: SharedMemoPrefill };
 
 const HTTP_URL_PATTERN = /https?:\/\/[^\s<>"']+/gi;
@@ -66,6 +66,26 @@ const firstNonEmptyLine = (value: string) =>
     .map((line) => line.trim())
     .find(Boolean) ?? "";
 
+const createMemoPrefill = (input: {
+  title?: string;
+  content?: string;
+  url?: string;
+}): SharedMemoPrefill => {
+  const titleValue = truncate(
+    input.title || firstNonEmptyLine(input.content ?? "") || "共有メモ",
+    MAX_MEMO_TITLE_LENGTH,
+  );
+  const contentValue = truncate(input.content ?? "", MAX_MEMO_CONTENT_LENGTH);
+
+  return {
+    title: titleValue.value,
+    content: contentValue.value,
+    url: input.url,
+    titleTruncated: titleValue.truncated,
+    contentTruncated: contentValue.truncated,
+  };
+};
+
 const isSingleUrlText = (text: string, expectedUrl?: string) => {
   const matches = text.match(HTTP_URL_PATTERN) ?? [];
   const urls = extractHttpUrls(text);
@@ -101,7 +121,17 @@ export const getShareDestination = (
     (explicitUrl && (!text || isSingleUrlText(text, explicitUrl))) ||
     (!explicitUrl && isSingleUrlText(text))
   ) {
-    return { kind: "url-summary", url: explicitUrl ?? textUrls[0] };
+    const url = explicitUrl ?? textUrls[0];
+    if (!url) return { kind: "invalid" };
+    const parsedUrl = new URL(url);
+    return {
+      kind: "url",
+      url,
+      memoPrefill: createMemoPrefill({
+        title: title || parsedUrl.host,
+        url,
+      }),
+    };
   }
 
   if (!title && !text && !explicitUrl) return { kind: "invalid" };
@@ -111,19 +141,14 @@ export const getShareDestination = (
   for (const url of textUrls) allUrls.set(url, url);
 
   const contentSource = text || title;
-  const titleSource = title || firstNonEmptyLine(contentSource) || "共有メモ";
-  const titleValue = truncate(titleSource, MAX_MEMO_TITLE_LENGTH);
-  const contentValue = truncate(contentSource, MAX_MEMO_CONTENT_LENGTH);
 
   return {
     kind: "memo",
-    prefill: {
-      title: titleValue.value,
-      content: contentValue.value,
+    prefill: createMemoPrefill({
+      title,
+      content: contentSource,
       url: allUrls.size === 1 ? [...allUrls.values()][0] : undefined,
-      titleTruncated: titleValue.truncated,
-      contentTruncated: contentValue.truncated,
-    },
+    }),
   };
 };
 
@@ -152,20 +177,45 @@ if (import.meta.vitest) {
     });
 
   describe("共有内容の振り分け", () => {
-    it("URLフィールドだけなら付随タイトルを無視してAI要約へ送る", () => {
+    it("URLフィールドだけなら共有タイトル付きの選択対象URLにする", () => {
       expect(
         getShareDestination(
           share({ title: "ページタイトル", url: "https://example.com/a" }),
         ),
-      ).toEqual({ kind: "url-summary", url: "https://example.com/a" });
+      ).toMatchObject({
+        kind: "url",
+        url: "https://example.com/a",
+        memoPrefill: {
+          title: "ページタイトル",
+          content: "",
+          url: "https://example.com/a",
+        },
+      });
     });
 
-    it("textに入った単独URLをAI要約へ送る", () => {
+    it("textに入った単独URLを選択対象URLにする", () => {
       expect(
         getShareDestination(
           share({ title: "ページタイトル", text: "https://example.com/a" }),
         ),
-      ).toEqual({ kind: "url-summary", url: "https://example.com/a" });
+      ).toMatchObject({
+        kind: "url",
+        url: "https://example.com/a",
+        memoPrefill: { title: "ページタイトル", content: "" },
+      });
+    });
+
+    it("共有タイトルがなければURLのホスト名をタイトルにする", () => {
+      expect(
+        getShareDestination(share({ url: "https://example.com:8443/a" })),
+      ).toMatchObject({
+        kind: "url",
+        memoPrefill: {
+          title: "example.com:8443",
+          content: "",
+          url: "https://example.com:8443/a",
+        },
+      });
     });
 
     it("コメント付きURLは通常メモにし、URL欄にも設定する", () => {

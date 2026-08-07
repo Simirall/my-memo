@@ -33,7 +33,7 @@ export default function UrlSummaryForm({
     if (!pendingShare) return;
 
     const destination = getShareDestination(pendingShare);
-    if (destination.kind !== "url-summary") return;
+    if (destination.kind !== "url") return;
 
     setUrl(destination.url);
     clearPendingShare();

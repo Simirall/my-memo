@@ -93,6 +93,29 @@ describe("メモ作成フォーム", () => {
     expect(window.sessionStorage.getItem(SHARE_STORAGE_KEY)).toBeNull();
   });
 
+  it("共有URLを通常メモの初期値へ復元して一時データを消費する", async () => {
+    window.history.replaceState({}, "", "/memos/create?shared=1");
+    window.sessionStorage.setItem(
+      SHARE_STORAGE_KEY,
+      JSON.stringify({
+        title: "ページタイトル",
+        text: "",
+        url: "https://example.com/article",
+        receivedAt: Date.now(),
+      }),
+    );
+    mount(<CreateMemoForm categories={[]} />);
+
+    await expect
+      .element(page.getByLabelText("Title"))
+      .toHaveValue("ページタイトル");
+    await expect.element(page.getByLabelText("Content")).toHaveValue("");
+    await expect
+      .element(page.getByLabelText("URL (optional)"))
+      .toHaveValue("https://example.com/article");
+    expect(window.sessionStorage.getItem(SHARE_STORAGE_KEY)).toBeNull();
+  });
+
   it("AI要約の月次上限到達時にURLを保持してエラーを通知する", async () => {
     vi.spyOn(window, "fetch").mockResolvedValue(
       Response.json(

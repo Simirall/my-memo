@@ -56,12 +56,18 @@ export default function CreateMemoForm({
     if (!pendingShare) return;
 
     const destination = getShareDestination(pendingShare);
-    if (destination.kind !== "memo") return;
+    const prefill =
+      destination.kind === "memo"
+        ? destination.prefill
+        : destination.kind === "url"
+          ? destination.memoPrefill
+          : undefined;
+    if (!prefill) return;
 
-    setTitle(destination.prefill.title);
-    setContent(destination.prefill.content);
-    setUrl(destination.prefill.url ?? "");
-    setShareWarning(getShareWarning(destination.prefill));
+    setTitle(prefill.title);
+    setContent(prefill.content);
+    setUrl(prefill.url ?? "");
+    setShareWarning(getShareWarning(prefill));
     clearPendingShare();
   }, []);
 
