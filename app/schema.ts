@@ -278,6 +278,64 @@ export const memoAttachmentsTable = sqliteTable(
   ],
 );
 
+export const shareIntakesTable = sqliteTable(
+  "share_intakes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => userTable.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    text: text("text").notNull(),
+    url: text("url"),
+    status: text("status").notNull().default("pending"),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("share_intakes_user_id_idx").on(table.userId, table.createdAt),
+    index("share_intakes_status_expires_at_idx").on(
+      table.status,
+      table.expiresAt,
+    ),
+  ],
+);
+
+export const shareIntakeFilesTable = sqliteTable(
+  "share_intake_files",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    shareIntakeId: text("share_intake_id")
+      .notNull()
+      .references(() => shareIntakesTable.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => userTable.id, { onDelete: "cascade" }),
+    r2Key: text("r2_key").notNull().unique(),
+    fileName: text("file_name").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    etag: text("etag").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("share_intake_files_share_intake_id_idx").on(
+      table.shareIntakeId,
+      table.createdAt,
+    ),
+    index("share_intake_files_user_id_idx").on(table.userId),
+    check(
+      "share_intake_files_size_bytes_non_negative",
+      sql`${table.sizeBytes} >= 0`,
+    ),
+  ],
+);
+
 export const categoriesRelations = relations(categoriesTable, ({ many }) => ({
   memos: many(memosTable),
 }));
@@ -306,6 +364,31 @@ export const memoAttachmentsRelations = relations(
     }),
     user: one(userTable, {
       fields: [memoAttachmentsTable.userId],
+      references: [userTable.id],
+    }),
+  }),
+);
+
+export const shareIntakesRelations = relations(
+  shareIntakesTable,
+  ({ one, many }) => ({
+    user: one(userTable, {
+      fields: [shareIntakesTable.userId],
+      references: [userTable.id],
+    }),
+    files: many(shareIntakeFilesTable),
+  }),
+);
+
+export const shareIntakeFilesRelations = relations(
+  shareIntakeFilesTable,
+  ({ one }) => ({
+    intake: one(shareIntakesTable, {
+      fields: [shareIntakeFilesTable.shareIntakeId],
+      references: [shareIntakesTable.id],
+    }),
+    user: one(userTable, {
+      fields: [shareIntakeFilesTable.userId],
       references: [userTable.id],
     }),
   }),

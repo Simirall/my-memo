@@ -16,6 +16,8 @@ export {
   getAttachmentPreviewKind,
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS_PER_MEMO,
+  MAX_SHARED_ATTACHMENT_BYTES,
+  SHARE_INTAKE_MAX_AGE_MS,
 } from "./attachment-constants";
 
 export type AttachmentQuota = {

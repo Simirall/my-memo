@@ -1,6 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
+import { getShareIntake } from "@/routes/-features/sharing/share-intake";
 import { categoriesTable, tagsTable } from "@/schema";
 import CreateMemoForm from "./-components/$create-memo-form";
 
@@ -21,6 +22,17 @@ export default createRoute(async (c) => {
       .orderBy(asc(tagsTable.name)),
   ]);
 
+  const shareId = c.req.query("shareId");
+  const shareIntake = shareId
+    ? await getShareIntake(c.env, user.id, shareId)
+    : undefined;
+  if (shareId && !shareIntake) {
+    return c.redirect(
+      "/memos/create?error=" +
+        encodeURIComponent("共有内容が見つからないか、期限切れです。"),
+    );
+  }
+
   return c.render(
     <div className="flex justify-center p-4 sm:p-8">
       <div className="card w-full max-w-2xl bg-base-100 shadow-sm">
@@ -28,6 +40,8 @@ export default createRoute(async (c) => {
           <CreateMemoForm
             categories={categories}
             error={c.req.query("error")}
+            initialValues={shareIntake?.prefill}
+            shareIntake={shareIntake}
             tags={tags}
           />
         </div>

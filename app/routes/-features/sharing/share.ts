@@ -18,6 +18,12 @@ export type SharedMemoPrefill = {
   contentTruncated: boolean;
 };
 
+export type MediaShareFile = {
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+};
+
 export type ShareDestination =
   | { kind: "url"; url: string; memoPrefill: SharedMemoPrefill }
   | { kind: "memo"; prefill: SharedMemoPrefill };
@@ -84,6 +90,28 @@ const createMemoPrefill = (input: {
     titleTruncated: titleValue.truncated,
     contentTruncated: contentValue.truncated,
   };
+};
+
+export const createMediaSharePrefill = (
+  pendingShare: Pick<PendingShare, "title" | "text" | "url">,
+  files: ReadonlyArray<MediaShareFile>,
+): SharedMemoPrefill => {
+  const fileNames = files.map((file) => file.fileName);
+  const explicitUrl = parseHttpUrl(pendingShare.url);
+  const textUrls = extractHttpUrls(pendingShare.text);
+  const allUrls = new Map<string, string>();
+  if (explicitUrl) allUrls.set(explicitUrl, explicitUrl);
+  for (const url of textUrls) allUrls.set(url, url);
+
+  return createMemoPrefill({
+    title:
+      pendingShare.title ||
+      firstNonEmptyLine(pendingShare.text) ||
+      fileNames[0] ||
+      "共有ファイル",
+    content: pendingShare.text || fileNames.join("\n"),
+    url: allUrls.size === 1 ? [...allUrls.values()][0] : undefined,
+  });
 };
 
 const isSingleUrlText = (text: string, expectedUrl?: string) => {
@@ -177,6 +205,34 @@ if (import.meta.vitest) {
     });
 
   describe("共有内容の振り分け", () => {
+    it("メディアだけなら先頭ファイル名をタイトルと本文に補完する", () => {
+      expect(
+        createMediaSharePrefill(normalizePendingShare({}), [
+          { fileName: "写真.png", contentType: "image/png", sizeBytes: 3 },
+          { fileName: "音声.mp3", contentType: "audio/mpeg", sizeBytes: 4 },
+        ]),
+      ).toMatchObject({
+        title: "写真.png",
+        content: "写真.png\n音声.mp3",
+        url: undefined,
+      });
+    });
+
+    it("ファイル付きURL共有は通常メモのURL欄へURLを補完する", () => {
+      expect(
+        createMediaSharePrefill(
+          normalizePendingShare({
+            text: "コメント https://example.com/article",
+          }),
+          [{ fileName: "添付.txt", contentType: "text/plain", sizeBytes: 1 }],
+        ),
+      ).toMatchObject({
+        title: "コメント https://example.com/article",
+        content: "コメント https://example.com/article",
+        url: "https://example.com/article",
+      });
+    });
+
     it("URLフィールドだけなら共有タイトル付きの選択対象URLにする", () => {
       expect(
         getShareDestination(

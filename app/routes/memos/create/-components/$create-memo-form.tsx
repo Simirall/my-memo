@@ -7,6 +7,7 @@ import {
   readPendingShare,
   type SharedMemoPrefill,
 } from "@/routes/-features/sharing";
+import type { ShareIntake } from "@/routes/-features/sharing/share-intake";
 import type { Tag } from "@/routes/-features/tags";
 import { TagInput } from "@/routes/-features/tags";
 import {
@@ -28,11 +29,13 @@ export default function CreateMemoForm({
   tags = [],
   error: initialError,
   initialValues,
+  shareIntake,
 }: {
   categories: ReadonlyArray<z.infer<typeof categorySchema.read>>;
   tags?: ReadonlyArray<Tag>;
   error?: string;
   initialValues?: SharedMemoPrefill;
+  shareIntake?: ShareIntake;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(initialError);
@@ -48,6 +51,9 @@ export default function CreateMemoForm({
   const [attachmentStatus, setAttachmentStatus] = useState<string>();
   const [createdMemoId, setCreatedMemoId] = useState<string>();
   const [isCheckingAttachments, setIsCheckingAttachments] = useState(false);
+  const [sharedFiles, setSharedFiles] = useState(shareIntake?.files ?? []);
+  const [isRemovingSharedFile, setIsRemovingSharedFile] = useState(false);
+  const [isCancellingShare, setIsCancellingShare] = useState(false);
 
   useEffect(() => {
     if (!new URLSearchParams(window.location.search).has("shared")) return;
@@ -163,6 +169,63 @@ export default function CreateMemoForm({
     return { failed, succeeded };
   };
 
+  const removeSharedFile = async (fileId: string) => {
+    if (!shareIntake || isRemovingSharedFile || isLoading) return;
+    setIsRemovingSharedFile(true);
+    setAttachmentError(undefined);
+    try {
+      const response = await fetch(
+        `/api/share-intakes/${shareIntake.id}/files/${fileId}`,
+        { method: "DELETE", headers: { Accept: "application/json" } },
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        files?: typeof sharedFiles;
+        message?: string;
+      };
+      if (!response.ok || !payload.files) {
+        throw new Error(payload.message ?? "共有ファイルを外せませんでした。");
+      }
+      setSharedFiles(payload.files);
+    } catch (cause) {
+      setAttachmentError(
+        cause instanceof Error
+          ? cause.message
+          : "共有ファイルを外せませんでした。",
+      );
+    } finally {
+      setIsRemovingSharedFile(false);
+    }
+  };
+
+  const cancelSharedIntake = async () => {
+    if (!shareIntake || isCancellingShare || isLoading) return;
+    setIsCancellingShare(true);
+    setAttachmentError(undefined);
+    try {
+      const response = await fetch(`/api/share-intakes/${shareIntake.id}`, {
+        method: "DELETE",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as {
+          message?: string;
+        };
+        throw new Error(
+          payload.message ?? "共有内容をキャンセルできませんでした。",
+        );
+      }
+      window.location.assign("/");
+    } catch (cause) {
+      setAttachmentError(
+        cause instanceof Error
+          ? cause.message
+          : "共有内容をキャンセルできませんでした。",
+      );
+    } finally {
+      setIsCancellingShare(false);
+    }
+  };
+
   const retryAttachments = async () => {
     if (!createdMemoId || files.length === 0) return;
     setIsLoading(true);
@@ -187,6 +250,26 @@ export default function CreateMemoForm({
     setIsLoading(true);
 
     try {
+      if (shareIntake) {
+        const response = await fetch(
+          `/api/share-intakes/${shareIntake.id}/finalize`,
+          {
+            method: "POST",
+            body: new FormData(form),
+            headers: { Accept: "application/json" },
+          },
+        );
+        if (response.ok) {
+          window.location.assign("/");
+          return;
+        }
+        const payload = (await response.json().catch(() => ({}))) as {
+          message?: string;
+        };
+        setError(payload.message ?? "共有メモを保存できませんでした。");
+        return;
+      }
+
       const response = await fetch(form.action, {
         method: "POST",
         body: new FormData(form),
@@ -252,6 +335,42 @@ export default function CreateMemoForm({
           {attachmentStatus}
         </div>
       )}
+      {shareIntake && (
+        <section aria-label="共有ファイル" className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold">共有ファイル</h2>
+            <span className="badge badge-soft badge-info">
+              {sharedFiles.length}件
+            </span>
+          </div>
+          {sharedFiles.length > 0 ? (
+            <ul className="flex flex-col gap-2">
+              {sharedFiles.map((file) => (
+                <li
+                  className="flex items-center justify-between gap-2 rounded-box bg-base-200 p-3"
+                  key={file.id}
+                >
+                  <span className="min-w-0 break-all text-sm">
+                    {file.fileName}・{formatAttachmentSize(file.sizeBytes)}
+                  </span>
+                  <button
+                    className="btn btn-ghost btn-xs"
+                    disabled={isLoading || isRemovingSharedFile}
+                    onClick={() => removeSharedFile(file.id)}
+                    type="button"
+                  >
+                    外す
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="alert alert-warning" role="status">
+              保存する共有ファイルがありません。
+            </div>
+          )}
+        </section>
+      )}
       <label className="flex flex-col gap-1" htmlFor="memo-title">
         Title
         <input
@@ -315,35 +434,40 @@ export default function CreateMemoForm({
         <label htmlFor="memo-tags">Tags</label>
         <TagInput availableTags={tags} inputId="memo-tags" />
       </div>
-      <label className="flex flex-col gap-1" htmlFor="memo-attachments">
-        添付ファイル（任意）
-        <input
-          accept="*/*"
-          className="file-input w-full"
-          disabled={isLoading || Boolean(createdMemoId)}
-          id="memo-attachments"
-          multiple
-          onChange={selectFiles}
-          type="file"
-        />
-        {files.length > 0 && (
-          <span className="text-base-content/70 text-sm">
-            {files.map((file) => (
-              <span className="block" key={`${file.name}-${file.lastModified}`}>
-                {file.name}・{formatAttachmentSize(file.size)}
-              </span>
-            ))}
-          </span>
-        )}
-        {attachmentQuota && (
-          <span className="text-base-content/70 text-sm">
-            使用量: {formatAttachmentSize(attachmentQuota.used)} /{" "}
-            {attachmentQuota.limit === null
-              ? "無制限"
-              : formatAttachmentSize(attachmentQuota.limit)}
-          </span>
-        )}
-      </label>
+      {!shareIntake && (
+        <label className="flex flex-col gap-1" htmlFor="memo-attachments">
+          添付ファイル（任意）
+          <input
+            accept="*/*"
+            className="file-input w-full"
+            disabled={isLoading || Boolean(createdMemoId)}
+            id="memo-attachments"
+            multiple
+            onChange={selectFiles}
+            type="file"
+          />
+          {files.length > 0 && (
+            <span className="text-base-content/70 text-sm">
+              {files.map((file) => (
+                <span
+                  className="block"
+                  key={`${file.name}-${file.lastModified}`}
+                >
+                  {file.name}・{formatAttachmentSize(file.size)}
+                </span>
+              ))}
+            </span>
+          )}
+          {attachmentQuota && (
+            <span className="text-base-content/70 text-sm">
+              使用量: {formatAttachmentSize(attachmentQuota.used)} /{" "}
+              {attachmentQuota.limit === null
+                ? "無制限"
+                : formatAttachmentSize(attachmentQuota.limit)}
+            </span>
+          )}
+        </label>
+      )}
       {createdMemoId && files.length > 0 && (
         <button
           className="btn"
@@ -358,18 +482,37 @@ export default function CreateMemoForm({
           )}
         </button>
       )}
-      <button
-        aria-label="Create Memo"
-        className="btn"
-        disabled={isLoading || isCheckingAttachments || Boolean(createdMemoId)}
-        type="submit"
-      >
-        {isLoading ? (
-          <span className="loading loading-spinner" />
-        ) : (
-          "Create Memo"
+      <div className="flex gap-2">
+        {shareIntake && (
+          <button
+            className="btn flex-1"
+            disabled={isLoading || isCancellingShare}
+            onClick={cancelSharedIntake}
+            type="button"
+          >
+            キャンセル
+          </button>
         )}
-      </button>
+        <button
+          aria-label="Create Memo"
+          className="btn flex-1"
+          disabled={
+            isLoading ||
+            isCheckingAttachments ||
+            Boolean(createdMemoId) ||
+            (Boolean(shareIntake) && sharedFiles.length === 0)
+          }
+          type="submit"
+        >
+          {isLoading ? (
+            <span className="loading loading-spinner" />
+          ) : shareIntake ? (
+            "共有メモを保存"
+          ) : (
+            "Create Memo"
+          )}
+        </button>
+      </div>
     </form>
   );
 }

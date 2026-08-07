@@ -1,5 +1,7 @@
 export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 export const MAX_ATTACHMENTS_PER_MEMO = 5;
+export const MAX_SHARED_ATTACHMENT_BYTES = 75 * 1024 * 1024;
+export const SHARE_INTAKE_MAX_AGE_MS = 30 * 60 * 1000;
 
 export type AttachmentPreviewKind = "image" | "audio" | "video";
 

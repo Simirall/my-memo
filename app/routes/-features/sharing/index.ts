@@ -1,9 +1,11 @@
 export type {
+  MediaShareFile,
   PendingShare,
   ShareDestination,
   SharedMemoPrefill,
 } from "./share";
 export {
+  createMediaSharePrefill,
   extractHttpUrls,
   getShareDestination,
   isPendingShare,

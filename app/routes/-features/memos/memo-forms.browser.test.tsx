@@ -116,6 +116,112 @@ describe("メモ作成フォーム", () => {
     expect(window.sessionStorage.getItem(SHARE_STORAGE_KEY)).toBeNull();
   });
 
+  it("共有ファイルを一覧表示し、個別に外せる", async () => {
+    vi.spyOn(window, "fetch").mockImplementation(async (input) => {
+      if (String(input).includes("/files/share-file-1")) {
+        return Response.json({
+          files: [
+            {
+              id: "share-file-2",
+              fileName: "音声.mp3",
+              contentType: "audio/mpeg",
+              sizeBytes: 4,
+              etag: "etag-2",
+              r2Key: "share-staging/share-1/two",
+            },
+          ],
+        });
+      }
+      return Response.json({
+        id: "share-1",
+        title: "写真.png",
+        text: "写真.png",
+        url: null,
+        status: "pending",
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        prefill: {
+          title: "写真.png",
+          content: "写真.png",
+          titleTruncated: false,
+          contentTruncated: false,
+        },
+        files: [
+          {
+            id: "share-file-1",
+            fileName: "写真.png",
+            contentType: "image/png",
+            sizeBytes: 3,
+            etag: "etag-1",
+            r2Key: "share-staging/share-1/one",
+          },
+          {
+            id: "share-file-2",
+            fileName: "音声.mp3",
+            contentType: "audio/mpeg",
+            sizeBytes: 4,
+            etag: "etag-2",
+            r2Key: "share-staging/share-1/two",
+          },
+        ],
+      });
+    });
+    mount(
+      <CreateMemoForm
+        categories={[]}
+        initialValues={{
+          title: "写真.png",
+          content: "写真.png\n音声.mp3",
+          titleTruncated: false,
+          contentTruncated: false,
+        }}
+        shareIntake={{
+          id: "share-1",
+          title: "写真.png",
+          text: "写真.png",
+          url: null,
+          status: "pending",
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          prefill: {
+            title: "写真.png",
+            content: "写真.png\n音声.mp3",
+            titleTruncated: false,
+            contentTruncated: false,
+          },
+          files: [
+            {
+              id: "share-file-1",
+              fileName: "写真.png",
+              contentType: "image/png",
+              sizeBytes: 3,
+              etag: "etag-1",
+              r2Key: "share-staging/share-1/one",
+            },
+            {
+              id: "share-file-2",
+              fileName: "音声.mp3",
+              contentType: "audio/mpeg",
+              sizeBytes: 4,
+              etag: "etag-2",
+              r2Key: "share-staging/share-1/two",
+            },
+          ],
+        }}
+      />,
+    );
+
+    await expect.element(page.getByText("写真.png・3 B")).toBeVisible();
+    await page.getByRole("button", { name: "外す" }).first().click();
+    await expect
+      .element(page.getByText("写真.png・3 B"))
+      .not.toBeInTheDocument();
+    await expect.element(page.getByText("音声.mp3・4 B")).toBeVisible();
+    expect(window.fetch).toHaveBeenCalledWith(
+      "/api/share-intakes/share-1/files/share-file-1",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+    expect(document.querySelector('input[type="file"]')).toBeNull();
+  });
+
   it("AI要約の月次上限到達時にURLを保持してエラーを通知する", async () => {
     vi.spyOn(window, "fetch").mockResolvedValue(
       Response.json(

@@ -1,7 +1,7 @@
 import { MAX_ATTACHMENTS_PER_MEMO } from "./attachment-constants";
 import { currentUtcMonthStart, PLAN_METRICS } from "./authorization";
 
-type MemoAttachmentInsert = {
+export type MemoAttachmentInsert = {
   id: string;
   memoId: string;
   userId: string;
@@ -23,10 +23,34 @@ type MemoInsert = {
   tags?: readonly string[];
 };
 
-export async function insertMemoWithinQuota(
+const buildMemoStatements = (
   db: D1Database,
   memo: MemoInsert,
-): Promise<boolean> {
+  attachmentCount = 0,
+  attachmentBytes = 0,
+) => {
+  const attachmentQuotaCondition =
+    attachmentCount > 0
+      ? `
+             AND EXISTS (
+               SELECT 1
+               FROM user AS attachment_user
+               INNER JOIN plan_limits AS attachment_limits
+                 ON attachment_limits.plan_id = attachment_user.plan_id
+                AND attachment_limits.metric = 'attachment.storage_bytes'
+               WHERE attachment_user.id = ?
+                 AND ? <= ${MAX_ATTACHMENTS_PER_MEMO}
+                 AND (
+                   attachment_limits.limit_value IS NULL
+                   OR (
+                     SELECT COALESCE(SUM(size_bytes), 0)
+                     FROM memo_attachments
+                     WHERE user_id = ?
+                   ) + ? <= attachment_limits.limit_value
+                 )
+             )`
+      : "";
+
   const statements = [
     db
       .prepare(
@@ -43,7 +67,7 @@ export async function insertMemoWithinQuota(
                pl.limit_value IS NULL
                OR (SELECT COUNT(*) FROM memos WHERE user_id = ?) < pl.limit_value
              )
-         )`,
+         )${attachmentQuotaCondition}`,
       )
       .bind(
         memo.id,
@@ -55,6 +79,9 @@ export async function insertMemoWithinQuota(
         memo.aiGenerated,
         memo.userId,
         memo.userId,
+        ...(attachmentCount > 0
+          ? [memo.userId, attachmentCount, memo.userId, attachmentBytes]
+          : []),
       ),
   ];
 
@@ -85,8 +112,72 @@ export async function insertMemoWithinQuota(
     );
   }
 
-  const results = await db.batch(statements);
+  return statements;
+};
+
+const buildAttachmentStatement = (
+  db: D1Database,
+  attachment: MemoAttachmentInsert,
+) =>
+  db
+    .prepare(
+      `INSERT INTO memo_attachments
+        (id, memo_id, user_id, r2_key, file_name, content_type, size_bytes, etag)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?
+       WHERE EXISTS (
+         SELECT 1 FROM memos WHERE id = ? AND user_id = ?
+       )`,
+    )
+    .bind(
+      attachment.id,
+      attachment.memoId,
+      attachment.userId,
+      attachment.r2Key,
+      attachment.fileName,
+      attachment.contentType,
+      attachment.sizeBytes,
+      attachment.etag,
+      attachment.memoId,
+      attachment.userId,
+    );
+
+export async function insertMemoWithinQuota(
+  db: D1Database,
+  memo: MemoInsert,
+): Promise<boolean> {
+  const results = await db.batch(buildMemoStatements(db, memo));
   return results[0]?.meta.changes === 1;
+}
+
+export async function insertMemoAndAttachmentsWithinQuota(
+  db: D1Database,
+  memo: MemoInsert,
+  attachments: ReadonlyArray<MemoAttachmentInsert>,
+  trailingStatements: ReadonlyArray<D1PreparedStatement> = [],
+): Promise<boolean> {
+  const memoStatements = buildMemoStatements(
+    db,
+    memo,
+    attachments.length,
+    attachments.reduce((total, attachment) => total + attachment.sizeBytes, 0),
+  );
+  const statements = [
+    ...memoStatements,
+    ...attachments.map((attachment) =>
+      buildAttachmentStatement(db, attachment),
+    ),
+    ...trailingStatements,
+  ];
+  const results = await db.batch(statements);
+  const attachmentStart = memoStatements.length;
+  return (
+    results[0]?.meta.changes === 1 &&
+    attachments.every(
+      (_, index) => results[attachmentStart + index]?.meta.changes === 1,
+    ) &&
+    (trailingStatements.length === 0 ||
+      results[attachmentStart + attachments.length]?.meta.changes === 1)
+  );
 }
 
 export async function reserveAiSummaryQuota(
