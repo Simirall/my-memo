@@ -20,9 +20,11 @@ type MemoWithTags = z.infer<typeof memoSchema.read> & {
 export const Memo = ({
   memo,
   showCategory = true,
+  returnTo = "/",
 }: {
   memo: MemoWithTags;
   showCategory?: boolean;
+  returnTo?: string;
 }) => {
   const tags =
     memo.tags ??
@@ -64,27 +66,23 @@ export const Memo = ({
             <div className="badge badge-soft badge-info">✨ AI Generated</div>
           )}
         </div>
-        <div className="flex w-full flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <div data-memo-tag-list>
-              <MemoTagList tags={tags} />
-            </div>
-            <button
-              aria-label={`タグを編集: ${memo.title}`}
-              className="btn btn-info btn-square btn-xs"
-              data-memo-id={memo.id}
-              data-memo-tag-edit
-              data-memo-tags={JSON.stringify(tags)}
-              data-memo-title={memo.title}
-              type="button"
-            >
-              <PhosphorIcon
-                className="inline-flex shrink-0 [&_svg]:size-4"
-                svg={pencilSimpleIcon}
-              />
-            </button>
-          </div>
+        <div data-memo-tag-list>
+          <MemoTagList tags={tags} />
         </div>
+        <button
+          aria-label={`タグを編集: ${memo.title}`}
+          className="btn btn-info btn-square btn-xs"
+          data-memo-id={memo.id}
+          data-memo-tag-edit
+          data-memo-tags={JSON.stringify(tags)}
+          data-memo-title={memo.title}
+          type="button"
+        >
+          <PhosphorIcon
+            className="inline-flex shrink-0 [&_svg]:size-4"
+            svg={pencilSimpleIcon}
+          />
+        </button>
         <div className="*:space-y-4 [&_h1,&_h2]:font-bold [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_p]:whitespace-pre-wrap [&_ul]:list-inside [&_ul]:list-disc">
           <div
             dangerouslySetInnerHTML={{
@@ -95,8 +93,19 @@ export const Memo = ({
         <AttachmentManager
           initialAttachments={memo.attachments}
           memoId={memo.id}
+          readOnly
         />
-        <DeleteButton action={`/api/memos/delete/${memo.id}`} />
+        <div className="flex w-full gap-2">
+          <a
+            className="btn btn-soft btn-accent grow"
+            href={`/memos/${encodeURIComponent(memo.id)}/edit?returnTo=${encodeURIComponent(
+              returnTo,
+            )}`}
+          >
+            編集
+          </a>
+          <DeleteButton action={`/api/memos/delete/${memo.id}`} />
+        </div>
       </div>
     </div>
   );

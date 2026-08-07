@@ -22,9 +22,9 @@ export default createRoute(async (c) => {
   ]);
 
   return c.render(
-    <div className="flex justify-center p-8">
-      <div className="card w-96 bg-base-100 shadow-sm">
-        <div className="card-body">
+    <div className="flex justify-center p-4 sm:p-8">
+      <div className="card w-full max-w-2xl bg-base-100 shadow-sm">
+        <div className="card-body [&>honox-island]:block [&>honox-island]:w-full">
           <CreateMemoForm
             categories={categories}
             error={c.req.query("error")}

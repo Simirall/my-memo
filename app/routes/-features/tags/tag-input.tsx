@@ -78,7 +78,7 @@ export const TagInput = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex min-h-10 flex-wrap items-center gap-2 rounded-field border border-base-300 bg-base-100 p-2">
+      <div className="input h-auto min-h-10 w-full flex-wrap gap-2 p-2">
         {selected.map((tag) => (
           <span
             className={`badge gap-1 pr-0 ${
@@ -104,7 +104,7 @@ export const TagInput = ({
           aria-autocomplete="list"
           aria-controls={`${inputId}-suggestions`}
           aria-describedby={error ? `${inputId}-error` : undefined}
-          className="input min-w-32 flex-1 border-0 p-0 focus:outline-0"
+          className="min-w-32 flex-1 border-0 bg-transparent p-0 outline-none"
           id={inputId}
           maxLength={MAX_TAG_NAME_LENGTH}
           onInput={(event) => {

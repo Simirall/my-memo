@@ -11,6 +11,7 @@ import {
 } from "@/routes/-features/memos";
 import { normalizeTagNames, replaceMemoTags } from "@/routes/-features/tags";
 import {
+  categoriesTable,
   memoAttachmentsTable,
   memosTable,
   memoTagsTable,
@@ -43,6 +44,43 @@ const wantsJson = (c: MemosContext) =>
 
 const wantsStream = (c: MemosContext) =>
   c.req.header("Accept")?.includes("text/event-stream") ?? false;
+
+const cleanupR2Keys = async (
+  bucket: R2Bucket,
+  keys: readonly string[],
+  context: { memoId: string; event: string },
+) => {
+  const results = await Promise.allSettled(
+    keys.map((key) => bucket.delete(key)),
+  );
+  for (const result of results) {
+    if (result.status === "rejected") {
+      console.error(
+        JSON.stringify({
+          event: context.event,
+          memoId: context.memoId,
+          error:
+            result.reason instanceof Error
+              ? result.reason.message
+              : String(result.reason),
+        }),
+      );
+    }
+  }
+};
+
+const getEditAttachmentPrefix = (userId: string, memoId: string) =>
+  `users/${userId}/memos/${memoId}/edits/`;
+
+const isEditAttachmentToken = (
+  token: string,
+  userId: string,
+  memoId: string,
+) => {
+  const prefix = getEditAttachmentPrefix(userId, memoId);
+  const suffix = token.startsWith(prefix) ? token.slice(prefix.length) : "";
+  return suffix.split("/").length === 2 && suffix.split("/").every(Boolean);
+};
 
 const quotaError = (
   c: MemosContext,
@@ -218,6 +256,341 @@ memosRoute
 
     if (wantsJson(c)) return c.json({ memoId });
     return c.redirect("/");
+  })
+  .post("/:id/edit-attachments", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.json({ message: "認証が必要です。" }, 401);
+
+    const memoId = c.req.param("id");
+    const db = getAppDb(c.env);
+    const memo = await db
+      .select({ id: memosTable.id })
+      .from(memosTable)
+      .where(and(eq(memosTable.id, memoId), eq(memosTable.userId, user.id)))
+      .get();
+    if (!memo) return c.json({ message: "メモが見つかりません。" }, 404);
+
+    const fileNameHeader = c.req.header("X-File-Name");
+    const editId = c.req.header("X-Edit-Id");
+    const body = c.req.raw.body;
+    if (!fileNameHeader || fileNameHeader.length > 2048 || !editId) {
+      return c.json({ message: "添付ファイル情報が不正です。" }, 400);
+    }
+    if (!/^[a-zA-Z0-9-]{1,80}$/.test(editId)) {
+      return c.json({ message: "更新IDが不正です。" }, 400);
+    }
+    if (!body) return c.json({ message: "ファイルが空です。" }, 400);
+
+    const declaredSizeHeader =
+      c.req.header("Content-Length") ?? c.req.header("X-File-Size");
+    const declaredSize = declaredSizeHeader ? Number(declaredSizeHeader) : NaN;
+    if (!Number.isSafeInteger(declaredSize) || declaredSize < 0) {
+      return c.json({ message: "ファイルサイズを確認できませんでした。" }, 411);
+    }
+    if (declaredSize > MAX_ATTACHMENT_BYTES) {
+      return c.json({ message: "1ファイルは25 MiB以下にしてください。" }, 413);
+    }
+
+    const contentType =
+      (c.req.header("Content-Type") || "application/octet-stream")
+        .split(";", 1)[0]
+        .trim()
+        .toLowerCase()
+        .slice(0, 255) || "application/octet-stream";
+    const fileName = decodeAttachmentFileName(fileNameHeader);
+    const token = `${getEditAttachmentPrefix(user.id, memoId)}${editId}/${crypto.randomUUID()}`;
+    try {
+      const object = await putR2ObjectWithKnownLength(
+        c.env.MY_MEMO_FILES,
+        token,
+        body,
+        declaredSize,
+        { httpMetadata: { contentType } },
+      );
+      if (object.size !== declaredSize) {
+        await cleanupR2Keys(c.env.MY_MEMO_FILES, [token], {
+          event: "memo_edit_attachment_size_mismatch_cleanup_failed",
+          memoId,
+        });
+        return c.json(
+          { message: "ファイルサイズを確認できませんでした。" },
+          400,
+        );
+      }
+      return c.json({
+        attachment: {
+          token,
+          fileName,
+          contentType,
+          sizeBytes: object.size,
+          etag: object.etag,
+        },
+      });
+    } catch (error) {
+      await cleanupR2Keys(c.env.MY_MEMO_FILES, [token], {
+        event: "memo_edit_attachment_upload_cleanup_failed",
+        memoId,
+      });
+      console.error(
+        JSON.stringify({
+          event: "memo_edit_attachment_upload_failed",
+          memoId,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      return c.json(
+        { message: "ファイルをアップロードできませんでした。" },
+        502,
+      );
+    }
+  })
+  .post("/:id/edit-attachments/cleanup", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.json({ message: "認証が必要です。" }, 401);
+    const memoId = c.req.param("id");
+    const body = (await c.req.json().catch(() => null)) as {
+      tokens?: unknown;
+    } | null;
+    const tokens = Array.isArray(body?.tokens)
+      ? body.tokens.filter(
+          (token): token is string => typeof token === "string",
+        )
+      : [];
+    const allowed = tokens.filter((token) =>
+      isEditAttachmentToken(token, user.id, memoId),
+    );
+    await cleanupR2Keys(c.env.MY_MEMO_FILES, allowed, {
+      event: "memo_edit_attachment_cleanup_failed",
+      memoId,
+    });
+    return c.json({ ok: true });
+  })
+  .patch("/:id", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.json({ message: "認証が必要です。" }, 401);
+
+    const memoId = c.req.param("id");
+    const db = getAppDb(c.env);
+    const memo = await db
+      .select()
+      .from(memosTable)
+      .where(and(eq(memosTable.id, memoId), eq(memosTable.userId, user.id)))
+      .get();
+    if (!memo) return c.json({ message: "メモが見つかりません。" }, 404);
+
+    const parsed = memoSchema.update.safeParse(
+      await c.req.json().catch(() => null),
+    );
+    if (!parsed.success) {
+      return c.json(
+        { message: parsed.error.issues[0]?.message ?? "入力内容が不正です。" },
+        400,
+      );
+    }
+    const validated = parsed.data;
+    const staged = validated.stagedAttachments;
+    const stagedKeys = staged.map((attachment) => attachment.token);
+    const cleanupStaged = () =>
+      cleanupR2Keys(c.env.MY_MEMO_FILES, stagedKeys, {
+        event: "memo_edit_attachment_cleanup_failed",
+        memoId,
+      });
+
+    if (new Set(stagedKeys).size !== stagedKeys.length) {
+      await cleanupStaged();
+      return c.json({ message: "添付ファイルが重複しています。" }, 400);
+    }
+    if (
+      staged.some(
+        (attachment) =>
+          !isEditAttachmentToken(attachment.token, user.id, memoId),
+      )
+    ) {
+      await cleanupStaged();
+      return c.json({ message: "添付ファイルの更新IDが不正です。" }, 400);
+    }
+
+    const categoryId = validated.categoryId ?? null;
+    if (categoryId) {
+      const category = await db
+        .select({ id: categoriesTable.id })
+        .from(categoriesTable)
+        .where(
+          and(
+            eq(categoriesTable.id, categoryId),
+            eq(categoriesTable.userId, user.id),
+          ),
+        )
+        .get();
+      if (!category) {
+        await cleanupStaged();
+        return c.json({ message: "カテゴリが見つかりません。" }, 400);
+      }
+    }
+
+    const currentAttachments = await db
+      .select()
+      .from(memoAttachmentsTable)
+      .where(
+        and(
+          eq(memoAttachmentsTable.memoId, memoId),
+          eq(memoAttachmentsTable.userId, user.id),
+        ),
+      );
+    const deleteIds = [...new Set(validated.deleteAttachmentIds)];
+    const currentById = new Map(
+      currentAttachments.map((attachment) => [attachment.id, attachment]),
+    );
+    if (deleteIds.some((id) => !currentById.has(id))) {
+      await cleanupStaged();
+      return c.json({ message: "削除対象の添付が見つかりません。" }, 400);
+    }
+    const keptAttachments = currentAttachments.filter(
+      (attachment) => !deleteIds.includes(attachment.id),
+    );
+    const finalCount = keptAttachments.length + staged.length;
+    const finalBytes =
+      keptAttachments.reduce(
+        (total, attachment) => total + attachment.sizeBytes,
+        0,
+      ) + staged.reduce((total, attachment) => total + attachment.sizeBytes, 0);
+    if (finalCount > MAX_ATTACHMENTS_PER_MEMO) {
+      await cleanupStaged();
+      return c.json(
+        { message: "1メモに添付できるファイルは5件までです。" },
+        409,
+      );
+    }
+    const quota = await getAttachmentQuota(db, user.id);
+    if (!quota) {
+      await cleanupStaged();
+      return c.json({ message: "添付容量の上限設定がありません。" }, 500);
+    }
+    const totalUserBytes = await db
+      .select({
+        total: sql<number>`coalesce(sum(${memoAttachmentsTable.sizeBytes}), 0)`,
+      })
+      .from(memoAttachmentsTable)
+      .where(eq(memoAttachmentsTable.userId, user.id))
+      .get();
+    const finalUserBytes =
+      Number(totalUserBytes?.total ?? 0) -
+      deleteIds.reduce(
+        (total, id) => total + (currentById.get(id)?.sizeBytes ?? 0),
+        0,
+      ) +
+      staged.reduce((total, attachment) => total + attachment.sizeBytes, 0);
+    if (
+      finalBytes < 0 ||
+      finalBytes > Number.MAX_SAFE_INTEGER ||
+      (quota.limit !== null && finalUserBytes > quota.limit)
+    ) {
+      await cleanupStaged();
+      return c.json({ message: "添付容量の残りが足りません。" }, 409);
+    }
+
+    const stagedObjects = await Promise.all(
+      staged.map(async (attachment) => ({
+        ...attachment,
+        object: await c.env.MY_MEMO_FILES.head(attachment.token),
+      })),
+    );
+    if (
+      stagedObjects.some(
+        ({ object, sizeBytes, etag }) =>
+          !object || object.size !== sizeBytes || object.etag !== etag,
+      )
+    ) {
+      await cleanupStaged();
+      return c.json({ message: "確定前の添付が見つかりません。" }, 400);
+    }
+
+    const statements = [
+      c.env.MY_MEMO_D1.prepare(
+        `UPDATE memos
+           SET title = ?, content = ?, url = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND user_id = ?`,
+      ).bind(
+        validated.title,
+        validated.content,
+        validated.url ?? null,
+        categoryId,
+        memoId,
+        user.id,
+      ),
+      c.env.MY_MEMO_D1.prepare("DELETE FROM memo_tags WHERE memo_id = ?").bind(
+        memoId,
+      ),
+    ];
+    for (const name of validated.tags) {
+      statements.push(
+        c.env.MY_MEMO_D1.prepare(
+          `INSERT INTO tags (id, user_id, name)
+             VALUES (?, ?, ?)
+             ON CONFLICT(user_id, name) DO NOTHING`,
+        ).bind(crypto.randomUUID(), user.id, name),
+      );
+    }
+    for (const name of validated.tags) {
+      statements.push(
+        c.env.MY_MEMO_D1.prepare(
+          `INSERT INTO memo_tags (memo_id, tag_id)
+             SELECT ?, id FROM tags WHERE user_id = ? AND name = ?`,
+        ).bind(memoId, user.id, name),
+      );
+    }
+    for (const id of deleteIds) {
+      statements.push(
+        c.env.MY_MEMO_D1.prepare(
+          "DELETE FROM memo_attachments WHERE id = ? AND memo_id = ? AND user_id = ?",
+        ).bind(id, memoId, user.id),
+      );
+    }
+    for (const attachment of staged) {
+      statements.push(
+        c.env.MY_MEMO_D1.prepare(
+          `INSERT INTO memo_attachments
+             (id, memo_id, user_id, r2_key, file_name, content_type, size_bytes, etag)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(
+          crypto.randomUUID(),
+          memoId,
+          user.id,
+          attachment.token,
+          attachment.fileName,
+          attachment.contentType,
+          attachment.sizeBytes,
+          attachment.etag,
+        ),
+      );
+    }
+
+    try {
+      const results = await c.env.MY_MEMO_D1.batch(statements);
+      if (results[0]?.meta.changes !== 1) {
+        await cleanupStaged();
+        return c.json({ message: "メモを更新できませんでした。" }, 409);
+      }
+    } catch (error) {
+      await cleanupStaged();
+      console.error(
+        JSON.stringify({
+          event: "memo_update_failed",
+          memoId,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      return c.json({ message: "メモを更新できませんでした。" }, 500);
+    }
+
+    await cleanupR2Keys(
+      c.env.MY_MEMO_FILES,
+      deleteIds
+        .map((id) => currentById.get(id)?.r2Key)
+        .filter((key): key is string => Boolean(key)),
+      { event: "memo_edit_attachment_delete_failed", memoId },
+    );
+    return c.json({ ok: true, redirect: "/" });
   })
   .post("/:id/attachments", async (c) => {
     const user = c.get("user");

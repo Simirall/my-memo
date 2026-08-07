@@ -53,4 +53,20 @@ describe("メモ表示", () => {
       .element(page.getByRole("link", { name: "仕事" }))
       .not.toBeInTheDocument();
   });
+
+  it("編集ボタンを削除ボタンの左に残り幅いっぱいで表示する", async () => {
+    mount(<Memo memo={memo} returnTo="/categories/category-1" />);
+
+    const editLink = page.getByRole("link", { name: "編集" });
+    await expect
+      .element(editLink)
+      .toHaveAttribute(
+        "href",
+        "/memos/memo-1/edit?returnTo=%2Fcategories%2Fcategory-1",
+      );
+    await expect.element(editLink).toHaveClass("grow");
+    await expect
+      .element(page.getByRole("button", { name: "削除" }))
+      .toBeVisible();
+  });
 });

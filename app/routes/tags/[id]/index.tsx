@@ -63,7 +63,7 @@ export default createRoute(async (c) => {
       </header>
       <div className="flex flex-wrap items-start justify-center gap-4">
         {memos.map((memo) => (
-          <Memo key={memo.id} memo={memo} showCategory />
+          <Memo key={memo.id} memo={memo} returnTo={c.req.path} showCategory />
         ))}
       </div>
       <MemoTagEditor activeTagId={result.id} availableTags={allTags} />

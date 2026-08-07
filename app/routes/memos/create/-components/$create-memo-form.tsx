@@ -249,7 +249,7 @@ export default function CreateMemoForm({
       <label className="flex flex-col gap-1" htmlFor="memo-title">
         Title
         <input
-          className="input"
+          className="input w-full!"
           id="memo-title"
           maxLength={255}
           name="title"
@@ -264,7 +264,7 @@ export default function CreateMemoForm({
       <label className="flex flex-col gap-1" htmlFor="memo-content">
         Content
         <textarea
-          className="textarea min-h-40"
+          className="textarea min-h-40 w-full!"
           id="memo-content"
           maxLength={10000}
           name="content"
@@ -278,7 +278,7 @@ export default function CreateMemoForm({
       <label className="flex flex-col gap-1" htmlFor="memo-url">
         URL (optional)
         <input
-          className="input"
+          className="input w-full!"
           id="memo-url"
           name="url"
           onInput={(event) =>
@@ -291,7 +291,11 @@ export default function CreateMemoForm({
       {categories.length > 0 && (
         <label className="flex flex-col gap-1" htmlFor="memo-category">
           Category
-          <select className="select" id="memo-category" name="categoryId">
+          <select
+            className="select w-full!"
+            id="memo-category"
+            name="categoryId"
+          >
             <option value="">Select Category</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
@@ -301,10 +305,10 @@ export default function CreateMemoForm({
           </select>
         </label>
       )}
-      <label className="flex flex-col gap-1" htmlFor="memo-tags">
-        Tags
+      <div className="flex flex-col gap-1">
+        <label htmlFor="memo-tags">Tags</label>
         <TagInput availableTags={tags} inputId="memo-tags" />
-      </label>
+      </div>
       <label className="flex flex-col gap-1" htmlFor="memo-attachments">
         添付ファイル（任意）
         <input

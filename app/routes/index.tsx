@@ -39,7 +39,7 @@ export default createRoute(async (c) => {
       <CategoryTabs activeCategoryId={null} categories={categories} />
       <div className="flex flex-wrap items-start justify-center gap-4 py-4">
         {result.map((memo) => (
-          <Memo key={memo.id} memo={memo} />
+          <Memo key={memo.id} memo={memo} returnTo={c.req.path} />
         ))}
       </div>
       <MemoTagEditor availableTags={tags} />

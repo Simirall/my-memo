@@ -39,6 +39,31 @@ export const memoSchema = {
         return val;
       }),
   }).extend({ tags: tagNamesField }),
+  update: createInsertSchema(memosTable, {
+    userId: (schema) => schema.optional(),
+    title: (schema) => schema.max(255, "255文字以内で入力してください"),
+    content: (schema) => schema.max(10000, "10,000文字以内で入力してください"),
+    url: (schema) =>
+      schema.max(2048, "2048文字以内で入力してください").nullable().optional(),
+    categoryId: (schema) => schema.nullable().optional(),
+    aiGenerated: (schema) => schema.optional(),
+  })
+    .omit({ aiGenerated: true })
+    .extend({
+      tags: tagNamesField,
+      deleteAttachmentIds: z.array(z.string()).default([]),
+      stagedAttachments: z
+        .array(
+          z.object({
+            token: z.string().min(1),
+            fileName: z.string().min(1).max(255),
+            contentType: z.string().min(1).max(255),
+            sizeBytes: z.number().int().nonnegative(),
+            etag: z.string().min(1),
+          }),
+        )
+        .default([]),
+    }),
   url: z.object({
     url: z.url("有効なURLを入力してください"),
     category: z

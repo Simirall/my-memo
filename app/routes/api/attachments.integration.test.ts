@@ -200,4 +200,186 @@ describe("添付ファイルAPI", () => {
     });
     expect(objects.objects).toHaveLength(0);
   });
+
+  it("メモ本体・タグ・カテゴリ・添付を一括更新し、AI生成フラグを保持する", async () => {
+    await addUser("edit-owner");
+    await addUser("edit-other");
+    await addMemo("edit-memo", "edit-owner");
+    await run(
+      "INSERT INTO categories (id, user_id, name) VALUES (?, ?, ?)",
+      "edit-category",
+      "edit-owner",
+      "編集カテゴリ",
+    );
+
+    const ownerApp = appForUser("edit-owner");
+    const originalUpload = await ownerApp.fetch(
+      new Request("https://example.test/api/memos/edit-memo/attachments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain",
+          "X-File-Size": "3",
+          "X-File-Name": encodeURIComponent("old.txt"),
+        },
+        body: "old",
+      }),
+      env,
+    );
+    const originalPayload = (await originalUpload.json()) as {
+      attachment: { id: string; r2Key: string };
+    };
+
+    const stagedResponse = await ownerApp.fetch(
+      new Request("https://example.test/api/memos/edit-memo/edit-attachments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain",
+          "X-Edit-Id": "edit-request-1",
+          "X-File-Size": "3",
+          "X-File-Name": encodeURIComponent("new.txt"),
+        },
+        body: "new",
+      }),
+      env,
+    );
+    expect(stagedResponse.status).toBe(200);
+    const stagedPayload = (await stagedResponse.json()) as {
+      attachment: {
+        token: string;
+        fileName: string;
+        contentType: string;
+        sizeBytes: number;
+        etag: string;
+      };
+    };
+
+    await run("UPDATE memos SET ai_generated = 1 WHERE id = ?", "edit-memo");
+    const updated = await ownerApp.fetch(
+      new Request("https://example.test/api/memos/edit-memo", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "更新タイトル",
+          content: "更新本文",
+          url: "https://example.test/updated",
+          categoryId: "edit-category",
+          tags: ["更新タグ"],
+          deleteAttachmentIds: [originalPayload.attachment.id],
+          stagedAttachments: [stagedPayload.attachment],
+        }),
+      }),
+      env,
+    );
+    expect(updated.status).toBe(200);
+
+    const savedMemo = await db
+      .prepare("SELECT * FROM memos WHERE id = ?")
+      .bind("edit-memo")
+      .first<{
+        title: string;
+        content: string;
+        url: string;
+        category_id: string;
+        ai_generated: number;
+      }>();
+    expect(savedMemo).toMatchObject({
+      title: "更新タイトル",
+      content: "更新本文",
+      url: "https://example.test/updated",
+      category_id: "edit-category",
+      ai_generated: 1,
+    });
+    expect(
+      await db
+        .prepare(
+          "SELECT name FROM tags INNER JOIN memo_tags ON memo_tags.tag_id = tags.id WHERE memo_tags.memo_id = ?",
+        )
+        .bind("edit-memo")
+        .first<{ name: string }>(),
+    ).toEqual({ name: "更新タグ" });
+    expect(
+      await env.MY_MEMO_FILES.head(originalPayload.attachment.r2Key),
+    ).toBeNull();
+    expect(
+      await env.MY_MEMO_FILES.head(stagedPayload.attachment.token),
+    ).not.toBeNull();
+
+    const forbidden = await appForUser("edit-other").fetch(
+      new Request("https://example.test/api/memos/edit-memo", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "不正更新",
+          content: "不正更新",
+          tags: [],
+          deleteAttachmentIds: [],
+          stagedAttachments: [],
+        }),
+      }),
+      env,
+    );
+    expect(forbidden.status).toBe(404);
+  });
+
+  it("更新の検証に失敗した場合は本体を変更せず確定前添付も削除する", async () => {
+    await addUser("atomic-owner");
+    await addUser("atomic-other");
+    await addMemo("atomic-memo", "atomic-owner");
+    await run(
+      "INSERT INTO categories (id, user_id, name) VALUES (?, ?, ?)",
+      "other-category",
+      "atomic-other",
+      "他ユーザーカテゴリ",
+    );
+    const ownerApp = appForUser("atomic-owner");
+    const stagedResponse = await ownerApp.fetch(
+      new Request(
+        "https://example.test/api/memos/atomic-memo/edit-attachments",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain",
+            "X-Edit-Id": "atomic-request-1",
+            "X-File-Size": "4",
+            "X-File-Name": encodeURIComponent("atomic.txt"),
+          },
+          body: "data",
+        },
+      ),
+      env,
+    );
+    const stagedPayload = (await stagedResponse.json()) as {
+      attachment: {
+        token: string;
+        fileName: string;
+        contentType: string;
+        sizeBytes: number;
+        etag: string;
+      };
+    };
+    const response = await ownerApp.fetch(
+      new Request("https://example.test/api/memos/atomic-memo", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "保存してはいけないタイトル",
+          content: "保存してはいけない本文",
+          categoryId: "other-category",
+          tags: [],
+          stagedAttachments: [stagedPayload.attachment],
+          deleteAttachmentIds: [],
+        }),
+      }),
+      env,
+    );
+    expect(response.status).toBe(400);
+    const memo = await db
+      .prepare("SELECT title, content FROM memos WHERE id = ?")
+      .bind("atomic-memo")
+      .first<{ title: string; content: string }>();
+    expect(memo).toEqual({ title: "atomic-memo", content: "atomic-memo" });
+    expect(
+      await env.MY_MEMO_FILES.head(stagedPayload.attachment.token),
+    ).toBeNull();
+  });
 });

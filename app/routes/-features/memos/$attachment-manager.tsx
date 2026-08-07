@@ -23,9 +23,11 @@ const setInitialMediaVolume = (element: HTMLMediaElement | null) => {
 export default function AttachmentManager({
   memoId,
   initialAttachments = [],
+  readOnly = false,
 }: {
   memoId: string;
   initialAttachments?: ReadonlyArray<MemoAttachment>;
+  readOnly?: boolean;
 }) {
   const [attachments, setAttachments] =
     useState<ReadonlyArray<MemoAttachment>>(initialAttachments);
@@ -204,14 +206,16 @@ export default function AttachmentManager({
                   >
                     {attachment.fileName}
                   </a>
-                  <button
-                    className="btn btn-ghost btn-xs"
-                    disabled={isLoading || isCheckingQuota}
-                    onClick={() => deleteAttachment(attachment)}
-                    type="button"
-                  >
-                    削除
-                  </button>
+                  {!readOnly && (
+                    <button
+                      className="btn btn-ghost btn-xs"
+                      disabled={isLoading || isCheckingQuota}
+                      onClick={() => deleteAttachment(attachment)}
+                      type="button"
+                    >
+                      削除
+                    </button>
+                  )}
                 </div>
                 <p className="text-base-content/70 text-sm">
                   {attachment.contentType}・
@@ -262,45 +266,56 @@ export default function AttachmentManager({
           })}
         </ul>
       )}
-      <label className="flex flex-col gap-1" htmlFor={`attachments-${memoId}`}>
-        追加するファイル
-        <input
-          accept="*/*"
-          className="file-input w-full"
-          disabled={isLoading || attachments.length >= MAX_ATTACHMENTS_PER_MEMO}
-          id={`attachments-${memoId}`}
-          multiple
-          onChange={selectFiles}
-          ref={fileInputRef}
-          type="file"
-        />
-      </label>
-      {files.length > 0 && (
-        <div className="text-base-content/70 text-sm">
-          {files.map((file) => (
-            <p key={`${file.name}-${file.lastModified}`}>
-              {file.name}・{formatAttachmentSize(file.size)}
-            </p>
-          ))}
-          <button
-            className="btn mt-2"
-            disabled={isLoading || isCheckingQuota || Boolean(error)}
-            onClick={uploadFiles}
-            type="button"
+      {!readOnly && (
+        <>
+          <label
+            className="flex flex-col gap-1"
+            htmlFor={`attachments-${memoId}`}
           >
-            {isLoading ? (
-              <span className="loading loading-spinner" />
-            ) : (
-              "添付を保存"
-            )}
-          </button>
-        </div>
-      )}
-      {quota && (
-        <p className="text-base-content/70 text-sm">
-          使用量: {formatAttachmentSize(quota.used)} /{" "}
-          {quota.limit === null ? "無制限" : formatAttachmentSize(quota.limit)}
-        </p>
+            追加するファイル
+            <input
+              accept="*/*"
+              className="file-input w-full"
+              disabled={
+                isLoading || attachments.length >= MAX_ATTACHMENTS_PER_MEMO
+              }
+              id={`attachments-${memoId}`}
+              multiple
+              onChange={selectFiles}
+              ref={fileInputRef}
+              type="file"
+            />
+          </label>
+          {files.length > 0 && (
+            <div className="text-base-content/70 text-sm">
+              {files.map((file) => (
+                <p key={`${file.name}-${file.lastModified}`}>
+                  {file.name}・{formatAttachmentSize(file.size)}
+                </p>
+              ))}
+              <button
+                className="btn mt-2"
+                disabled={isLoading || isCheckingQuota || Boolean(error)}
+                onClick={uploadFiles}
+                type="button"
+              >
+                {isLoading ? (
+                  <span className="loading loading-spinner" />
+                ) : (
+                  "添付を保存"
+                )}
+              </button>
+            </div>
+          )}
+          {quota && (
+            <p className="text-base-content/70 text-sm">
+              使用量: {formatAttachmentSize(quota.used)} /{" "}
+              {quota.limit === null
+                ? "無制限"
+                : formatAttachmentSize(quota.limit)}
+            </p>
+          )}
+        </>
       )}
       {error && (
         <div
