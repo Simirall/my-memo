@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import {
+  memoAttachmentsTable,
   memosTable,
   memoTagsTable,
   planLimitsTable,
@@ -13,6 +14,7 @@ import {
 export const PLAN_METRICS = {
   memoTotal: "memo.total",
   aiSummaryMonthly: "ai_summary.monthly",
+  attachmentStorageBytes: "attachment.storage_bytes",
 } as const;
 
 export type PlanMetric = (typeof PLAN_METRICS)[keyof typeof PLAN_METRICS];
@@ -21,6 +23,7 @@ export type AppDb = ReturnType<typeof getAppDb>;
 export const getAppDb = (env: Cloudflare.Env) =>
   drizzle(env.MY_MEMO_D1, {
     schema: {
+      memoAttachmentsTable,
       memosTable,
       planLimitsTable,
       plansTable,
@@ -86,6 +89,17 @@ export async function getUsage(
     return Number(result?.count ?? 0);
   }
 
+  if (metric === PLAN_METRICS.attachmentStorageBytes) {
+    const result = await db
+      .select({
+        total: sql<number>`coalesce(sum(${memoAttachmentsTable.sizeBytes}), 0)`,
+      })
+      .from(memoAttachmentsTable)
+      .where(eq(memoAttachmentsTable.userId, userId))
+      .get();
+    return Number(result?.total ?? 0);
+  }
+
   const result = await db
     .select({ used: usageCountersTable.used })
     .from(usageCountersTable)
@@ -107,12 +121,18 @@ export async function getPlanUsage(db: AppDb, userId: string) {
     userId,
     PLAN_METRICS.aiSummaryMonthly,
   );
+  const attachmentStorage = await getEntitlement(
+    db,
+    userId,
+    PLAN_METRICS.attachmentStorageBytes,
+  );
 
-  if (!memo || !aiSummary) return null;
+  if (!memo || !aiSummary || !attachmentStorage) return null;
 
-  const [memoUsed, aiSummaryUsed] = await Promise.all([
+  const [memoUsed, aiSummaryUsed, attachmentStorageUsed] = await Promise.all([
     getUsage(db, userId, PLAN_METRICS.memoTotal),
     getUsage(db, userId, PLAN_METRICS.aiSummaryMonthly),
+    getUsage(db, userId, PLAN_METRICS.attachmentStorageBytes),
   ]);
 
   return {
@@ -121,6 +141,10 @@ export async function getPlanUsage(db: AppDb, userId: string) {
     planName: memo.planName,
     memo: { used: memoUsed, limit: memo.limit },
     aiSummary: { used: aiSummaryUsed, limit: aiSummary.limit },
+    attachmentStorage: {
+      used: attachmentStorageUsed,
+      limit: attachmentStorage.limit,
+    },
     aiSummaryPeriod: currentUtcMonthStart(),
   };
 }

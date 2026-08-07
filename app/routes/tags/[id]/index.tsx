@@ -28,6 +28,7 @@ export default createRoute(async (c) => {
               with: {
                 category: true,
                 memoTags: { with: { tag: true } },
+                attachments: true,
               },
             },
           },

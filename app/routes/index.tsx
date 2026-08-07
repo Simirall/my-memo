@@ -27,6 +27,7 @@ export default createRoute(async (c) => {
       with: {
         category: true,
         memoTags: { with: { tag: true } },
+        attachments: true,
       },
       where: eq(schema.memosTable.userId, user.id),
     }),

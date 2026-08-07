@@ -5,6 +5,8 @@ import type { categorySchema } from "@/routes/-features/categories";
 import type { Tag } from "@/routes/-features/tags";
 import { MemoTagList } from "@/routes/-features/tags";
 import { DeleteButton, FolderOpenIcon, PhosphorIcon } from "@/routes/-shared";
+import type { memoAttachmentsTable } from "@/schema";
+import AttachmentManager from "./$attachment-manager";
 import type { memoSchema } from "./memo-schema";
 import { sanitizeHtml } from "./sanitize-html";
 
@@ -12,6 +14,7 @@ type MemoWithTags = z.infer<typeof memoSchema.read> & {
   category?: z.infer<typeof categorySchema.read> | null;
   tags?: ReadonlyArray<Tag>;
   memoTags?: ReadonlyArray<{ tag: Tag | null }>;
+  attachments?: ReadonlyArray<typeof memoAttachmentsTable.$inferSelect>;
 };
 
 export const Memo = ({
@@ -89,6 +92,10 @@ export const Memo = ({
             }}
           />
         </div>
+        <AttachmentManager
+          initialAttachments={memo.attachments}
+          memoId={memo.id}
+        />
         <DeleteButton action={`/api/memos/delete/${memo.id}`} />
       </div>
     </div>

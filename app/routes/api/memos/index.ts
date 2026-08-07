@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
@@ -10,14 +10,30 @@ import {
   tagUpdateSchema,
 } from "@/routes/-features/memos";
 import { normalizeTagNames, replaceMemoTags } from "@/routes/-features/tags";
-import { memosTable, memoTagsTable, tagsTable } from "@/schema";
+import {
+  memoAttachmentsTable,
+  memosTable,
+  memoTagsTable,
+  tagsTable,
+} from "@/schema";
+import {
+  decodeAttachmentFileName,
+  getAttachmentQuota,
+  MAX_ATTACHMENT_BYTES,
+  MAX_ATTACHMENTS_PER_MEMO,
+} from "@/utils/attachments";
 import {
   getAppDb,
   getEntitlement,
   getUsage,
   PLAN_METRICS,
 } from "@/utils/authorization";
-import { insertMemoWithinQuota, reserveAiSummaryQuota } from "@/utils/quota";
+import {
+  insertAttachmentWithinQuota,
+  insertMemoWithinQuota,
+  reserveAiSummaryQuota,
+} from "@/utils/quota";
+import { putR2ObjectWithKnownLength } from "@/utils/r2-upload";
 
 const memosRoute = new Hono<{ Bindings: CloudflareBindings }>();
 type MemosContext = Context<{ Bindings: CloudflareBindings }>;
@@ -181,8 +197,9 @@ memosRoute
       );
     }
 
+    const memoId = crypto.randomUUID();
     const inserted = await insertMemoWithinQuota(c.env.MY_MEMO_D1, {
-      id: crypto.randomUUID(),
+      id: memoId,
       userId: user.id,
       title: validated.title,
       content: validated.content,
@@ -199,7 +216,180 @@ memosRoute
       );
     }
 
+    if (wantsJson(c)) return c.json({ memoId });
     return c.redirect("/");
+  })
+  .post("/:id/attachments", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.json({ message: "認証が必要です。" }, 401);
+
+    const memoId = c.req.param("id");
+    const db = getAppDb(c.env);
+    const memo = await db
+      .select({ id: memosTable.id })
+      .from(memosTable)
+      .where(and(eq(memosTable.id, memoId), eq(memosTable.userId, user.id)))
+      .get();
+    if (!memo) return c.json({ message: "メモが見つかりません。" }, 404);
+
+    const fileNameHeader = c.req.header("X-File-Name");
+    if (!fileNameHeader || fileNameHeader.length > 2048) {
+      return c.json({ message: "ファイル名が不正です。" }, 400);
+    }
+    const body = c.req.raw.body;
+    if (!body) return c.json({ message: "ファイルが空です。" }, 400);
+
+    const declaredSizeHeader =
+      c.req.header("Content-Length") ?? c.req.header("X-File-Size");
+    const declaredSize = declaredSizeHeader ? Number(declaredSizeHeader) : NaN;
+    if (!Number.isSafeInteger(declaredSize) || declaredSize < 0) {
+      return c.json({ message: "ファイルサイズを確認できませんでした。" }, 411);
+    }
+    if (declaredSize > MAX_ATTACHMENT_BYTES) {
+      return c.json({ message: "1ファイルは25 MiB以下にしてください。" }, 413);
+    }
+
+    const count = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(memoAttachmentsTable)
+      .where(eq(memoAttachmentsTable.memoId, memoId))
+      .get();
+    if (Number(count?.count ?? 0) >= MAX_ATTACHMENTS_PER_MEMO) {
+      return c.json(
+        { message: "1メモに添付できるファイルは5件までです。" },
+        409,
+      );
+    }
+
+    const quota = await getAttachmentQuota(db, user.id);
+    if (!quota) {
+      return c.json(
+        {
+          code: "PLAN_CONFIGURATION_ERROR",
+          message: "添付容量の上限設定がありません。",
+        },
+        500,
+      );
+    }
+    if (
+      quota.remaining !== null &&
+      Number.isFinite(declaredSize) &&
+      declaredSize > quota.remaining
+    ) {
+      return c.json({ message: "添付容量の残りが足りません。" }, 409);
+    }
+
+    const contentType =
+      (c.req.header("Content-Type") || "application/octet-stream")
+        .split(";", 1)[0]
+        .trim()
+        .toLowerCase()
+        .slice(0, 255) || "application/octet-stream";
+    const fileName = decodeAttachmentFileName(fileNameHeader);
+    const r2Key = `users/${user.id}/memos/${memoId}/${crypto.randomUUID()}`;
+    const cleanup = async () => {
+      try {
+        await c.env.MY_MEMO_FILES.delete(r2Key);
+      } catch (error) {
+        console.error(
+          JSON.stringify({
+            event: "memo_attachment_cleanup_failed",
+            memoId,
+            r2Key,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
+      }
+    };
+
+    let object: R2Object;
+    try {
+      object = await putR2ObjectWithKnownLength(
+        c.env.MY_MEMO_FILES,
+        r2Key,
+        body,
+        declaredSize,
+        {
+          httpMetadata: { contentType },
+        },
+      );
+    } catch (error) {
+      await cleanup();
+      console.error(
+        JSON.stringify({
+          event: "memo_attachment_upload_failed",
+          memoId,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      return c.json(
+        { message: "ファイルをアップロードできませんでした。" },
+        502,
+      );
+    }
+
+    if (object.size !== declaredSize) {
+      await cleanup();
+      console.error(
+        JSON.stringify({
+          event: "memo_attachment_size_mismatch",
+          memoId,
+          declaredSize,
+          actualSize: object.size,
+        }),
+      );
+      return c.json({ message: "ファイルサイズを確認できませんでした。" }, 400);
+    }
+
+    if (object.size > MAX_ATTACHMENT_BYTES) {
+      await cleanup();
+      return c.json({ message: "1ファイルは25 MiB以下にしてください。" }, 413);
+    }
+
+    let insertedAttachment = false;
+    try {
+      insertedAttachment = await insertAttachmentWithinQuota(c.env.MY_MEMO_D1, {
+        id: crypto.randomUUID(),
+        memoId,
+        userId: user.id,
+        r2Key,
+        fileName,
+        contentType,
+        sizeBytes: object.size,
+        etag: object.etag,
+      });
+    } catch (error) {
+      await cleanup();
+      console.error(
+        JSON.stringify({
+          event: "memo_attachment_record_failed",
+          memoId,
+          r2Key,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      return c.json({ message: "添付ファイルを記録できませんでした。" }, 502);
+    }
+    if (!insertedAttachment) {
+      await cleanup();
+      return c.json(
+        { message: "添付容量またはファイル数の上限に達しました。" },
+        409,
+      );
+    }
+
+    const saved = await db
+      .select()
+      .from(memoAttachmentsTable)
+      .where(
+        and(
+          eq(memoAttachmentsTable.r2Key, r2Key),
+          eq(memoAttachmentsTable.userId, user.id),
+        ),
+      )
+      .get();
+    const latestQuota = await getAttachmentQuota(db, user.id);
+    return c.json({ attachment: saved, quota: latestQuota });
   })
   .post("/delete/:id", async (c) => {
     const user = c.get("user");
@@ -214,6 +404,40 @@ memosRoute
       .get();
 
     if (memo) {
+      const attachments = await db
+        .select({ r2Key: memoAttachmentsTable.r2Key })
+        .from(memoAttachmentsTable)
+        .where(
+          and(
+            eq(memoAttachmentsTable.memoId, memoId),
+            eq(memoAttachmentsTable.userId, user.id),
+          ),
+        );
+      try {
+        await Promise.all(
+          attachments.map((attachment) =>
+            c.env.MY_MEMO_FILES.delete(attachment.r2Key),
+          ),
+        );
+      } catch (error) {
+        console.error(
+          JSON.stringify({
+            event: "memo_attachment_delete_failed",
+            memoId,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
+        if (wantsJson(c)) {
+          return c.json(
+            { message: "添付ファイルを削除できませんでした。" },
+            502,
+          );
+        }
+        return c.redirect(
+          `/?error=${encodeURIComponent("添付ファイルを削除できませんでした。")}`,
+        );
+      }
+
       await db
         .delete(memosTable)
         .where(and(eq(memosTable.userId, user.id), eq(memosTable.id, memoId)));

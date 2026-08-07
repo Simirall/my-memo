@@ -249,6 +249,35 @@ export const memoTagsTable = sqliteTable(
   ],
 );
 
+export const memoAttachmentsTable = sqliteTable(
+  "memo_attachments",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    memoId: text("memo_id")
+      .notNull()
+      .references(() => memosTable.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => userTable.id, { onDelete: "cascade" }),
+    r2Key: text("r2_key").notNull().unique(),
+    fileName: text("file_name").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    etag: text("etag").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("memo_attachments_memo_id_idx").on(table.memoId, table.createdAt),
+    index("memo_attachments_user_id_idx").on(table.userId),
+    check(
+      "memo_attachments_size_bytes_non_negative",
+      sql`${table.sizeBytes} >= 0`,
+    ),
+  ],
+);
+
 export const categoriesRelations = relations(categoriesTable, ({ many }) => ({
   memos: many(memosTable),
 }));
@@ -268,10 +297,25 @@ export const memoTagsRelations = relations(memoTagsTable, ({ one }) => ({
   }),
 }));
 
+export const memoAttachmentsRelations = relations(
+  memoAttachmentsTable,
+  ({ one }) => ({
+    memo: one(memosTable, {
+      fields: [memoAttachmentsTable.memoId],
+      references: [memosTable.id],
+    }),
+    user: one(userTable, {
+      fields: [memoAttachmentsTable.userId],
+      references: [userTable.id],
+    }),
+  }),
+);
+
 export const memosRelations = relations(memosTable, ({ one, many }) => ({
   category: one(categoriesTable, {
     fields: [memosTable.categoryId],
     references: [categoriesTable.id],
   }),
   memoTags: many(memoTagsTable),
+  attachments: many(memoAttachmentsTable),
 }));

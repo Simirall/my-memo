@@ -2,6 +2,7 @@
 import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
+import AttachmentManager from "@/routes/-features/memos/$attachment-manager";
 import { SHARE_STORAGE_KEY } from "@/routes/-features/sharing";
 import CreateMemoForm from "@/routes/memos/create/-components/$create-memo-form";
 import UrlSummaryForm from "@/routes/memos/url-summary/-components/$url-summary-form";
@@ -55,7 +56,9 @@ describe("メモ作成フォーム", () => {
     await page.getByLabelText("Title").fill("title");
     await page.getByLabelText("Content").fill("content");
     await page.getByRole("button", { name: "Create Memo" }).click();
-    await expect.element(page.getByRole("button")).toBeDisabled();
+    await expect
+      .element(page.getByRole("button", { name: "Create Memo" }))
+      .toBeDisabled();
 
     resolveResponse?.(
       Response.json({ message: "失敗しました。" }, { status: 500 }),
@@ -157,5 +160,98 @@ describe("メモ作成フォーム", () => {
       .element(page.getByLabelText("URL"))
       .toHaveValue("https://example.com/article");
     expect(window.sessionStorage.getItem(SHARE_STORAGE_KEY)).toBeNull();
+  });
+});
+
+describe("添付ファイル管理", () => {
+  it("添付保存後にファイル選択を解除して成功通知を自動で消す", async () => {
+    vi.spyOn(window, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === "/api/attachments/quota") {
+        return Response.json({
+          used: 0,
+          limit: 524_288_000,
+          remaining: 524_288_000,
+          maxFileBytes: 26_214_400,
+          maxFilesPerMemo: 5,
+        });
+      }
+      return Response.json({
+        attachment: {
+          id: "attachment-1",
+          memoId: "memo-1",
+          userId: "user-1",
+          r2Key: "user-1/memo-1/attachment-1",
+          fileName: "sample.mp3",
+          contentType: "audio/mpeg",
+          sizeBytes: 3,
+          etag: "etag-1",
+          createdAt: new Date().toISOString(),
+        },
+        quota: {
+          used: 3,
+          limit: 524_288_000,
+          remaining: 524_287_997,
+          maxFileBytes: 26_214_400,
+          maxFilesPerMemo: 5,
+        },
+      });
+    });
+    mount(
+      <AttachmentManager
+        initialAttachments={[
+          {
+            id: "audio-1",
+            memoId: "memo-1",
+            userId: "user-1",
+            r2Key: "user-1/memo-1/audio-1",
+            fileName: "sample.mp3",
+            contentType: "audio/mpeg",
+            sizeBytes: 3,
+            etag: "etag-audio",
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: "video-1",
+            memoId: "memo-1",
+            userId: "user-1",
+            r2Key: "user-1/memo-1/video-1",
+            fileName: "sample.mp4",
+            contentType: "video/mp4",
+            sizeBytes: 3,
+            etag: "etag-video",
+            createdAt: new Date().toISOString(),
+          },
+        ]}
+        memoId="memo-1"
+      />,
+    );
+    expect(
+      Array.from(
+        document.querySelectorAll<HTMLMediaElement>("audio, video"),
+      ).map((media) => media.volume),
+    ).toEqual([0.25, 0.25]);
+
+    const input =
+      document.querySelector<HTMLInputElement>('input[type="file"]');
+    expect(input).not.toBeNull();
+    const transfer = new DataTransfer();
+    transfer.items.add(new File(["abc"], "sample.mp3", { type: "audio/mpeg" }));
+    if (input) {
+      input.files = transfer.files;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    await expect
+      .element(page.getByRole("button", { name: "添付を保存" }))
+      .toBeEnabled();
+    await page.getByRole("button", { name: "添付を保存" }).click();
+
+    const status = page.getByRole("status");
+    await expect.element(status).toHaveTextContent("1件の添付を保存しました。");
+    expect(input?.value).toBe("");
+    expect(document.querySelector('[role="status"]')).toHaveClass("alert-soft");
+
+    await expect.element(status).not.toBeInTheDocument();
   });
 });

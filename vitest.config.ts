@@ -17,6 +17,7 @@ export default defineConfig({
         compatibilityDate: "2025-11-17",
         compatibilityFlags: ["nodejs_compat"],
         d1Databases: ["MY_MEMO_D1"],
+        r2Buckets: ["MY_MEMO_FILES"],
         bindings: {
           TEST_MIGRATIONS: await readD1Migrations(
             path.join(import.meta.dirname, "migrations"),

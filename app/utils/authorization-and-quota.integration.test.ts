@@ -79,6 +79,7 @@ beforeEach(async () => {
   await db.batch([
     db.prepare("DELETE FROM authorization_audit_logs"),
     db.prepare("DELETE FROM usage_counters"),
+    db.prepare("DELETE FROM memo_attachments"),
     db.prepare("DELETE FROM memo_tags"),
     db.prepare("DELETE FROM memos"),
     db.prepare("DELETE FROM tags"),
@@ -93,6 +94,9 @@ beforeEach(async () => {
     ),
     db.prepare(
       "UPDATE plan_limits SET limit_value = 10 WHERE plan_id = 'free' AND metric = 'ai_summary.monthly'",
+    ),
+    db.prepare(
+      "UPDATE plan_limits SET limit_value = 524288000 WHERE plan_id = 'free' AND metric = 'attachment.storage_bytes'",
     ),
   ]);
 });
@@ -113,6 +117,7 @@ describe("マイグレーションとプラン設定", () => {
     expect(plan).toEqual({ code: "free", is_default: 1, is_active: 1 });
     expect(limits.results).toEqual([
       { metric: "ai_summary.monthly", limit_value: 10 },
+      { metric: "attachment.storage_bytes", limit_value: 524288000 },
       { metric: "memo.total", limit_value: 100 },
     ]);
   });

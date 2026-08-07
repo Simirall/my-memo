@@ -30,7 +30,12 @@ export default createRoute(async (c) => {
         eq(schema.categoriesTable.id, id),
       ),
       with: {
-        memos: { with: { memoTags: { with: { tag: true } } } },
+        memos: {
+          with: {
+            memoTags: { with: { tag: true } },
+            attachments: true,
+          },
+        },
       },
     }),
   ]);

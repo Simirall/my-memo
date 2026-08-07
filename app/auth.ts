@@ -13,7 +13,11 @@ import {
   verificationTable,
 } from "./schema";
 
-const requiredPlanMetrics = ["memo.total", "ai_summary.monthly"] as const;
+const requiredPlanMetrics = [
+  "memo.total",
+  "ai_summary.monthly",
+  "attachment.storage_bytes",
+] as const;
 
 const disabledAdminPaths = [
   "/admin/ban-user",

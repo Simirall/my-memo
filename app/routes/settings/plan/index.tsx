@@ -1,4 +1,5 @@
 import { createRoute } from "honox/factory";
+import { formatAttachmentSize } from "@/utils/attachment-constants";
 import { getAppDb, getPlanUsage } from "@/utils/authorization";
 import { SettingsLayout } from "../-components/settings-layout";
 
@@ -34,6 +35,15 @@ export default createRoute(async (c) => {
                 <p className="font-semibold">保存メモ</p>
                 <p className="text-2xl">
                   {usage.memo.used} / {formatLimit(usage.memo.limit)}
+                </p>
+              </div>
+              <div className="rounded-box bg-base-200 p-4">
+                <p className="font-semibold">添付ストレージ</p>
+                <p className="text-2xl">
+                  {formatAttachmentSize(usage.attachmentStorage.used)} /{" "}
+                  {usage.attachmentStorage.limit === null
+                    ? "無制限"
+                    : formatAttachmentSize(usage.attachmentStorage.limit)}
                 </p>
               </div>
               <div className="rounded-box bg-base-200 p-4">

@@ -38,7 +38,13 @@
   ],
   "ai": {
     "binding": "AI"
-  }
+  },
+  "r2_buckets": [
+    {
+      "binding": "MY_MEMO_FILES",
+      "bucket_name": "my-memo-r2"
+    }
+  ]
   // "vars": {
   //   "MY_VAR": "my-variable"
   // },
@@ -46,12 +52,6 @@
   //   {
   //     "binding": "MY_KV_NAMESPACE",
   //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
   //   }
   // ],
 }

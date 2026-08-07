@@ -1,4 +1,16 @@
+import { MAX_ATTACHMENTS_PER_MEMO } from "./attachment-constants";
 import { currentUtcMonthStart, PLAN_METRICS } from "./authorization";
+
+type MemoAttachmentInsert = {
+  id: string;
+  memoId: string;
+  userId: string;
+  r2Key: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  etag: string;
+};
 
 type MemoInsert = {
   id: string;
@@ -108,6 +120,52 @@ export async function reserveAiSummaryQuota(
        )`,
     )
     .bind(userId, metric, periodStart, userId, metric, userId, metric)
+    .run();
+
+  return result.meta.changes === 1;
+}
+
+export async function insertAttachmentWithinQuota(
+  db: D1Database,
+  attachment: MemoAttachmentInsert,
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `INSERT INTO memo_attachments
+        (id, memo_id, user_id, r2_key, file_name, content_type, size_bytes, etag)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?
+       WHERE EXISTS (
+         SELECT 1
+         FROM memos AS m
+         INNER JOIN user AS u ON u.id = m.user_id
+         INNER JOIN plan_limits AS pl ON pl.plan_id = u.plan_id
+         WHERE m.id = ?
+           AND m.user_id = ?
+           AND pl.metric = ?
+           AND (SELECT COUNT(*) FROM memo_attachments WHERE memo_id = ?) < ?
+           AND (
+             pl.limit_value IS NULL
+             OR (SELECT COALESCE(SUM(size_bytes), 0) FROM memo_attachments WHERE user_id = ?) + ? <= pl.limit_value
+           )
+       )`,
+    )
+    .bind(
+      attachment.id,
+      attachment.memoId,
+      attachment.userId,
+      attachment.r2Key,
+      attachment.fileName,
+      attachment.contentType,
+      attachment.sizeBytes,
+      attachment.etag,
+      attachment.memoId,
+      attachment.userId,
+      PLAN_METRICS.attachmentStorageBytes,
+      attachment.memoId,
+      MAX_ATTACHMENTS_PER_MEMO,
+      attachment.userId,
+      attachment.sizeBytes,
+    )
     .run();
 
   return result.meta.changes === 1;
