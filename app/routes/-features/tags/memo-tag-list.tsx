@@ -1,6 +1,18 @@
+import {
+  type MemoListQuery,
+  replaceMemoListTag,
+} from "@/routes/-features/memos/memo-list-query";
 import type { Tag } from "./tags";
 
-export const MemoTagList = ({ tags }: { tags: ReadonlyArray<Tag> }) => {
+export const MemoTagList = ({
+  listPath = "/",
+  query = { sort: "desc" },
+  tags,
+}: {
+  listPath?: string;
+  query?: MemoListQuery;
+  tags: ReadonlyArray<Tag>;
+}) => {
   const sortedTags = [...tags].sort((a, b) =>
     a.name.localeCompare(b.name, "ja"),
   );
@@ -11,7 +23,7 @@ export const MemoTagList = ({ tags }: { tags: ReadonlyArray<Tag> }) => {
         <li key={tag.id}>
           <a
             className="badge badge-soft badge-info hover:underline"
-            href={`/tags/${tag.id}`}
+            href={replaceMemoListTag(listPath, query, tag.id)}
           >
             #{tag.name}
           </a>

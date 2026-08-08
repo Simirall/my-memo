@@ -30,12 +30,9 @@ export default createRoute(async (c) => {
             <ul className="list rounded-box bg-base-200">
               {tags.map((tag) => (
                 <li className="list-row items-center" key={tag.id}>
-                  <a
-                    className="list-col-grow font-semibold hover:underline"
-                    href={`/tags/${tag.id}`}
-                  >
+                  <span className="list-col-grow font-semibold">
                     #{tag.name}
-                  </a>
+                  </span>
                   <DeleteButton
                     action={`/api/tags/delete/${tag.id}`}
                     confirmMessage={`「#${tag.name}」を削除しますか？`}

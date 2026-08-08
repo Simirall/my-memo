@@ -1,14 +1,11 @@
 import { and, asc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
-import { EditMemoForm } from "@/routes/-features/memos";
+import {
+  EditMemoForm,
+  getSafeMemoListReturnTo,
+} from "@/routes/-features/memos";
 import * as schema from "@/schema";
-
-const getSafeReturnTo = (value: string | undefined) => {
-  if (!value?.startsWith("/") || value.startsWith("//")) return "/";
-  if (/^\/(?:categories|tags)\/[^/?#]+$/.test(value)) return value;
-  return value === "/" ? value : "/";
-};
 
 export default createRoute(async (c) => {
   const user = c.get("user");
@@ -49,7 +46,10 @@ export default createRoute(async (c) => {
   const tags = memo.memoTags
     .flatMap((memoTag) => (memoTag.tag ? [memoTag.tag] : []))
     .sort((a, b) => a.name.localeCompare(b.name, "ja"));
-  const returnTo = getSafeReturnTo(c.req.query("returnTo"));
+  const returnTo = getSafeMemoListReturnTo(
+    c.req.query("returnTo"),
+    new Set(availableTags.map((tag) => tag.id)),
+  );
 
   return c.render(
     <div className="flex justify-center p-4 sm:p-8">

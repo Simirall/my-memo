@@ -101,7 +101,7 @@ describe("メモ表示", () => {
     await expect
       .element(categoryLink)
       .toHaveAttribute("href", "/categories/category-1");
-    await expect.element(categoryLink).not.toHaveClass("badge");
+    await expect.element(categoryLink).toHaveClass("badge");
   });
 
   it("カテゴリ表示中はメモ内のカテゴリ表示を隠す", async () => {

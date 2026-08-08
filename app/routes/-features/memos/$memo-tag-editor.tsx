@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "hono/jsx";
 import type { Tag } from "@/routes/-features/tags";
 import { TagInput } from "@/routes/-features/tags";
+import { addMemoListTagOptions, removeMemoCardFromList } from "./memo-list-dom";
+import { type MemoListQuery, replaceMemoListTag } from "./memo-list-query";
 
 type MemoTagTarget = {
   id: string;
@@ -19,7 +21,12 @@ const mergeTags = (...groups: ReadonlyArray<ReadonlyArray<Tag>>): Tag[] => {
   return sortTags([...tagsByName.values()]);
 };
 
-const updateCardTags = (memoId: string, tags: ReadonlyArray<Tag>) => {
+const updateCardTags = (
+  memoId: string,
+  tags: ReadonlyArray<Tag>,
+  listPath: string,
+  query: MemoListQuery,
+) => {
   const card = document.querySelector<HTMLElement>(
     `[data-memo-card="${CSS.escape(memoId)}"]`,
   );
@@ -38,7 +45,7 @@ const updateCardTags = (memoId: string, tags: ReadonlyArray<Tag>) => {
       const link = document.createElement("a");
       item.appendChild(link);
       link.className = "badge badge-soft badge-info hover:underline";
-      link.href = `/tags/${encodeURIComponent(tag.id)}`;
+      link.href = replaceMemoListTag(listPath, query, tag.id);
       link.textContent = `#${tag.name}`;
       return item;
     }),
@@ -48,9 +55,13 @@ const updateCardTags = (memoId: string, tags: ReadonlyArray<Tag>) => {
 export default function MemoTagEditor({
   activeTagId,
   availableTags,
+  listPath = "/",
+  query = { sort: "desc" },
 }: {
   activeTagId?: string;
   availableTags: ReadonlyArray<Tag>;
+  listPath?: string;
+  query?: MemoListQuery;
 }) {
   const [target, setTarget] = useState<MemoTagTarget | null>(null);
   const [draft, setDraft] = useState<Tag[]>([]);
@@ -124,31 +135,15 @@ export default function MemoTagEditor({
         return;
       }
 
-      updateCardTags(target.id, payload.tags);
+      updateCardTags(target.id, payload.tags, listPath, query);
+      addMemoListTagOptions(payload.tags);
       setKnownTags((currentTags) =>
         mergeTags(currentTags, draft, payload.tags ?? []),
       );
       dialogRef.current?.close();
 
       if (activeTagId && !payload.tags.some((tag) => tag.id === activeTagId)) {
-        const card = document.querySelector<HTMLElement>(
-          `[data-memo-card="${CSS.escape(target.id)}"]`,
-        );
-        card?.remove();
-        const count = document.querySelector<HTMLElement>(
-          "[data-tag-result-count]",
-        );
-        if (count) {
-          const current = Number.parseInt(count.dataset.count ?? "1", 10);
-          const next = Math.max(0, current - 1);
-          count.dataset.count = String(next);
-          count.textContent = `${next}件`;
-          if (next === 0) {
-            document
-              .querySelector<HTMLElement>("[data-tag-result-empty]")
-              ?.removeAttribute("hidden");
-          }
-        }
+        removeMemoCardFromList(target.id);
       }
     } catch {
       setError("通信に失敗しました。もう一度お試しください。");

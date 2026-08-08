@@ -21,7 +21,11 @@ describe("カテゴリタブ", () => {
     const container = document.createElement("div");
     document.body.appendChild(container);
     render(
-      <CategoryTabs activeCategoryId={null} categories={[category]} />,
+      <CategoryTabs
+        activeCategoryId={null}
+        categories={[category]}
+        query={{ sort: "asc", type: "ai", tag: "tag-1" }}
+      />,
       container,
     );
 
@@ -30,6 +34,9 @@ describe("カテゴリタブ", () => {
       .toHaveAttribute("aria-current", "page");
     await expect
       .element(page.getByRole("link", { name: "仕事" }))
-      .toHaveAttribute("href", "/categories/category-1");
+      .toHaveAttribute(
+        "href",
+        "/categories/category-1?sort=asc&type=ai&tag=tag-1",
+      );
   });
 });

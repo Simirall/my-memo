@@ -2,7 +2,11 @@
 import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
-import { Memo, MemoTagEditor } from "@/routes/-features/memos";
+import {
+  Memo,
+  MemoListControls,
+  MemoTagEditor,
+} from "@/routes/-features/memos";
 import { TagInput } from "@/routes/-features/tags";
 
 function mount(node: Parameters<typeof render>[0]) {
@@ -104,13 +108,14 @@ describe("タグUI", () => {
     await expect.element(page.getByText("#仕事")).toHaveClass("badge-primary");
   });
 
-  it("カードのタグバッジは結果ページへ遷移し、編集モーダルは一括保存する", async () => {
+  it("カードのタグバッジは現在の一覧条件を維持し、編集モーダルは一括保存する", async () => {
     const fetchMock = vi
       .spyOn(window, "fetch")
       .mockResolvedValue(Response.json({ tags: [] }));
     mount(
       <div>
         <Memo
+          listPath="/categories/category-1"
           memo={{
             id: "memo-1",
             userId: "user-1",
@@ -123,14 +128,22 @@ describe("タグUI", () => {
             updatedAt: "2026-08-03 00:00:00",
             tags: [tag],
           }}
+          query={{ sort: "asc", type: "link" }}
         />
-        <MemoTagEditor availableTags={[tag]} />
+        <MemoTagEditor
+          availableTags={[tag]}
+          listPath="/categories/category-1"
+          query={{ sort: "asc", type: "link" }}
+        />
       </div>,
     );
 
     await expect
       .element(page.getByRole("link", { name: "#仕事" }))
-      .toHaveAttribute("href", "/tags/tag-1");
+      .toHaveAttribute(
+        "href",
+        "/categories/category-1?sort=asc&type=link&tag=tag-1",
+      );
     await expect
       .element(page.getByRole("link", { name: "#仕事" }))
       .toHaveClass("badge-soft");
@@ -140,7 +153,7 @@ describe("タグUI", () => {
     await page.getByRole("button", { name: "タグを編集: テストメモ" }).click();
     await expect
       .element(page.getByRole("button", { name: "タグを編集: テストメモ" }))
-      .toHaveClass("btn-info");
+      .toHaveClass("btn-accent");
     await expect
       .element(page.getByRole("button", { name: "タグを編集: テストメモ" }))
       .toHaveClass("btn-square");
@@ -207,7 +220,7 @@ describe("タグUI", () => {
     });
     await expect
       .element(page.getByRole("link", { name: "#windows" }))
-      .toHaveAttribute("href", "/tags/tag-new");
+      .toHaveAttribute("href", "/?tag=tag-new");
   });
 
   it("保存した新規タグを再度開いた候補にも反映する", async () => {
@@ -218,6 +231,12 @@ describe("タグUI", () => {
       .mockResolvedValue(Response.json({ tags: [tagA, tagAb] }));
     mount(
       <div>
+        <MemoListControls
+          action="/"
+          initialOpen
+          query={{ sort: "desc" }}
+          tags={[tagA]}
+        />
         <Memo
           memo={{
             id: "memo-new-tag",
@@ -245,6 +264,9 @@ describe("タグUI", () => {
       .click();
     await page.getByRole("button", { name: "保存" }).click();
     await expect.poll(() => fetchMock.mock.calls.length).toBe(1);
+    expect(
+      document.querySelector('#memo-tag option[value="tag-ab"]')?.textContent,
+    ).toBe("#ab");
 
     await page
       .getByRole("button", { name: "タグを編集: 候補更新テスト" })
@@ -254,10 +276,61 @@ describe("タグUI", () => {
     await page.getByRole("textbox").fill("a");
 
     await expect
-      .element(page.getByRole("option", { name: "#a", exact: true }))
+      .element(
+        page
+          .getByRole("dialog")
+          .getByRole("option", { name: "#a", exact: true }),
+      )
       .toBeInTheDocument();
     await expect
-      .element(page.getByRole("option", { name: "#ab", exact: true }))
+      .element(
+        page
+          .getByRole("dialog")
+          .getByRole("option", { name: "#ab", exact: true }),
+      )
       .toBeInTheDocument();
+  });
+
+  it("選択中のタグを外すとカードを除き0件表示へ切り替える", async () => {
+    vi.spyOn(window, "fetch").mockResolvedValue(Response.json({ tags: [] }));
+    mount(
+      <div>
+        <div data-memo-list-grid>
+          <Memo
+            memo={{
+              id: "memo-filtered",
+              userId: "user-1",
+              title: "絞り込み対象",
+              content: "本文",
+              url: null,
+              categoryId: null,
+              aiGenerated: 0,
+              createdAt: "2026-08-03 00:00:00",
+              updatedAt: "2026-08-03 00:00:00",
+              tags: [tag],
+            }}
+            query={{ sort: "desc", tag: tag.id }}
+          />
+        </div>
+        <MemoTagEditor
+          activeTagId={tag.id}
+          availableTags={[tag]}
+          query={{ sort: "desc", tag: tag.id }}
+        />
+      </div>,
+    );
+
+    await page
+      .getByRole("button", { name: "タグを編集: 絞り込み対象" })
+      .click();
+    await page.getByRole("button", { name: "仕事を外す" }).click();
+    await page.getByRole("button", { name: "保存" }).click();
+
+    await expect
+      .element(page.getByText("条件に一致するメモはありません。"))
+      .toBeInTheDocument();
+    expect(
+      document.querySelector('[data-memo-card="memo-filtered"]'),
+    ).toBeNull();
   });
 });

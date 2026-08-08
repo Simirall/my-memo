@@ -7,6 +7,8 @@ import { MemoTagList } from "@/routes/-features/tags";
 import { DeleteButton, FolderOpenIcon, PhosphorIcon } from "@/routes/-shared";
 import type { memoAttachmentsTable } from "@/schema";
 import AttachmentManager from "./$attachment-manager";
+import type { MemoListQuery } from "./memo-list-query";
+import { buildMemoListUrl } from "./memo-list-query";
 import type { memoSchema } from "./memo-schema";
 import { sanitizeHtml } from "./sanitize-html";
 
@@ -19,10 +21,14 @@ type MemoWithTags = z.infer<typeof memoSchema.read> & {
 
 export const Memo = ({
   memo,
+  listPath = "/",
+  query = { sort: "desc" },
   showCategory = true,
   returnTo = "/",
 }: {
   memo: MemoWithTags;
+  listPath?: string;
+  query?: MemoListQuery;
   showCategory?: boolean;
   returnTo?: string;
 }) => {
@@ -58,7 +64,10 @@ export const Memo = ({
               {showCategory && memo.category && (
                 <a
                   className="badge badge-soft badge-primary flex w-fit items-center gap-1"
-                  href={`/categories/${memo.category.id}`}
+                  href={buildMemoListUrl(
+                    `/categories/${memo.category.id}`,
+                    query,
+                  )}
                 >
                   <FolderOpenIcon />
                   {memo.category.name}
@@ -71,7 +80,7 @@ export const Memo = ({
           )}
           <div className="flex min-w-0 items-center gap-2">
             <div className="min-w-0 flex-1" data-memo-tag-list>
-              <MemoTagList tags={tags} />
+              <MemoTagList listPath={listPath} query={query} tags={tags} />
             </div>
             <button
               aria-label={`タグを編集: ${memo.title}`}
