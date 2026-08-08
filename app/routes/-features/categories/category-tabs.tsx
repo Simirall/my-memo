@@ -18,10 +18,13 @@ export const CategoryTabs = ({
   query?: MemoListQuery;
 }) => {
   return (
-    <nav aria-label="Memo categories" className="tabs tabs-box">
+    <nav
+      aria-label="Memo categories"
+      className="tabs tabs-box sticky top-20 z-10 w-full overflow-x-auto bg-secondary/30 text-secondary-content shadow backdrop-blur-sm"
+    >
       <a
         aria-current={activeCategoryId === null ? "page" : undefined}
-        className={`tab whitespace-nowrap ${activeCategoryId === null ? "tab-active" : ""}`}
+        className={`tab whitespace-nowrap ${activeCategoryId === null ? "tab-active !bg-secondary-content !text-secondary" : "!text-secondary-content"}`}
         href={buildMemoListUrl("/", { ...query, page: 1 })}
       >
         すべて
@@ -32,7 +35,7 @@ export const CategoryTabs = ({
         return (
           <a
             aria-current={isActive ? "page" : undefined}
-            className={`tab inline-flex items-center gap-1 whitespace-nowrap ${isActive ? "tab-active" : ""}`}
+            className={`tab inline-flex items-center gap-1 whitespace-nowrap ${isActive ? "tab-active !bg-secondary-content !text-secondary" : "!text-secondary-content"}`}
             href={buildMemoListUrl(`/categories/${category.id}`, {
               ...query,
               page: 1,
