@@ -6,6 +6,7 @@ import {
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS_PER_MEMO,
 } from "@/utils/attachment-constants";
+import { readMediaDimensions } from "@/utils/media-dimensions";
 
 type MemoAttachment = typeof memoAttachmentsTable.$inferSelect;
 type AttachmentQuota = {
@@ -14,6 +15,10 @@ type AttachmentQuota = {
   remaining: number | null;
   maxFileBytes: number;
   maxFilesPerMemo: number;
+};
+type PendingAttachment = {
+  file: File;
+  dimensions: Awaited<ReturnType<typeof readMediaDimensions>>;
 };
 
 const setInitialMediaVolume = (element: HTMLMediaElement | null) => {
@@ -31,7 +36,7 @@ export default function AttachmentManager({
 }) {
   const [attachments, setAttachments] =
     useState<ReadonlyArray<MemoAttachment>>(initialAttachments);
-  const [files, setFiles] = useState<ReadonlyArray<File>>([]);
+  const [files, setFiles] = useState<ReadonlyArray<PendingAttachment>>([]);
   const [quota, setQuota] = useState<AttachmentQuota | null>(null);
   const [error, setError] = useState<string>();
   const [status, setStatus] = useState<string>();
@@ -58,7 +63,7 @@ export default function AttachmentManager({
   const selectFiles = async (event: Event) => {
     const input = event.currentTarget as HTMLInputElement;
     const selected = Array.from(input.files ?? []);
-    setFiles(selected);
+    setFiles([]);
     setError(undefined);
     setStatus(undefined);
     if (selected.length === 0) return;
@@ -88,7 +93,27 @@ export default function AttachmentManager({
       );
       if (nextQuota.remaining !== null && selectedBytes > nextQuota.remaining) {
         setError("選択したファイルの合計が残りの添付容量を超えています。");
+        return;
       }
+      const pending: PendingAttachment[] = [];
+      for (const file of selected) {
+        try {
+          pending.push({
+            file,
+            dimensions: await readMediaDimensions(
+              file,
+              getAttachmentPreviewKind(file.type),
+            ),
+          });
+        } catch (cause) {
+          throw new Error(
+            `「${file.name}」の寸法を取得できませんでした。${
+              cause instanceof Error ? ` ${cause.message}` : ""
+            }`,
+          );
+        }
+      }
+      setFiles(pending);
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -109,7 +134,8 @@ export default function AttachmentManager({
     const failures: string[] = [];
 
     try {
-      for (const file of files) {
+      for (const pending of files) {
+        const file = pending.file;
         const response = await fetch(`/api/memos/${memoId}/attachments`, {
           method: "POST",
           headers: {
@@ -117,6 +143,12 @@ export default function AttachmentManager({
             "Content-Type": file.type || "application/octet-stream",
             "X-File-Size": String(file.size),
             "X-File-Name": encodeURIComponent(file.name),
+            ...(pending.dimensions
+              ? {
+                  "X-Media-Width": String(pending.dimensions.width),
+                  "X-Media-Height": String(pending.dimensions.height),
+                }
+              : {}),
           },
           body: file,
         });
@@ -226,15 +258,18 @@ export default function AttachmentManager({
                 {previewKind === "image" && (
                   <img
                     alt={attachment.fileName}
-                    className="mt-2 max-h-64 max-w-full rounded-box object-contain"
+                    className="mx-auto mt-2 block h-auto max-h-[min(60dvh,32rem)] w-full max-w-full rounded-box object-contain"
+                    height={attachment.mediaHeight ?? undefined}
                     loading="lazy"
                     src={`${endpoint}?preview=1`}
+                    width={attachment.mediaWidth ?? undefined}
                   />
                 )}
                 {previewKind === "audio" && (
                   <audio
                     className="mt-2 w-full"
                     controls
+                    loading="lazy"
                     preload="metadata"
                     ref={setInitialMediaVolume}
                     src={`${endpoint}?preview=1`}
@@ -249,11 +284,14 @@ export default function AttachmentManager({
                 )}
                 {previewKind === "video" && (
                   <video
-                    className="mt-2 max-h-72 w-full"
+                    className="mx-auto mt-2 block h-auto max-h-[min(60dvh,32rem)] w-full max-w-full rounded-box object-contain"
                     controls
+                    height={attachment.mediaHeight ?? undefined}
+                    loading="lazy"
                     preload="metadata"
                     ref={setInitialMediaVolume}
                     src={`${endpoint}?preview=1`}
+                    width={attachment.mediaWidth ?? undefined}
                   >
                     <track
                       kind="captions"
@@ -291,8 +329,8 @@ export default function AttachmentManager({
           {files.length > 0 && (
             <div className="text-base-content/70 text-sm">
               {files.map((file) => (
-                <p key={`${file.name}-${file.lastModified}`}>
-                  {file.name}・{formatAttachmentSize(file.size)}
+                <p key={`${file.file.name}-${file.file.lastModified}`}>
+                  {file.file.name}・{formatAttachmentSize(file.file.size)}
                 </p>
               ))}
               <button

@@ -20,6 +20,8 @@ const attachment = {
   fileName: "資料.txt",
   contentType: "text/plain",
   sizeBytes: 3,
+  mediaWidth: null,
+  mediaHeight: null,
   etag: "etag-1",
   createdAt: "2026-08-02 00:00:00",
 };

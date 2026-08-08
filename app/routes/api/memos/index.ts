@@ -22,6 +22,7 @@ import {
   getAttachmentQuota,
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS_PER_MEMO,
+  parseMediaDimensions,
 } from "@/utils/attachments";
 import {
   getAppDb,
@@ -292,6 +293,22 @@ memosRoute
         .trim()
         .toLowerCase()
         .slice(0, 255) || "application/octet-stream";
+    let mediaDimensions: { width: number; height: number } | null;
+    try {
+      mediaDimensions = parseMediaDimensions(
+        contentType,
+        c.req.header("X-Media-Width"),
+        c.req.header("X-Media-Height"),
+      );
+    } catch (error) {
+      return c.json(
+        {
+          message:
+            error instanceof Error ? error.message : "添付寸法が不正です。",
+        },
+        400,
+      );
+    }
     const fileName = decodeAttachmentFileName(fileNameHeader);
     const token = `${getEditAttachmentPrefix(user.id, memoId)}${editId}/${crypto.randomUUID()}`;
     try {
@@ -318,6 +335,8 @@ memosRoute
           fileName,
           contentType,
           sizeBytes: object.size,
+          mediaWidth: mediaDimensions?.width ?? null,
+          mediaHeight: mediaDimensions?.height ?? null,
           etag: object.etag,
         },
       });
@@ -403,6 +422,26 @@ memosRoute
     ) {
       await cleanupStaged();
       return c.json({ message: "添付ファイルの更新IDが不正です。" }, 400);
+    }
+    try {
+      for (const attachment of staged) {
+        parseMediaDimensions(
+          attachment.contentType,
+          attachment.mediaWidth == null ? null : String(attachment.mediaWidth),
+          attachment.mediaHeight == null
+            ? null
+            : String(attachment.mediaHeight),
+        );
+      }
+    } catch (error) {
+      await cleanupStaged();
+      return c.json(
+        {
+          message:
+            error instanceof Error ? error.message : "添付寸法が不正です。",
+        },
+        400,
+      );
     }
 
     const categoryId = validated.categoryId ?? null;
@@ -545,8 +584,8 @@ memosRoute
       statements.push(
         c.env.MY_MEMO_D1.prepare(
           `INSERT INTO memo_attachments
-             (id, memo_id, user_id, r2_key, file_name, content_type, size_bytes, etag)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+             (id, memo_id, user_id, r2_key, file_name, content_type, size_bytes, media_width, media_height, etag)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).bind(
           crypto.randomUUID(),
           memoId,
@@ -555,6 +594,8 @@ memosRoute
           attachment.fileName,
           attachment.contentType,
           attachment.sizeBytes,
+          attachment.mediaWidth,
+          attachment.mediaHeight,
           attachment.etag,
         ),
       );
@@ -653,6 +694,22 @@ memosRoute
         .trim()
         .toLowerCase()
         .slice(0, 255) || "application/octet-stream";
+    let mediaDimensions: { width: number; height: number } | null;
+    try {
+      mediaDimensions = parseMediaDimensions(
+        contentType,
+        c.req.header("X-Media-Width"),
+        c.req.header("X-Media-Height"),
+      );
+    } catch (error) {
+      return c.json(
+        {
+          message:
+            error instanceof Error ? error.message : "添付寸法が不正です。",
+        },
+        400,
+      );
+    }
     const fileName = decodeAttachmentFileName(fileNameHeader);
     const r2Key = `users/${user.id}/memos/${memoId}/${crypto.randomUUID()}`;
     const cleanup = async () => {
@@ -724,6 +781,8 @@ memosRoute
         fileName,
         contentType,
         sizeBytes: object.size,
+        mediaWidth: mediaDimensions?.width ?? null,
+        mediaHeight: mediaDimensions?.height ?? null,
         etag: object.etag,
       });
     } catch (error) {

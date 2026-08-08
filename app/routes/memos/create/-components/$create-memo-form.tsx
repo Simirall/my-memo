@@ -1,4 +1,4 @@
-import { useEffect, useState } from "hono/jsx";
+import { useEffect, useRef, useState } from "hono/jsx";
 import type z from "zod";
 import type { categorySchema } from "@/routes/-features/categories";
 import {
@@ -10,11 +10,17 @@ import {
 import type { ShareIntake } from "@/routes/-features/sharing/share-intake";
 import type { Tag } from "@/routes/-features/tags";
 import { TagInput } from "@/routes/-features/tags";
+import type { MediaDimensions } from "@/utils/attachment-constants";
 import {
   formatAttachmentSize,
+  getAttachmentPreviewKind,
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS_PER_MEMO,
 } from "@/utils/attachment-constants";
+import {
+  readMediaDimensions,
+  readMediaDimensionsFromUrl,
+} from "@/utils/media-dimensions";
 
 type AttachmentQuota = {
   used: number;
@@ -22,6 +28,10 @@ type AttachmentQuota = {
   remaining: number | null;
   maxFileBytes: number;
   maxFilesPerMemo: number;
+};
+type PendingAttachment = {
+  file: File;
+  dimensions: MediaDimensions | null;
 };
 
 export default function CreateMemoForm({
@@ -45,15 +55,28 @@ export default function CreateMemoForm({
   const [shareWarning, setShareWarning] = useState(() =>
     getShareWarning(initialValues),
   );
-  const [files, setFiles] = useState<ReadonlyArray<File>>([]);
+  const [files, setFiles] = useState<ReadonlyArray<PendingAttachment>>([]);
   const [attachmentQuota, setAttachmentQuota] = useState<AttachmentQuota>();
   const [attachmentError, setAttachmentError] = useState<string>();
   const [attachmentStatus, setAttachmentStatus] = useState<string>();
   const [createdMemoId, setCreatedMemoId] = useState<string>();
   const [isCheckingAttachments, setIsCheckingAttachments] = useState(false);
   const [sharedFiles, setSharedFiles] = useState(shareIntake?.files ?? []);
+  const [sharedMediaDimensions, setSharedMediaDimensions] = useState<
+    Record<string, MediaDimensions>
+  >({});
+  const [sharedMediaError, setSharedMediaError] = useState<string>();
+  const [isCheckingSharedMedia, setIsCheckingSharedMedia] = useState(
+    Boolean(
+      shareIntake?.files.some((file) => {
+        const kind = getAttachmentPreviewKind(file.contentType);
+        return kind === "image" || kind === "video";
+      }),
+    ),
+  );
   const [isRemovingSharedFile, setIsRemovingSharedFile] = useState(false);
   const [isCancellingShare, setIsCancellingShare] = useState(false);
+  const sharedMediaAnalysisGeneration = useRef(0);
 
   useEffect(() => {
     if (!new URLSearchParams(window.location.search).has("shared")) return;
@@ -77,6 +100,67 @@ export default function CreateMemoForm({
     clearPendingShare();
   }, []);
 
+  const analyzeSharedMedia = async () => {
+    if (!shareIntake) return;
+    const generation = (sharedMediaAnalysisGeneration.current ?? 0) + 1;
+    sharedMediaAnalysisGeneration.current = generation;
+    const mediaFiles = sharedFiles.filter((file) => {
+      const kind = getAttachmentPreviewKind(file.contentType);
+      return kind === "image" || kind === "video";
+    });
+    setIsCheckingSharedMedia(true);
+    setSharedMediaError(undefined);
+    try {
+      const entries = await Promise.all(
+        mediaFiles.map(async (file) => {
+          const kind = getAttachmentPreviewKind(file.contentType);
+          if (kind !== "image" && kind !== "video") return null;
+          try {
+            const dimensions = await readMediaDimensionsFromUrl(
+              `/api/share-intakes/${shareIntake.id}/files/${file.id}`,
+              kind,
+            );
+            return [file.id, dimensions] as const;
+          } catch (cause) {
+            throw new Error(
+              `「${file.fileName}」の寸法を取得できませんでした。${
+                cause instanceof Error ? ` ${cause.message}` : ""
+              }`,
+            );
+          }
+        }),
+      );
+      if (generation !== sharedMediaAnalysisGeneration.current) return;
+      setSharedMediaDimensions(
+        Object.fromEntries(
+          entries.filter(
+            (entry): entry is readonly [string, MediaDimensions] =>
+              entry !== null,
+          ),
+        ),
+      );
+    } catch (cause) {
+      if (generation !== sharedMediaAnalysisGeneration.current) return;
+      setSharedMediaError(
+        cause instanceof Error
+          ? cause.message
+          : "共有ファイルの寸法を取得できませんでした。",
+      );
+    } finally {
+      if (generation === sharedMediaAnalysisGeneration.current)
+        setIsCheckingSharedMedia(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!shareIntake) return;
+    void analyzeSharedMedia();
+    return () => {
+      sharedMediaAnalysisGeneration.current =
+        (sharedMediaAnalysisGeneration.current ?? 0) + 1;
+    };
+  }, [shareIntake?.id, sharedFiles]);
+
   const fetchAttachmentQuota = async () => {
     const response = await fetch("/api/attachments/quota", {
       headers: { Accept: "application/json" },
@@ -91,7 +175,7 @@ export default function CreateMemoForm({
     const selected = Array.from(
       (event.currentTarget as HTMLInputElement).files ?? [],
     );
-    setFiles(selected);
+    setFiles([]);
     setAttachmentError(undefined);
     setAttachmentStatus(undefined);
     if (selected.length === 0) return;
@@ -122,7 +206,27 @@ export default function CreateMemoForm({
         setAttachmentError(
           "選択したファイルの合計が残りの添付容量を超えています。",
         );
+        return;
       }
+      const pending: PendingAttachment[] = [];
+      for (const file of selected) {
+        try {
+          pending.push({
+            file,
+            dimensions: await readMediaDimensions(
+              file,
+              getAttachmentPreviewKind(file.type),
+            ),
+          });
+        } catch (cause) {
+          throw new Error(
+            `「${file.name}」の寸法を取得できませんでした。${
+              cause instanceof Error ? ` ${cause.message}` : ""
+            }`,
+          );
+        }
+      }
+      setFiles(pending);
     } catch (cause) {
       setAttachmentError(
         cause instanceof Error
@@ -136,11 +240,12 @@ export default function CreateMemoForm({
 
   const uploadAttachments = async (
     memoId: string,
-    pending: ReadonlyArray<File>,
+    pending: ReadonlyArray<PendingAttachment>,
   ) => {
-    const failed: File[] = [];
+    const failed: PendingAttachment[] = [];
     let succeeded = 0;
-    for (const file of pending) {
+    for (const item of pending) {
+      const file = item.file;
       try {
         const response = await fetch(`/api/memos/${memoId}/attachments`, {
           method: "POST",
@@ -149,11 +254,17 @@ export default function CreateMemoForm({
             "Content-Type": file.type || "application/octet-stream",
             "X-File-Size": String(file.size),
             "X-File-Name": encodeURIComponent(file.name),
+            ...(item.dimensions
+              ? {
+                  "X-Media-Width": String(item.dimensions.width),
+                  "X-Media-Height": String(item.dimensions.height),
+                }
+              : {}),
           },
           body: file,
         });
         if (!response.ok) {
-          failed.push(file);
+          failed.push(item);
           continue;
         }
         const payload = (await response.json()) as {
@@ -162,7 +273,7 @@ export default function CreateMemoForm({
         if (payload.quota) setAttachmentQuota(payload.quota);
         succeeded += 1;
       } catch {
-        failed.push(file);
+        failed.push(item);
       }
     }
     setFiles(failed);
@@ -186,6 +297,11 @@ export default function CreateMemoForm({
         throw new Error(payload.message ?? "共有ファイルを外せませんでした。");
       }
       setSharedFiles(payload.files);
+      setSharedMediaDimensions((current) => {
+        const next = { ...current };
+        delete next[fileId];
+        return next;
+      });
     } catch (cause) {
       setAttachmentError(
         cause instanceof Error
@@ -243,7 +359,7 @@ export default function CreateMemoForm({
 
   const submit = async (event: Event) => {
     event.preventDefault();
-    if (createdMemoId || isCheckingAttachments) return;
+    if (createdMemoId || isCheckingAttachments || isCheckingSharedMedia) return;
     if (attachmentError) return;
     const form = event.currentTarget as HTMLFormElement;
     setError(undefined);
@@ -251,11 +367,20 @@ export default function CreateMemoForm({
 
     try {
       if (shareIntake) {
+        const body = new FormData(form);
+        body.set(
+          "mediaDimensions",
+          JSON.stringify(
+            Object.entries(sharedMediaDimensions).map(
+              ([fileId, dimensions]) => ({ fileId, ...dimensions }),
+            ),
+          ),
+        );
         const response = await fetch(
           `/api/share-intakes/${shareIntake.id}/finalize`,
           {
             method: "POST",
-            body: new FormData(form),
+            body,
             headers: { Accept: "application/json" },
           },
         );
@@ -330,6 +455,19 @@ export default function CreateMemoForm({
           {attachmentError}
         </div>
       )}
+      {sharedMediaError && (
+        <div aria-live="polite" className="alert alert-error" role="alert">
+          {sharedMediaError}
+          <button
+            className="btn btn-sm"
+            disabled={isCheckingSharedMedia || isLoading}
+            onClick={() => void analyzeSharedMedia()}
+            type="button"
+          >
+            寸法を再試行
+          </button>
+        </div>
+      )}
       {attachmentStatus && (
         <div aria-live="polite" className="alert alert-warning" role="status">
           {attachmentStatus}
@@ -368,6 +506,11 @@ export default function CreateMemoForm({
             <div className="alert alert-warning" role="status">
               保存する共有ファイルがありません。
             </div>
+          )}
+          {isCheckingSharedMedia && (
+            <p className="text-base-content/70 text-sm" role="status">
+              共有mediaの寸法を確認しています…
+            </p>
           )}
         </section>
       )}
@@ -448,7 +591,7 @@ export default function CreateMemoForm({
           />
           {files.length > 0 && (
             <span className="text-base-content/70 text-sm">
-              {files.map((file) => (
+              {files.map(({ file }) => (
                 <span
                   className="block"
                   key={`${file.name}-${file.lastModified}`}
@@ -499,6 +642,8 @@ export default function CreateMemoForm({
           disabled={
             isLoading ||
             isCheckingAttachments ||
+            isCheckingSharedMedia ||
+            Boolean(sharedMediaError) ||
             Boolean(createdMemoId) ||
             (Boolean(shareIntake) && sharedFiles.length === 0)
           }

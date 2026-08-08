@@ -4,11 +4,13 @@ import { type Context, Hono } from "hono";
 import { memoSchema } from "@/routes/-features/memos";
 import {
   finalizeShareIntake,
+  getShareIntake,
   removeShareIntake,
   removeShareIntakeFile,
   ShareIntakeError,
 } from "@/routes/-features/sharing/share-intake";
 import { categoriesTable } from "@/schema";
+import { parseAttachmentRange } from "@/utils/attachments";
 import { getAppDb } from "@/utils/authorization";
 
 const shareIntakesRoute = new Hono<{ Bindings: CloudflareBindings }>();
@@ -53,6 +55,66 @@ shareIntakesRoute.delete(
     }
   },
 );
+
+shareIntakesRoute.get("/:id/files/:fileId", async (c: ShareIntakesContext) => {
+  const user = c.get("user");
+  if (!user) return c.json({ message: "認証が必要です。" }, 401);
+  const intake = await getShareIntake(c.env, user.id, c.req.param("id") ?? "");
+  const file = intake?.files.find(
+    (candidate) => candidate.id === c.req.param("fileId"),
+  );
+  if (!file || intake?.status !== "pending") {
+    return c.json({ message: "共有ファイルが見つかりません。" }, 404);
+  }
+  const rangeHeader = c.req.header("Range");
+  const range = rangeHeader
+    ? parseAttachmentRange(rangeHeader, file.sizeBytes)
+    : undefined;
+  if (rangeHeader && !range) {
+    return new Response(null, {
+      status: 416,
+      headers: {
+        "Accept-Ranges": "bytes",
+        "Content-Range": `bytes */${file.sizeBytes}`,
+      },
+    });
+  }
+  const object = await c.env.MY_MEMO_FILES.get(
+    file.r2Key,
+    range ? { range } : undefined,
+  );
+  if (!object || !("body" in object)) {
+    return c.json({ message: "共有ファイルを取得できませんでした。" }, 404);
+  }
+  const headers = new Headers({
+    "Content-Type": file.contentType,
+    "Content-Disposition": "inline",
+    "X-Content-Type-Options": "nosniff",
+    ETag: object.httpEtag,
+    "Accept-Ranges": "bytes",
+  });
+  if (object.uploaded)
+    headers.set("Last-Modified", object.uploaded.toUTCString());
+  if (range && object.range) {
+    const objectRange = object.range;
+    const offset =
+      "suffix" in objectRange
+        ? Math.max(object.size - objectRange.suffix, 0)
+        : (objectRange.offset ?? 0);
+    const length =
+      "suffix" in objectRange
+        ? object.size - offset
+        : (objectRange.length ?? object.size - offset);
+    headers.set(
+      "Content-Range",
+      `bytes ${offset}-${offset + length - 1}/${object.size}`,
+    );
+    headers.set("Content-Length", String(length));
+    return new Response(object.body, { status: 206, headers });
+  }
+  headers.set("Content-Length", String(object.size));
+  return new Response(object.body, { headers });
+});
 
 shareIntakesRoute.delete("/:id", async (c: ShareIntakesContext) => {
   const user = c.get("user");
@@ -105,6 +167,7 @@ shareIntakesRoute.post(
           url: validated.url ?? null,
           categoryId,
           tags: validated.tags,
+          mediaDimensions: validated.mediaDimensions,
         },
       );
       return c.json(result);

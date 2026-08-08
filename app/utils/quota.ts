@@ -9,6 +9,8 @@ export type MemoAttachmentInsert = {
   fileName: string;
   contentType: string;
   sizeBytes: number;
+  mediaWidth?: number | null;
+  mediaHeight?: number | null;
   etag: string;
 };
 
@@ -122,8 +124,8 @@ const buildAttachmentStatement = (
   db
     .prepare(
       `INSERT INTO memo_attachments
-        (id, memo_id, user_id, r2_key, file_name, content_type, size_bytes, etag)
-       SELECT ?, ?, ?, ?, ?, ?, ?, ?
+        (id, memo_id, user_id, r2_key, file_name, content_type, size_bytes, media_width, media_height, etag)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE EXISTS (
          SELECT 1 FROM memos WHERE id = ? AND user_id = ?
        )`,
@@ -136,6 +138,8 @@ const buildAttachmentStatement = (
       attachment.fileName,
       attachment.contentType,
       attachment.sizeBytes,
+      attachment.mediaWidth ?? null,
+      attachment.mediaHeight ?? null,
       attachment.etag,
       attachment.memoId,
       attachment.userId,
@@ -223,8 +227,8 @@ export async function insertAttachmentWithinQuota(
   const result = await db
     .prepare(
       `INSERT INTO memo_attachments
-        (id, memo_id, user_id, r2_key, file_name, content_type, size_bytes, etag)
-       SELECT ?, ?, ?, ?, ?, ?, ?, ?
+        (id, memo_id, user_id, r2_key, file_name, content_type, size_bytes, media_width, media_height, etag)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE EXISTS (
          SELECT 1
          FROM memos AS m
@@ -248,6 +252,8 @@ export async function insertAttachmentWithinQuota(
       attachment.fileName,
       attachment.contentType,
       attachment.sizeBytes,
+      attachment.mediaWidth ?? null,
+      attachment.mediaHeight ?? null,
       attachment.etag,
       attachment.memoId,
       attachment.userId,

@@ -6,6 +6,7 @@ import {
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS_PER_MEMO,
   MAX_SHARED_ATTACHMENT_BYTES,
+  parseMediaDimensions,
   SHARE_INTAKE_MAX_AGE_MS,
 } from "@/utils/attachments";
 import { getAppDb } from "@/utils/authorization";
@@ -416,6 +417,11 @@ type FinalizeMemo = {
   url: string | null;
   categoryId: string | null;
   tags: readonly string[];
+  mediaDimensions: readonly {
+    fileId: string;
+    width: number;
+    height: number;
+  }[];
 };
 
 export const finalizeShareIntake = async (
@@ -432,6 +438,20 @@ export const finalizeShareIntake = async (
   }
   if (intake.files.length === 0) {
     throw new ShareIntakeError("保存する共有ファイルがありません。", 400);
+  }
+  const dimensionsByFileId = new Map(
+    memo.mediaDimensions.map((dimensions) => [dimensions.fileId, dimensions]),
+  );
+  if (dimensionsByFileId.size !== memo.mediaDimensions.length) {
+    throw new ShareIntakeError("共有ファイルの寸法が重複しています。", 400);
+  }
+  if (
+    memo.mediaDimensions.some(
+      (dimensions) =>
+        !intake.files.some((file) => file.id === dimensions.fileId),
+    )
+  ) {
+    throw new ShareIntakeError("共有ファイルの寸法対象が不正です。", 400);
   }
 
   const claim = await env.MY_MEMO_D1.prepare(
@@ -456,6 +476,8 @@ export const finalizeShareIntake = async (
     fileName: string;
     contentType: string;
     sizeBytes: number;
+    mediaWidth: number | null;
+    mediaHeight: number | null;
     etag: string;
   }> = [];
   let committed = false;
@@ -470,6 +492,22 @@ export const finalizeShareIntake = async (
       ) {
         throw new ShareIntakeError(
           "確定前の共有ファイルが見つかりません。",
+          400,
+        );
+      }
+      const dimensions = dimensionsByFileId.get(staged.id);
+      let mediaDimensions: { width: number; height: number } | null;
+      try {
+        mediaDimensions = parseMediaDimensions(
+          staged.contentType,
+          dimensions ? String(dimensions.width) : null,
+          dimensions ? String(dimensions.height) : null,
+        );
+      } catch (error) {
+        throw new ShareIntakeError(
+          error instanceof Error
+            ? error.message
+            : "共有ファイルの寸法が不正です。",
           400,
         );
       }
@@ -494,6 +532,8 @@ export const finalizeShareIntake = async (
         fileName: staged.fileName,
         contentType: staged.contentType,
         sizeBytes: object.size,
+        mediaWidth: mediaDimensions?.width ?? null,
+        mediaHeight: mediaDimensions?.height ?? null,
         etag: object.etag,
       });
     }

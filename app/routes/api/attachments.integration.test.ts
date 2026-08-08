@@ -168,6 +168,41 @@ describe("JavaScript必須のメモAPI", () => {
 });
 
 describe("添付ファイルAPI", () => {
+  it("画像・動画の寸法不足と音声への寸法指定を拒否する", async () => {
+    await addUser("dimension-owner");
+    await addMemo("dimension-memo", "dimension-owner");
+    const app = appForUser("dimension-owner");
+    const missing = await app.fetch(
+      new Request("https://example.test/api/memos/dimension-memo/attachments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "image/png",
+          "X-File-Size": "1",
+          "X-File-Name": "image.png",
+        },
+        body: "x",
+      }),
+      env,
+    );
+    expect(missing.status).toBe(400);
+
+    const audio = await app.fetch(
+      new Request("https://example.test/api/memos/dimension-memo/attachments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "audio/mpeg",
+          "X-File-Size": "1",
+          "X-File-Name": "audio.mp3",
+          "X-Media-Width": "1",
+          "X-Media-Height": "1",
+        },
+        body: "x",
+      }),
+      env,
+    );
+    expect(audio.status).toBe(400);
+  });
+
   it("R2実サイズを記録し、所有者だけがRange付きでプレビューできる", async () => {
     await addUser("api-owner");
     await addUser("api-other");
@@ -182,6 +217,8 @@ describe("添付ファイルAPI", () => {
           "Content-Type": "image/png",
           "X-File-Size": "6",
           "X-File-Name": encodeURIComponent("画像.png"),
+          "X-Media-Width": "1",
+          "X-Media-Height": "1",
         },
         body: "abcdef",
       }),
@@ -189,9 +226,17 @@ describe("添付ファイルAPI", () => {
     );
     expect(upload.status).toBe(200);
     const uploaded = (await upload.json()) as {
-      attachment: { id: string; sizeBytes: number; r2Key: string };
+      attachment: {
+        id: string;
+        sizeBytes: number;
+        r2Key: string;
+        mediaWidth: number;
+        mediaHeight: number;
+      };
     };
     expect(uploaded.attachment.sizeBytes).toBe(6);
+    expect(uploaded.attachment.mediaWidth).toBe(1);
+    expect(uploaded.attachment.mediaHeight).toBe(1);
 
     const preview = await ownerApp.fetch(
       new Request(

@@ -265,6 +265,8 @@ export const memoAttachmentsTable = sqliteTable(
     fileName: text("file_name").notNull(),
     contentType: text("content_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
+    mediaWidth: integer("media_width"),
+    mediaHeight: integer("media_height"),
     etag: text("etag").notNull(),
     createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -274,6 +276,11 @@ export const memoAttachmentsTable = sqliteTable(
     check(
       "memo_attachments_size_bytes_non_negative",
       sql`${table.sizeBytes} >= 0`,
+    ),
+    check(
+      "memo_attachments_media_dimensions_pair",
+      sql`(${table.mediaWidth} IS NULL AND ${table.mediaHeight} IS NULL)
+        OR (${table.mediaWidth} > 0 AND ${table.mediaHeight} > 0)`,
     ),
   ],
 );

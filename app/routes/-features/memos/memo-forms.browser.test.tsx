@@ -314,6 +314,8 @@ describe("添付ファイル管理", () => {
           fileName: "sample.mp3",
           contentType: "audio/mpeg",
           sizeBytes: 3,
+          mediaWidth: null,
+          mediaHeight: null,
           etag: "etag-1",
           createdAt: new Date().toISOString(),
         },
@@ -337,6 +339,8 @@ describe("添付ファイル管理", () => {
             fileName: "sample.mp3",
             contentType: "audio/mpeg",
             sizeBytes: 3,
+            mediaWidth: null,
+            mediaHeight: null,
             etag: "etag-audio",
             createdAt: new Date().toISOString(),
           },
@@ -348,6 +352,8 @@ describe("添付ファイル管理", () => {
             fileName: "sample.mp4",
             contentType: "video/mp4",
             sizeBytes: 3,
+            mediaWidth: 1920,
+            mediaHeight: 1080,
             etag: "etag-video",
             createdAt: new Date().toISOString(),
           },
@@ -360,6 +366,22 @@ describe("添付ファイル管理", () => {
         document.querySelectorAll<HTMLMediaElement>("audio, video"),
       ).map((media) => media.volume),
     ).toEqual([0.25, 0.25]);
+    const audio = document.querySelector<HTMLAudioElement>("audio");
+    const video = document.querySelector<HTMLVideoElement>("video");
+    expect((audio as HTMLAudioElement & { loading?: string })?.loading).toBe(
+      "lazy",
+    );
+    expect((video as HTMLVideoElement & { loading?: string })?.loading).toBe(
+      "lazy",
+    );
+    expect(video?.preload).toBe("metadata");
+    expect(video?.width).toBe(1920);
+    expect(video?.height).toBe(1080);
+    expect(video).toHaveClass(
+      "max-h-[min(60dvh,32rem)]",
+      "object-contain",
+      "mx-auto",
+    );
 
     const input =
       document.querySelector<HTMLInputElement>('input[type="file"]');

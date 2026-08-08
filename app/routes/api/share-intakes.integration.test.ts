@@ -88,6 +88,46 @@ describe("共有メディア仮保存API", () => {
     expect(kept).toBeDefined();
     expect(excluded).toBeDefined();
     const ownerApp = appForUser("share-owner");
+    const otherPreview = await appForUser("share-other").fetch(
+      new Request(
+        `https://example.test/api/share-intakes/${intake.id}/files/${kept?.id}`,
+      ),
+      env,
+    );
+    expect(otherPreview.status).toBe(404);
+    const preview = await ownerApp.fetch(
+      new Request(
+        `https://example.test/api/share-intakes/${intake.id}/files/${kept?.id}`,
+      ),
+      env,
+    );
+    expect(preview.status).toBe(200);
+    expect(preview.headers.get("Content-Disposition")).toBe("inline");
+    expect(preview.headers.get("Accept-Ranges")).toBe("bytes");
+
+    const rangePreview = await ownerApp.fetch(
+      new Request(
+        `https://example.test/api/share-intakes/${intake.id}/files/${kept?.id}`,
+        { headers: { Range: "bytes=0-1" } },
+      ),
+      env,
+    );
+    expect(rangePreview.status).toBe(206);
+    expect(rangePreview.headers.get("Content-Range")).toBe("bytes 0-1/3");
+    expect(rangePreview.headers.get("Content-Length")).toBe("2");
+    expect(
+      Array.from(new Uint8Array(await rangePreview.arrayBuffer())),
+    ).toEqual([97, 98]);
+
+    const invalidRange = await ownerApp.fetch(
+      new Request(
+        `https://example.test/api/share-intakes/${intake.id}/files/${kept?.id}`,
+        { headers: { Range: "bytes=3-" } },
+      ),
+      env,
+    );
+    expect(invalidRange.status).toBe(416);
+    expect(invalidRange.headers.get("Content-Range")).toBe("bytes */3");
 
     const removed = await ownerApp.fetch(
       new Request(
@@ -107,6 +147,10 @@ describe("共有メディア仮保存API", () => {
     form.set("url", "https://example.com/article");
     form.set("categoryId", "");
     form.set("tags", JSON.stringify(["共有"]));
+    form.set(
+      "mediaDimensions",
+      JSON.stringify([{ fileId: kept?.id, width: 1, height: 1 }]),
+    );
     const finalized = await ownerApp.fetch(
       new Request(
         `https://example.test/api/share-intakes/${intake.id}/finalize`,
@@ -129,11 +173,18 @@ describe("共有メディア仮保存API", () => {
     });
     const saved = await db
       .prepare(
-        "SELECT r2_key, file_name FROM memo_attachments WHERE memo_id = ?",
+        "SELECT r2_key, file_name, media_width, media_height FROM memo_attachments WHERE memo_id = ?",
       )
       .bind(payload.memoId)
-      .first<{ r2_key: string; file_name: string }>();
+      .first<{
+        r2_key: string;
+        file_name: string;
+        media_width: number;
+        media_height: number;
+      }>();
     expect(saved?.file_name).toBe("写真.png");
+    expect(saved?.media_width).toBe(1);
+    expect(saved?.media_height).toBe(1);
     expect(saved?.r2_key).toContain(`/memos/${payload.memoId}/`);
     expect(await env.MY_MEMO_FILES.head(saved?.r2_key ?? "")).not.toBeNull();
     expect(await env.MY_MEMO_FILES.head(kept?.r2_key ?? "")).toBeNull();

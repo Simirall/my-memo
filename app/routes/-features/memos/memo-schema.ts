@@ -10,6 +10,24 @@ const tagNamesField = z.preprocess((value) => {
 }, z.array(z.string()));
 
 const memoReadSchema = createSelectSchema(memosTable);
+const mediaDimensionsField = z.preprocess(
+  (value) => {
+    if (value === undefined || value === "") return [];
+    if (typeof value !== "string") return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  },
+  z.array(
+    z.object({
+      fileId: z.string().min(1),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+    }),
+  ),
+);
 export const memoWithTagsSchema = memoReadSchema.extend({
   tags: z.array(z.object({ id: z.string(), name: z.string() })),
 });
@@ -38,7 +56,7 @@ export const memoSchema = {
         if (val === "") return null;
         return val;
       }),
-  }).extend({ tags: tagNamesField }),
+  }).extend({ tags: tagNamesField, mediaDimensions: mediaDimensionsField }),
   update: createInsertSchema(memosTable, {
     userId: (schema) => schema.optional(),
     title: (schema) => schema.max(255, "255文字以内で入力してください"),
@@ -59,6 +77,8 @@ export const memoSchema = {
             fileName: z.string().min(1).max(255),
             contentType: z.string().min(1).max(255),
             sizeBytes: z.number().int().nonnegative(),
+            mediaWidth: z.number().int().positive().nullable(),
+            mediaHeight: z.number().int().positive().nullable(),
             etag: z.string().min(1),
           }),
         )

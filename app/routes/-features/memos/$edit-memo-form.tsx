@@ -6,10 +6,12 @@ import { TagInput } from "@/routes/-features/tags";
 import type { memoAttachmentsTable } from "@/schema";
 import {
   formatAttachmentSize,
+  getAttachmentPreviewKind,
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS_PER_MEMO,
 } from "@/utils/attachment-constants";
 import type { AttachmentQuota } from "@/utils/attachments";
+import { readMediaDimensions } from "@/utils/media-dimensions";
 
 type MemoAttachment = typeof memoAttachmentsTable.$inferSelect;
 type EditableMemo = {
@@ -28,12 +30,15 @@ type StagedAttachment = {
   fileName: string;
   contentType: string;
   sizeBytes: number;
+  mediaWidth: number | null;
+  mediaHeight: number | null;
   etag: string;
 };
 
 type PendingFile = {
   id: string;
   file: File;
+  dimensions: Awaited<ReturnType<typeof readMediaDimensions>>;
 };
 
 const toTagNames = (tags: ReadonlyArray<Tag>) => tags.map((tag) => tag.name);
@@ -140,10 +145,26 @@ export default function EditMemoForm({
         setError("選択したファイルの合計が残りの添付容量を超えています。");
         return;
       }
-      setFiles((current) => [
-        ...current,
-        ...selected.map((file) => ({ id: crypto.randomUUID(), file })),
-      ]);
+      const pending: PendingFile[] = [];
+      for (const file of selected) {
+        try {
+          pending.push({
+            id: crypto.randomUUID(),
+            file,
+            dimensions: await readMediaDimensions(
+              file,
+              getAttachmentPreviewKind(file.type),
+            ),
+          });
+        } catch (cause) {
+          throw new Error(
+            `「${file.name}」の寸法を取得できませんでした。${
+              cause instanceof Error ? ` ${cause.message}` : ""
+            }`,
+          );
+        }
+      }
+      setFiles((current) => [...current, ...pending]);
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -189,6 +210,12 @@ export default function EditMemoForm({
           "X-Edit-Id": editId,
           "X-File-Name": encodeURIComponent(file.name),
           "X-File-Size": String(file.size),
+          ...(pending.dimensions
+            ? {
+                "X-Media-Width": String(pending.dimensions.width),
+                "X-Media-Height": String(pending.dimensions.height),
+              }
+            : {}),
         },
         body: file,
       });

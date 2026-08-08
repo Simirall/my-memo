@@ -2,6 +2,7 @@ export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 export const MAX_ATTACHMENTS_PER_MEMO = 5;
 export const MAX_SHARED_ATTACHMENT_BYTES = 75 * 1024 * 1024;
 export const SHARE_INTAKE_MAX_AGE_MS = 30 * 60 * 1000;
+export const MAX_MEDIA_DIMENSION = 100_000;
 
 export type AttachmentPreviewKind = "image" | "audio" | "video";
 
@@ -30,6 +31,47 @@ export function getAttachmentPreviewKind(
   return (
     previewTypes.get(contentType.split(";", 1)[0].trim().toLowerCase()) ?? null
   );
+}
+
+export type MediaDimensions = { width: number; height: number };
+
+export function areValidMediaDimensions(
+  dimensions: MediaDimensions | null | undefined,
+): dimensions is MediaDimensions {
+  return Boolean(
+    dimensions &&
+      Number.isSafeInteger(dimensions.width) &&
+      Number.isSafeInteger(dimensions.height) &&
+      dimensions.width > 0 &&
+      dimensions.height > 0 &&
+      dimensions.width <= MAX_MEDIA_DIMENSION &&
+      dimensions.height <= MAX_MEDIA_DIMENSION,
+  );
+}
+
+export function parseMediaDimensions(
+  contentType: string,
+  widthHeader: string | null | undefined,
+  heightHeader: string | null | undefined,
+): MediaDimensions | null {
+  const kind = getAttachmentPreviewKind(contentType);
+  const widthProvided = widthHeader !== null && widthHeader !== undefined;
+  const heightProvided = heightHeader !== null && heightHeader !== undefined;
+  if (kind !== "image" && kind !== "video") {
+    if (widthProvided || heightProvided) {
+      throw new Error("音声・その他の添付には寸法を指定できません。");
+    }
+    return null;
+  }
+  if (!widthProvided || !heightProvided) {
+    throw new Error("画像・動画の寸法が不足しています。");
+  }
+  const width = Number(widthHeader);
+  const height = Number(heightHeader);
+  if (!areValidMediaDimensions({ width, height })) {
+    throw new Error("画像・動画の寸法が不正です。");
+  }
+  return { width, height };
 }
 
 export function decodeAttachmentFileName(value: string | null): string {
