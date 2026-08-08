@@ -49,12 +49,79 @@ function mount() {
   );
 }
 
+function dispatchPaste(
+  files: ReadonlyArray<File>,
+  target: EventTarget = document.querySelector("form") ?? window,
+): ClipboardEvent {
+  const clipboard = new DataTransfer();
+  for (const file of files) clipboard.items.add(file);
+  const event = new Event("paste", {
+    bubbles: true,
+    cancelable: true,
+  }) as ClipboardEvent;
+  Object.defineProperty(event, "clipboardData", { value: clipboard });
+  target.dispatchEvent(event);
+  return event;
+}
+
 afterEach(() => {
   document.body.replaceChildren();
   vi.restoreAllMocks();
 });
 
 describe("メモ編集フォーム", () => {
+  it("既存添付の容量を二重計上せずメディアを貼り付けられる", async () => {
+    vi.spyOn(window, "fetch").mockResolvedValue(
+      Response.json({
+        used: 3,
+        limit: 7,
+        remaining: 4,
+        maxFileBytes: 26_214_400,
+        maxFilesPerMemo: 5,
+      }),
+    );
+    mount();
+
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => resolve(undefined)),
+    );
+    const event = dispatchPaste(
+      [new File(["ab"], "pasted.mp3", { type: "audio/mpeg" })],
+      window,
+    );
+
+    await expect.element(page.getByText("pasted.mp3・2 B")).toBeVisible();
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("AI要約メモの編集画面でフォーカスなしのメディア貼り付けを追加予定にする", async () => {
+    vi.spyOn(window, "fetch").mockResolvedValue(
+      Response.json({
+        used: 3,
+        limit: 524_288_000,
+        remaining: 524_287_997,
+        maxFileBytes: 26_214_400,
+        maxFilesPerMemo: 5,
+      }),
+    );
+    mount();
+
+    await expect.element(page.getByText("✨ AI Summary")).toBeVisible();
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => resolve(undefined)),
+    );
+    const event = dispatchPaste(
+      [new File(["audio"], "pasted.mp3", { type: "audio/mpeg" })],
+      window,
+    );
+
+    await expect.element(page.getByText("pasted.mp3・5 B")).toBeVisible();
+    await expect
+      .element(page.getByRole("status"))
+      .toHaveTextContent("1件のメディアを追加しました。");
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it("AIラベルと既存のメモ項目・添付を初期表示する", async () => {
     mount();
 

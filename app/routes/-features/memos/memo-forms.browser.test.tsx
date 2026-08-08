@@ -13,6 +13,23 @@ function mount(node: Parameters<typeof render>[0]) {
   render(node, container);
 }
 
+function dispatchPaste(
+  files: ReadonlyArray<File>,
+  text?: string,
+  target: EventTarget = document.querySelector("form") ?? window,
+): ClipboardEvent {
+  const clipboard = new DataTransfer();
+  for (const file of files) clipboard.items.add(file);
+  if (text !== undefined) clipboard.items.add(text, "text/plain");
+  const event = new Event("paste", {
+    bubbles: true,
+    cancelable: true,
+  }) as ClipboardEvent;
+  Object.defineProperty(event, "clipboardData", { value: clipboard });
+  target.dispatchEvent(event);
+  return event;
+}
+
 afterEach(() => {
   document.body.replaceChildren();
   window.history.replaceState({}, "", "/");
@@ -21,6 +38,137 @@ afterEach(() => {
 });
 
 describe("メモ作成フォーム", () => {
+  it("本文にメディアを貼り付け、テキストの混在時はメディアだけ追加する", async () => {
+    vi.spyOn(window, "fetch").mockResolvedValue(
+      Response.json({
+        used: 0,
+        limit: 524_288_000,
+        remaining: 524_288_000,
+        maxFileBytes: 26_214_400,
+        maxFilesPerMemo: 5,
+      }),
+    );
+    mount(<CreateMemoForm categories={[]} />);
+
+    await page.getByLabelText("Content").click();
+    const event = dispatchPaste(
+      [
+        new File(["audio"], "pasted.mp3", { type: "audio/mpeg" }),
+        new File(["text"], "pasted.txt", { type: "text/plain" }),
+      ],
+      "本文には入れない",
+    );
+
+    await expect.element(page.getByText("pasted.mp3・5 B")).toBeVisible();
+    const status = page.getByRole("status");
+    await expect
+      .element(status)
+      .toHaveTextContent("1件のメディアを追加しました。（非対応形式1件）");
+    await expect.element(status).toHaveClass("alert-soft", "alert-success");
+    const statusElement = document.querySelector('[role="status"]');
+    const fileInput =
+      document.querySelector<HTMLInputElement>("#memo-attachments");
+    expect(statusElement?.compareDocumentPosition(fileInput as Node)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(event.defaultPrevented).toBe(true);
+    await expect.element(page.getByLabelText("Content")).toHaveValue("");
+  });
+
+  it("本文以外にフォーカス中はメディアを貼り付けず、対応メディアがなければ通常貼り付けを妨げない", async () => {
+    vi.spyOn(window, "fetch").mockResolvedValue(
+      Response.json({
+        used: 0,
+        limit: 524_288_000,
+        remaining: 524_288_000,
+        maxFileBytes: 26_214_400,
+        maxFilesPerMemo: 5,
+      }),
+    );
+    mount(<CreateMemoForm categories={[]} />);
+
+    await page.getByLabelText("Title").click();
+    const titlePaste = dispatchPaste([
+      new File(["audio"], "title.mp3", { type: "audio/mpeg" }),
+    ]);
+    expect(titlePaste.defaultPrevented).toBe(false);
+    await expect
+      .element(page.getByText("title.mp3・5 B"))
+      .not.toBeInTheDocument();
+
+    const textPaste = dispatchPaste(
+      [new File(["text"], "note.txt", { type: "text/plain" })],
+      "通常の本文",
+    );
+    expect(textPaste.defaultPrevented).toBe(false);
+  });
+
+  it("フォーカスがない状態でも有効なメディアだけを追加し、貼り付け後に繰り返し追加できる", async () => {
+    vi.spyOn(window, "fetch").mockResolvedValue(
+      Response.json({
+        used: 0,
+        limit: 524_288_000,
+        remaining: 524_288_000,
+        maxFileBytes: 26_214_400,
+        maxFilesPerMemo: 5,
+      }),
+    );
+    mount(<CreateMemoForm categories={[]} />);
+
+    await expect.element(page.getByLabelText("Content")).toBeVisible();
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => resolve(undefined)),
+    );
+    const file = new File(["audio"], "repeat.mp3", { type: "audio/mpeg" });
+    const first = dispatchPaste([file], undefined, window);
+    expect(first.clipboardData?.items.length).toBe(1);
+    expect(first.clipboardData?.items[0]?.getAsFile()?.type).toBe("audio/mpeg");
+    await expect
+      .element(page.getByText("repeat.mp3・5 B").first())
+      .toBeVisible();
+    const second = dispatchPaste([file], undefined, window);
+    await expect
+      .element(page.getByText("repeat.mp3・5 B").last())
+      .toBeVisible();
+    expect(first.defaultPrevented).toBe(true);
+    expect(second.defaultPrevented).toBe(true);
+  });
+
+  it("ファイル選択で複数件を選べ、続けて選択しても追加予定を保持する", async () => {
+    vi.spyOn(window, "fetch").mockImplementation(async () =>
+      Response.json({
+        used: 0,
+        limit: 524_288_000,
+        remaining: 524_288_000,
+        maxFileBytes: 26_214_400,
+        maxFilesPerMemo: 5,
+      }),
+    );
+    mount(<CreateMemoForm categories={[]} />);
+
+    const input = page.getByLabelText("追加するファイル");
+    await input.upload([
+      new File(["first"], "first.txt", { type: "text/plain" }),
+      new File(["second"], "second.txt", { type: "text/plain" }),
+    ]);
+    await expect.element(page.getByText("first.txt・5 B")).toBeVisible();
+    await expect.element(page.getByText("second.txt・6 B")).toBeVisible();
+    await expect.element(input).toHaveValue("");
+
+    await input.upload(
+      new File(["third"], "third.txt", { type: "text/plain" }),
+    );
+    await expect.element(page.getByText("first.txt・5 B")).toBeVisible();
+    await expect.element(page.getByText("second.txt・6 B")).toBeVisible();
+    await expect.element(page.getByText("third.txt・5 B")).toBeVisible();
+
+    await page.getByRole("button", { name: "取り消す" }).first().click();
+    await expect
+      .element(page.getByText("first.txt・5 B"))
+      .not.toBeInTheDocument();
+    await expect.element(page.getByText("second.txt・6 B")).toBeVisible();
+  });
+
   it("メモ件数の上限到達時に入力内容を保持してエラーを通知する", async () => {
     vi.spyOn(window, "fetch").mockResolvedValue(
       Response.json(

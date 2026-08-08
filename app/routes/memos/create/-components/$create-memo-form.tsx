@@ -18,6 +18,14 @@ import {
   MAX_ATTACHMENTS_PER_MEMO,
 } from "@/utils/attachment-constants";
 import {
+  type ClipboardRejection,
+  formatClipboardRejections,
+  getClipboardFiles,
+  hasSupportedClipboardMedia,
+  selectClipboardMedia,
+  shouldCaptureClipboardPaste,
+} from "@/utils/clipboard-media";
+import {
   readMediaDimensions,
   readMediaDimensionsFromUrl,
 } from "@/utils/media-dimensions";
@@ -30,6 +38,7 @@ type AttachmentQuota = {
   maxFilesPerMemo: number;
 };
 type PendingAttachment = {
+  id: string;
   file: File;
   dimensions: MediaDimensions | null;
 };
@@ -77,6 +86,12 @@ export default function CreateMemoForm({
   const [isRemovingSharedFile, setIsRemovingSharedFile] = useState(false);
   const [isCancellingShare, setIsCancellingShare] = useState(false);
   const sharedMediaAnalysisGeneration = useRef(0);
+  const formRef = useRef<HTMLFormElement>(null);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
+  const clipboardPasteBusyRef = useRef(false);
+  const clipboardPasteHandlerRef = useRef<
+    ((event: ClipboardEvent) => Promise<void>) | undefined
+  >(undefined);
 
   useEffect(() => {
     if (!new URLSearchParams(window.location.search).has("shared")) return;
@@ -171,11 +186,98 @@ export default function CreateMemoForm({
     return quota;
   };
 
+  const handleClipboardPaste = async (event: ClipboardEvent) => {
+    if (
+      shareIntake ||
+      createdMemoId ||
+      isLoading ||
+      clipboardPasteBusyRef.current ||
+      !shouldCaptureClipboardPaste(event, contentRef.current)
+    )
+      return;
+
+    const selected = getClipboardFiles(event);
+    if (selected.length === 0 || !hasSupportedClipboardMedia(selected)) return;
+
+    event.preventDefault();
+    clipboardPasteBusyRef.current = true;
+    setAttachmentError(undefined);
+    setAttachmentStatus(undefined);
+    setIsCheckingAttachments(true);
+    try {
+      const quota = await fetchAttachmentQuota();
+      const maxFiles = Math.min(
+        quota.maxFilesPerMemo,
+        MAX_ATTACHMENTS_PER_MEMO,
+      );
+      const currentBytes = files.reduce(
+        (total, pending) => total + pending.file.size,
+        0,
+      );
+      const selection = selectClipboardMedia(selected, {
+        currentCount: files.length,
+        currentBytes,
+        maxFiles,
+        maxFileBytes: Math.min(quota.maxFileBytes, MAX_ATTACHMENT_BYTES),
+        availableBytes: quota.remaining,
+      });
+      const pending: PendingAttachment[] = [];
+      const dimensionFailures: ClipboardRejection[] = [];
+      for (const file of selection.accepted) {
+        try {
+          pending.push({
+            id: crypto.randomUUID(),
+            file,
+            dimensions: await readMediaDimensions(
+              file,
+              getAttachmentPreviewKind(file.type),
+            ),
+          });
+        } catch {
+          dimensionFailures.push({ file, reason: "dimensions" });
+        }
+      }
+      const rejected = [...selection.rejected, ...dimensionFailures];
+      setFiles((current) => [...current, ...pending]);
+      const details = formatClipboardRejections(rejected);
+      setAttachmentStatus(
+        pending.length > 0
+          ? `${pending.length}件のメディアを追加しました。${
+              details ? `（${details}）` : ""
+            }`
+          : `貼り付けたメディアを追加できませんでした。${
+              details ? `（${details}）` : ""
+            }`,
+      );
+    } catch (cause) {
+      setAttachmentError(
+        cause instanceof Error
+          ? cause.message
+          : "添付容量を確認できませんでした。",
+      );
+    } finally {
+      clipboardPasteBusyRef.current = false;
+      setIsCheckingAttachments(false);
+    }
+  };
+
+  clipboardPasteHandlerRef.current = handleClipboardPaste;
+
+  useEffect(() => {
+    const form = formRef.current;
+    if (shareIntake || !form) return;
+    const onPaste = (event: ClipboardEvent) => {
+      if (!form.isConnected) return;
+      void clipboardPasteHandlerRef.current?.(event);
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [Boolean(shareIntake)]);
+
   const selectFiles = async (event: Event) => {
-    const selected = Array.from(
-      (event.currentTarget as HTMLInputElement).files ?? [],
-    );
-    setFiles([]);
+    const input = event.currentTarget as HTMLInputElement;
+    const selected = Array.from(input.files ?? []);
+    input.value = "";
     setAttachmentError(undefined);
     setAttachmentStatus(undefined);
     if (selected.length === 0) return;
@@ -187,7 +289,7 @@ export default function CreateMemoForm({
         quota.maxFilesPerMemo,
         MAX_ATTACHMENTS_PER_MEMO,
       );
-      if (selected.length > maxFiles) {
+      if (files.length + selected.length > maxFiles) {
         setAttachmentError(`添付できるファイルは${maxFiles}件までです。`);
         return;
       }
@@ -201,7 +303,9 @@ export default function CreateMemoForm({
         );
         return;
       }
-      const totalBytes = selected.reduce((total, file) => total + file.size, 0);
+      const totalBytes =
+        files.reduce((total, pending) => total + pending.file.size, 0) +
+        selected.reduce((total, file) => total + file.size, 0);
       if (quota.remaining !== null && totalBytes > quota.remaining) {
         setAttachmentError(
           "選択したファイルの合計が残りの添付容量を超えています。",
@@ -212,6 +316,7 @@ export default function CreateMemoForm({
       for (const file of selected) {
         try {
           pending.push({
+            id: crypto.randomUUID(),
             file,
             dimensions: await readMediaDimensions(
               file,
@@ -226,7 +331,7 @@ export default function CreateMemoForm({
           );
         }
       }
-      setFiles(pending);
+      setFiles((current) => [...current, ...pending]);
     } catch (cause) {
       setAttachmentError(
         cause instanceof Error
@@ -236,6 +341,10 @@ export default function CreateMemoForm({
     } finally {
       setIsCheckingAttachments(false);
     }
+  };
+
+  const removeFile = (id: string) => {
+    setFiles((current) => current.filter((pending) => pending.id !== id));
   };
 
   const uploadAttachments = async (
@@ -438,7 +547,9 @@ export default function CreateMemoForm({
       action="/api/memos/create"
       className="flex flex-col gap-4"
       method="post"
+      onPaste={handleClipboardPaste}
       onSubmit={submit}
+      ref={formRef}
     >
       {error && (
         <div aria-live="polite" className="alert alert-error" role="alert">
@@ -466,11 +577,6 @@ export default function CreateMemoForm({
           >
             寸法を再試行
           </button>
-        </div>
-      )}
-      {attachmentStatus && (
-        <div aria-live="polite" className="alert alert-warning" role="status">
-          {attachmentStatus}
         </div>
       )}
       {shareIntake && (
@@ -539,6 +645,7 @@ export default function CreateMemoForm({
           onInput={(event) =>
             setContent((event.currentTarget as HTMLTextAreaElement).value)
           }
+          ref={contentRef}
           required
           value={content}
         />
@@ -578,38 +685,70 @@ export default function CreateMemoForm({
         <TagInput availableTags={tags} inputId="memo-tags" />
       </div>
       {!shareIntake && (
-        <label className="flex flex-col gap-1" htmlFor="memo-attachments">
-          添付ファイル（任意）
-          <input
-            accept="*/*"
-            className="file-input w-full"
-            disabled={isLoading || Boolean(createdMemoId)}
-            id="memo-attachments"
-            multiple
-            onChange={selectFiles}
-            type="file"
-          />
+        <section className="space-y-3">
+          <h2 className="font-semibold">添付ファイル</h2>
           {files.length > 0 && (
-            <span className="text-base-content/70 text-sm">
-              {files.map(({ file }) => (
-                <span
-                  className="block"
-                  key={`${file.name}-${file.lastModified}`}
-                >
-                  {file.name}・{formatAttachmentSize(file.size)}
+            <div className="space-y-2 rounded-box border border-base-300 bg-base-100 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-semibold">追加予定</h3>
+                <span className="badge badge-soft badge-info">
+                  保存時にアップロード
                 </span>
-              ))}
-            </span>
+              </div>
+              <ul className="space-y-2 text-sm">
+                {files.map(({ id, file }) => (
+                  <li
+                    className="flex items-center justify-between gap-2"
+                    key={id}
+                  >
+                    <span className="break-all">
+                      {file.name}・{formatAttachmentSize(file.size)}
+                    </span>
+                    <button
+                      className="btn btn-ghost btn-xs"
+                      disabled={isLoading}
+                      onClick={() => removeFile(id)}
+                      type="button"
+                    >
+                      取り消す
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
+          {attachmentStatus && (
+            <div
+              aria-live="polite"
+              className="alert alert-soft alert-success"
+              role="status"
+            >
+              {attachmentStatus}
+            </div>
+          )}
+          <label className="flex flex-col gap-1" htmlFor="memo-attachments">
+            追加するファイル
+            <input
+              accept="*/*"
+              className="file-input w-full"
+              disabled={
+                isLoading || isCheckingAttachments || Boolean(createdMemoId)
+              }
+              id="memo-attachments"
+              multiple
+              onChange={selectFiles}
+              type="file"
+            />
+          </label>
           {attachmentQuota && (
-            <span className="text-base-content/70 text-sm">
+            <p className="text-base-content/70 text-sm">
               使用量: {formatAttachmentSize(attachmentQuota.used)} /{" "}
               {attachmentQuota.limit === null
                 ? "無制限"
                 : formatAttachmentSize(attachmentQuota.limit)}
-            </span>
+            </p>
           )}
-        </label>
+        </section>
       )}
       {createdMemoId && files.length > 0 && (
         <button

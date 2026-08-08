@@ -11,6 +11,14 @@ import {
   MAX_ATTACHMENTS_PER_MEMO,
 } from "@/utils/attachment-constants";
 import type { AttachmentQuota } from "@/utils/attachments";
+import {
+  type ClipboardRejection,
+  formatClipboardRejections,
+  getClipboardFiles,
+  hasSupportedClipboardMedia,
+  selectClipboardMedia,
+  shouldCaptureClipboardPaste,
+} from "@/utils/clipboard-media";
 import { readMediaDimensions } from "@/utils/media-dimensions";
 
 type MemoAttachment = typeof memoAttachmentsTable.$inferSelect;
@@ -66,9 +74,16 @@ export default function EditMemoForm({
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [quota, setQuota] = useState<AttachmentQuota>();
   const [error, setError] = useState<string>();
+  const [status, setStatus] = useState<string>();
   const [isCheckingFiles, setIsCheckingFiles] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const isLeavingAfterSave = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
+  const clipboardPasteBusyRef = useRef(false);
+  const clipboardPasteHandlerRef = useRef<
+    ((event: ClipboardEvent) => Promise<void>) | undefined
+  >(undefined);
 
   const deletedBytes = attachments
     .filter((attachment) => deletedAttachmentIds.includes(attachment.id))
@@ -106,6 +121,96 @@ export default function EditMemoForm({
     return nextQuota;
   };
 
+  const handleClipboardPaste = async (event: ClipboardEvent) => {
+    if (
+      isSaving ||
+      clipboardPasteBusyRef.current ||
+      !shouldCaptureClipboardPaste(event, contentRef.current)
+    )
+      return;
+
+    const selected = getClipboardFiles(event);
+    if (selected.length === 0 || !hasSupportedClipboardMedia(selected)) return;
+
+    event.preventDefault();
+    clipboardPasteBusyRef.current = true;
+    setError(undefined);
+    setStatus(undefined);
+    setIsCheckingFiles(true);
+    try {
+      const nextQuota = quota ?? (await readQuota());
+      const maxFiles = Math.min(
+        nextQuota.maxFilesPerMemo,
+        MAX_ATTACHMENTS_PER_MEMO,
+      );
+      const currentBytes = files.reduce(
+        (total, pending) => total + pending.file.size,
+        0,
+      );
+      const availableBytes =
+        nextQuota.remaining === null
+          ? null
+          : nextQuota.remaining + deletedBytes;
+      const selection = selectClipboardMedia(selected, {
+        currentCount: activeAttachments.length + files.length,
+        currentBytes,
+        maxFiles,
+        maxFileBytes: Math.min(nextQuota.maxFileBytes, MAX_ATTACHMENT_BYTES),
+        availableBytes,
+      });
+      const pending: PendingFile[] = [];
+      const dimensionFailures: ClipboardRejection[] = [];
+      for (const file of selection.accepted) {
+        try {
+          pending.push({
+            id: crypto.randomUUID(),
+            file,
+            dimensions: await readMediaDimensions(
+              file,
+              getAttachmentPreviewKind(file.type),
+            ),
+          });
+        } catch {
+          dimensionFailures.push({ file, reason: "dimensions" });
+        }
+      }
+      const rejected = [...selection.rejected, ...dimensionFailures];
+      setFiles((current) => [...current, ...pending]);
+      const details = formatClipboardRejections(rejected);
+      setStatus(
+        pending.length > 0
+          ? `${pending.length}件のメディアを追加しました。${
+              details ? `（${details}）` : ""
+            }`
+          : `貼り付けたメディアを追加できませんでした。${
+              details ? `（${details}）` : ""
+            }`,
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "添付容量を確認できませんでした。",
+      );
+    } finally {
+      clipboardPasteBusyRef.current = false;
+      setIsCheckingFiles(false);
+    }
+  };
+
+  clipboardPasteHandlerRef.current = handleClipboardPaste;
+
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const onPaste = (event: ClipboardEvent) => {
+      if (!form.isConnected) return;
+      void clipboardPasteHandlerRef.current?.(event);
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, []);
+
   const selectFiles = async (event: Event) => {
     const input = event.currentTarget as HTMLInputElement;
     const selected = Array.from(input.files ?? []);
@@ -113,6 +218,7 @@ export default function EditMemoForm({
     if (selected.length === 0) return;
 
     setError(undefined);
+    setStatus(undefined);
     setIsCheckingFiles(true);
     try {
       const nextQuota = quota ?? (await readQuota());
@@ -285,13 +391,27 @@ export default function EditMemoForm({
   };
 
   return (
-    <form className="flex flex-col gap-4" onSubmit={submit}>
+    <form
+      className="flex flex-col gap-4"
+      onPaste={handleClipboardPaste}
+      onSubmit={submit}
+      ref={formRef}
+    >
       {memo.isAiSummary === 1 && (
         <div className="badge badge-soft badge-info">✨ AI Summary</div>
       )}
       {error && (
         <div aria-live="polite" className="alert alert-error" role="alert">
           {error}
+        </div>
+      )}
+      {status && (
+        <div
+          aria-live="polite"
+          className="alert alert-soft alert-success"
+          role="status"
+        >
+          {status}
         </div>
       )}
       <label className="flex flex-col gap-1" htmlFor="edit-memo-title">
@@ -317,6 +437,7 @@ export default function EditMemoForm({
           onInput={(event) =>
             setContent((event.currentTarget as HTMLTextAreaElement).value)
           }
+          ref={contentRef}
           required
           value={content}
         >
