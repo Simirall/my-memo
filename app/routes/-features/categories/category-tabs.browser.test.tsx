@@ -24,7 +24,7 @@ describe("カテゴリタブ", () => {
       <CategoryTabs
         activeCategoryId={null}
         categories={[category]}
-        query={{ sort: "asc", type: "ai", tag: "tag-1" }}
+        query={{ sort: "asc", page: 3, type: "ai", tag: "tag-1" }}
       />,
       container,
     );

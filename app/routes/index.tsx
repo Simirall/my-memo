@@ -5,12 +5,14 @@ import { CategoryTabs } from "@/routes/-features/categories";
 import {
   ActionFab,
   buildMemoListUrl,
+  getEmptyMemoListRedirectUrl,
   getMemoList,
   getMemoListDb,
   getUsedMemoTags,
   includeSelectedMemoListTag,
   Memo,
   MemoListControls,
+  MemoPagination,
   MemoTagEditor,
   parseMemoListQuery,
 } from "@/routes/-features/memos";
@@ -42,6 +44,12 @@ export default createRoute(async (c) => {
     new Set(tags.map((tag) => tag.id)),
   );
   const result = await getMemoList(db, user.id, query);
+  const emptyPageRedirect = getEmptyMemoListRedirectUrl(
+    c.req.path,
+    query,
+    result.items.length,
+  );
+  if (emptyPageRedirect) return c.redirect(emptyPageRedirect);
   const filterTags = includeSelectedMemoListTag(usedTags, tags, query.tag);
   const returnTo = buildMemoListUrl(c.req.path, query);
 
@@ -65,7 +73,7 @@ export default createRoute(async (c) => {
         className="grid w-full auto-rows-auto grid-cols-[repeat(auto-fit,minmax(min(100%,30rem),30rem))] items-stretch justify-center gap-4 py-4"
         data-memo-list-grid
       >
-        {result.map((memo) => (
+        {result.items.map((memo) => (
           <Memo
             key={memo.id}
             listPath={c.req.path}
@@ -75,7 +83,7 @@ export default createRoute(async (c) => {
           />
         ))}
       </div>
-      {result.length === 0 && (
+      {result.items.length === 0 && (
         <p
           className="rounded-box bg-base-200 p-6 text-center text-base-content/70"
           data-memo-list-empty
@@ -83,6 +91,11 @@ export default createRoute(async (c) => {
           条件に一致するメモはありません。
         </p>
       )}
+      <MemoPagination
+        hasNextPage={result.hasNextPage}
+        pathname={c.req.path}
+        query={query}
+      />
       <MemoTagEditor
         activeTagId={query.tag}
         availableTags={tags}

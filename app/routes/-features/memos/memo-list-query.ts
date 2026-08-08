@@ -4,6 +4,7 @@ export type MemoListAttachment = "with" | "without";
 
 export type MemoListQuery = {
   sort: MemoListSort;
+  page: number;
   type?: MemoListType;
   attachment?: MemoListAttachment;
   tag?: string;
@@ -25,9 +26,16 @@ export const parseMemoListQuery = (
   const typeValue = readSingleValue(searchParams, "type");
   const attachmentValue = readSingleValue(searchParams, "attachment");
   const tagValue = readSingleValue(searchParams, "tag");
+  const pageValue = readSingleValue(searchParams, "page");
+  const page =
+    pageValue && /^[1-9]\d*$/.test(pageValue) ? Number(pageValue) : 1;
 
   return {
     sort: sortValue === "asc" ? "asc" : "desc",
+    page:
+      Number.isSafeInteger(page) && Number.isSafeInteger((page - 1) * 20)
+        ? page
+        : 1,
     type:
       typeValue === "ai" || typeValue === "link" || typeValue === "normal"
         ? typeValue
@@ -43,6 +51,7 @@ export const parseMemoListQuery = (
 export const toMemoListSearchParams = (query: MemoListQuery) => {
   const searchParams = new URLSearchParams();
   if (query.sort === "asc") searchParams.set("sort", "asc");
+  if (query.page > 1) searchParams.set("page", String(query.page));
   if (query.type) searchParams.set("type", query.type);
   if (query.attachment) searchParams.set("attachment", query.attachment);
   if (query.tag) searchParams.set("tag", query.tag);
@@ -54,11 +63,20 @@ export const buildMemoListUrl = (pathname: string, query: MemoListQuery) => {
   return search ? `${pathname}?${search}` : pathname;
 };
 
+export const getEmptyMemoListRedirectUrl = (
+  pathname: string,
+  query: MemoListQuery,
+  itemCount: number,
+) =>
+  query.page > 1 && itemCount === 0
+    ? buildMemoListUrl(pathname, { ...query, page: 1 })
+    : undefined;
+
 export const replaceMemoListTag = (
   pathname: string,
   query: MemoListQuery,
   tag: string,
-) => buildMemoListUrl(pathname, { ...query, tag });
+) => buildMemoListUrl(pathname, { ...query, page: 1, tag });
 
 export const getSafeMemoListReturnTo = (
   value: string | undefined,

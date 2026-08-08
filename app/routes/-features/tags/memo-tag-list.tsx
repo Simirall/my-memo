@@ -6,7 +6,7 @@ import type { Tag } from "./tags";
 
 export const MemoTagList = ({
   listPath = "/",
-  query = { sort: "desc" },
+  query = { sort: "desc", page: 1 },
   tags,
 }: {
   listPath?: string;

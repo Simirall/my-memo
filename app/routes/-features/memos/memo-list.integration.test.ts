@@ -5,6 +5,7 @@ import {
   getMemoListDb,
   getUsedMemoTags,
   includeSelectedMemoListTag,
+  MEMO_LIST_PAGE_SIZE,
 } from "./memo-list";
 
 const d1 = env.MY_MEMO_D1;
@@ -50,6 +51,9 @@ const addMemo = (
     createdAt,
   );
 
+const memoIds = (result: Awaited<ReturnType<typeof getMemoList>>) =>
+  result.items.map((memo) => memo.id);
+
 beforeEach(async () => {
   await d1.batch([
     d1.prepare("DELETE FROM memo_attachments"),
@@ -70,10 +74,10 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
 
     const db = getMemoListDb(env);
     expect(
-      (await getMemoList(db, "owner", { sort: "desc" })).map((m) => m.id),
+      memoIds(await getMemoList(db, "owner", { sort: "desc", page: 1 })),
     ).toEqual(["memo-b", "memo-a", "memo-old"]);
     expect(
-      (await getMemoList(db, "owner", { sort: "asc" })).map((m) => m.id),
+      memoIds(await getMemoList(db, "owner", { sort: "asc", page: 1 })),
     ).toEqual(["memo-old", "memo-a", "memo-b"]);
   });
 
@@ -115,28 +119,69 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
     const result = await getMemoList(
       db,
       "owner",
-      { sort: "desc", type: "ai", attachment: "with", tag: "tag-1" },
+      {
+        sort: "desc",
+        page: 1,
+        type: "ai",
+        attachment: "with",
+        tag: "tag-1",
+      },
       "category-1",
     );
-    expect(result.map((memo) => memo.id)).toEqual(["ai-match"]);
+    expect(memoIds(result)).toEqual(["ai-match"]);
     expect(
-      (await getMemoList(db, "owner", { sort: "desc", type: "link" })).map(
-        (memo) => memo.id,
+      memoIds(
+        await getMemoList(db, "owner", {
+          sort: "desc",
+          page: 1,
+          type: "link",
+        }),
       ),
     ).toEqual(["link"]);
     expect(
-      (await getMemoList(db, "owner", { sort: "desc", type: "normal" })).map(
-        (memo) => memo.id,
+      memoIds(
+        await getMemoList(db, "owner", {
+          sort: "desc",
+          page: 1,
+          type: "normal",
+        }),
       ),
     ).toEqual(["plain"]);
     expect(
-      (
+      memoIds(
         await getMemoList(db, "owner", {
           sort: "desc",
+          page: 1,
           attachment: "without",
-        })
-      ).map((memo) => memo.id),
+        }),
+      ),
     ).toEqual(["link", "plain"]);
+  });
+
+  it("20件境界で次ページの有無を判定しOFFSETで続きだけを返す", async () => {
+    await addUser("owner");
+    for (let index = 1; index <= MEMO_LIST_PAGE_SIZE + 1; index += 1) {
+      await addMemo(
+        `memo-${String(index).padStart(2, "0")}`,
+        "owner",
+        `2026-08-08 00:00:${String(index).padStart(2, "0")}`,
+      );
+    }
+
+    const db = getMemoListDb(env);
+    const firstPage = await getMemoList(db, "owner", {
+      sort: "asc",
+      page: 1,
+    });
+    const secondPage = await getMemoList(db, "owner", {
+      sort: "asc",
+      page: 2,
+    });
+
+    expect(firstPage.items).toHaveLength(MEMO_LIST_PAGE_SIZE);
+    expect(firstPage.hasNextPage).toBe(true);
+    expect(memoIds(secondPage)).toEqual(["memo-21"]);
+    expect(secondPage.hasNextPage).toBe(false);
   });
 
   it("一覧スコープで実際に使われている自分のタグだけを返す", async () => {

@@ -56,7 +56,7 @@ export default function MemoTagEditor({
   activeTagId,
   availableTags,
   listPath = "/",
-  query = { sort: "desc" },
+  query = { sort: "desc", page: 1 },
 }: {
   activeTagId?: string;
   availableTags: ReadonlyArray<Tag>;

@@ -128,12 +128,12 @@ describe("タグUI", () => {
             updatedAt: "2026-08-03 00:00:00",
             tags: [tag],
           }}
-          query={{ sort: "asc", type: "link" }}
+          query={{ sort: "asc", page: 3, type: "link" }}
         />
         <MemoTagEditor
           availableTags={[tag]}
           listPath="/categories/category-1"
-          query={{ sort: "asc", type: "link" }}
+          query={{ sort: "asc", page: 3, type: "link" }}
         />
       </div>,
     );
@@ -234,7 +234,7 @@ describe("タグUI", () => {
         <MemoListControls
           action="/"
           initialOpen
-          query={{ sort: "desc" }}
+          query={{ sort: "desc", page: 1 }}
           tags={[tagA]}
         />
         <Memo
@@ -309,13 +309,13 @@ describe("タグUI", () => {
               updatedAt: "2026-08-03 00:00:00",
               tags: [tag],
             }}
-            query={{ sort: "desc", tag: tag.id }}
+            query={{ sort: "desc", page: 1, tag: tag.id }}
           />
         </div>
         <MemoTagEditor
           activeTagId={tag.id}
           availableTags={[tag]}
-          query={{ sort: "desc", tag: tag.id }}
+          query={{ sort: "desc", page: 1, tag: tag.id }}
         />
       </div>,
     );

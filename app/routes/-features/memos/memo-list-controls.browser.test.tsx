@@ -21,6 +21,7 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
         action="/categories/category-1"
         query={{
           sort: "asc",
+          page: 3,
           type: "ai",
           attachment: "with",
           tag: "tag-1",
@@ -67,7 +68,11 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
     const container = document.createElement("div");
     document.body.appendChild(container);
     render(
-      <MemoListControls action="/" query={{ sort: "desc" }} tags={[]} />,
+      <MemoListControls
+        action="/"
+        query={{ sort: "desc", page: 1 }}
+        tags={[]}
+      />,
       container,
     );
 
@@ -83,7 +88,11 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
       const container = document.createElement("div");
       document.body.appendChild(container);
       render(
-        <MemoListControls action="/" query={{ sort: "desc" }} tags={[]} />,
+        <MemoListControls
+          action="/"
+          query={{ sort: "desc", page: 1 }}
+          tags={[]}
+        />,
         container,
       );
       return container;
@@ -102,7 +111,7 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
       <MemoListControls
         action="/"
         initialOpen
-        query={{ sort: "desc" }}
+        query={{ sort: "desc", page: 1 }}
         tags={[]}
       />,
       container,
@@ -117,7 +126,7 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
       <MemoListControls
         action="/"
         initialOpen
-        query={{ sort: "desc" }}
+        query={{ sort: "desc", page: 1 }}
         tags={[{ id: "tag-a", name: "a" }]}
       />,
       container,

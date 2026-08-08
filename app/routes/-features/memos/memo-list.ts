@@ -8,7 +8,9 @@ export const getMemoListDb = (env: Cloudflare.Env) =>
 
 type MemoListDb = ReturnType<typeof getMemoListDb>;
 
-export const getMemoList = (
+export const MEMO_LIST_PAGE_SIZE = 20;
+
+export const getMemoList = async (
   db: MemoListDb,
   userId: string,
   query: MemoListQuery,
@@ -45,7 +47,7 @@ export const getMemoList = (
   }
 
   const order = query.sort === "asc" ? asc : desc;
-  return db.query.memosTable.findMany({
+  const rows = await db.query.memosTable.findMany({
     with: {
       category: true,
       memoTags: { with: { tag: true } },
@@ -53,7 +55,14 @@ export const getMemoList = (
     },
     where: and(...conditions),
     orderBy: [order(schema.memosTable.createdAt), order(schema.memosTable.id)],
+    limit: MEMO_LIST_PAGE_SIZE + 1,
+    offset: (query.page - 1) * MEMO_LIST_PAGE_SIZE,
   });
+
+  return {
+    items: rows.slice(0, MEMO_LIST_PAGE_SIZE),
+    hasNextPage: rows.length > MEMO_LIST_PAGE_SIZE,
+  };
 };
 
 export const getUsedMemoTags = async (

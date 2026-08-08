@@ -22,7 +22,7 @@ type MemoWithTags = z.infer<typeof memoSchema.read> & {
 export const Memo = ({
   memo,
   listPath = "/",
-  query = { sort: "desc" },
+  query = { sort: "desc", page: 1 },
   showCategory = true,
   returnTo = "/",
 }: {
@@ -64,10 +64,10 @@ export const Memo = ({
               {showCategory && memo.category && (
                 <a
                   className="badge badge-soft badge-primary flex w-fit items-center gap-1"
-                  href={buildMemoListUrl(
-                    `/categories/${memo.category.id}`,
-                    query,
-                  )}
+                  href={buildMemoListUrl(`/categories/${memo.category.id}`, {
+                    ...query,
+                    page: 1,
+                  })}
                 >
                   <FolderOpenIcon />
                   {memo.category.name}

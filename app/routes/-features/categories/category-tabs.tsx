@@ -11,7 +11,7 @@ type Category = z.infer<typeof categorySchema.read>;
 export const CategoryTabs = ({
   categories,
   activeCategoryId,
-  query = { sort: "desc" },
+  query = { sort: "desc", page: 1 },
 }: {
   categories: ReadonlyArray<Category>;
   activeCategoryId: string | null;
@@ -22,7 +22,7 @@ export const CategoryTabs = ({
       <a
         aria-current={activeCategoryId === null ? "page" : undefined}
         className={`tab whitespace-nowrap ${activeCategoryId === null ? "tab-active" : ""}`}
-        href={buildMemoListUrl("/", query)}
+        href={buildMemoListUrl("/", { ...query, page: 1 })}
       >
         すべて
       </a>
@@ -33,7 +33,10 @@ export const CategoryTabs = ({
           <a
             aria-current={isActive ? "page" : undefined}
             className={`tab inline-flex items-center gap-1 whitespace-nowrap ${isActive ? "tab-active" : ""}`}
-            href={buildMemoListUrl(`/categories/${category.id}`, query)}
+            href={buildMemoListUrl(`/categories/${category.id}`, {
+              ...query,
+              page: 1,
+            })}
             key={category.id}
           >
             <FolderOpenIcon />
