@@ -305,11 +305,16 @@ describe("管理者によるユーザー権限管理", () => {
     return app;
   }
 
-  function updateRequest(targetId: string, role: string, planId = "free") {
+  function updateRequest(
+    targetId: string,
+    role: string,
+    planId = "free",
+    acceptJson = true,
+  ) {
     return new Request(`https://example.test/${targetId}`, {
       method: "POST",
       headers: {
-        Accept: "application/json",
+        ...(acceptJson ? { Accept: "application/json" } : {}),
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({ role, planId }),
@@ -362,6 +367,20 @@ describe("管理者によるユーザー権限管理", () => {
       previous_value: JSON.stringify({ role: "user", planId: "free" }),
       current_value: JSON.stringify({ role: "admin", planId: "pro" }),
     });
+  });
+
+  it("成功時はAcceptヘッダーがなくてもJSONを返す", async () => {
+    await addUser("actor", { role: "admin" });
+    await addUser("target");
+
+    const response = await adminApp({ id: "actor" }).fetch(
+      updateRequest("target", "admin", "free", false),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toContain("application/json");
+    expect(await response.json()).toEqual({ ok: true });
   });
 
   it("最後の管理者は降格させず、失敗した変更を監査ログに残さない", async () => {

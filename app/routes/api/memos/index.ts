@@ -45,6 +45,13 @@ const wantsJson = (c: MemosContext) =>
 const wantsStream = (c: MemosContext) =>
   c.req.header("Accept")?.includes("text/event-stream") ?? false;
 
+const jsonError = (
+  c: MemosContext,
+  code: string,
+  message: string,
+  status: 400 | 403 | 406,
+) => c.json({ code, message }, status);
+
 const cleanupR2Keys = async (
   bucket: R2Bucket,
   keys: readonly string[],
@@ -82,22 +89,9 @@ const isEditAttachmentToken = (
   return suffix.split("/").length === 2 && suffix.split("/").every(Boolean);
 };
 
-const quotaError = (
-  c: MemosContext,
-  redirectPath: string,
-  message: string,
-  code = "QUOTA_EXCEEDED",
-) => {
-  if (wantsJson(c)) {
-    return c.json({ code, message }, 403);
-  }
-  return c.redirect(`${redirectPath}?error=${encodeURIComponent(message)}`);
-};
-
 type UrlSummaryFailure = {
   code: string;
   message: string;
-  redirect?: string;
 };
 
 type UrlSummaryResult =
@@ -218,20 +212,21 @@ memosRoute
       PLAN_METRICS.memoTotal,
     );
     if (!entitlement) {
-      return quotaError(
+      return jsonError(
         c,
-        "/memos/create",
-        "プランのメモ上限が設定されていません。",
         "PLAN_CONFIGURATION_ERROR",
+        "プランのメモ上限が設定されていません。",
+        403,
       );
     }
 
     const usage = await getUsage(db, user.id, PLAN_METRICS.memoTotal);
     if (entitlement.limit !== null && usage >= entitlement.limit) {
-      return quotaError(
+      return jsonError(
         c,
-        "/memos/create",
+        "QUOTA_EXCEEDED",
         `メモの上限（${entitlement.limit}件）に達しています。`,
+        403,
       );
     }
 
@@ -247,15 +242,15 @@ memosRoute
       tags: validated.tags,
     });
     if (!inserted) {
-      return quotaError(
+      return jsonError(
         c,
-        "/memos/create",
+        "QUOTA_EXCEEDED",
         "メモの上限に達しました。最新の利用状況を確認してください。",
+        403,
       );
     }
 
-    if (wantsJson(c)) return c.json({ memoId });
-    return c.redirect("/");
+    return c.json({ memoId });
   })
   .post("/:id/edit-attachments", async (c) => {
     const user = c.get("user");
@@ -850,195 +845,180 @@ memosRoute
   .post("/url", zValidator("form", memoSchema.url), async (c) => {
     const user = c.get("user");
     if (!user) return c.redirect("/login");
-    const db = getAppDb(c.env);
+    if (!wantsStream(c)) {
+      return jsonError(
+        c,
+        "SSE_REQUIRED",
+        "URL要約にはSSEに対応したリクエストが必要です。",
+        406,
+      );
+    }
 
     const validated = c.req.valid("form");
     const url = validated.url;
 
-    const memoEntitlement = await getEntitlement(
-      db,
-      user.id,
-      PLAN_METRICS.memoTotal,
-    );
-    const aiEntitlement = await getEntitlement(
-      db,
-      user.id,
-      PLAN_METRICS.aiSummaryMonthly,
-    );
-    if (!memoEntitlement || !aiEntitlement) {
-      return quotaError(
-        c,
-        "/memos/url-summary",
-        "プランの上限設定が不足しています。",
-        "PLAN_CONFIGURATION_ERROR",
-      );
-    }
+    return streamSSE(c, async (stream) => {
+      const writeEvent: SummaryStreamEventWriter = (event, payload) =>
+        stream.writeSSE({
+          event,
+          data: JSON.stringify(payload),
+        });
+      const writeError = (failure: UrlSummaryFailure) =>
+        stream.writeSSE({
+          event: "error",
+          data: JSON.stringify(failure),
+        });
 
-    const memoUsage = await getUsage(db, user.id, PLAN_METRICS.memoTotal);
-    if (memoEntitlement.limit !== null && memoUsage >= memoEntitlement.limit) {
-      return quotaError(
-        c,
-        "/memos/url-summary",
-        `メモの上限（${memoEntitlement.limit}件）に達しています。`,
-      );
-    }
+      try {
+        const db = getAppDb(c.env);
+        const memoEntitlement = await getEntitlement(
+          db,
+          user.id,
+          PLAN_METRICS.memoTotal,
+        );
+        const aiEntitlement = await getEntitlement(
+          db,
+          user.id,
+          PLAN_METRICS.aiSummaryMonthly,
+        );
+        if (!memoEntitlement || !aiEntitlement) {
+          await writeError({
+            code: "PLAN_CONFIGURATION_ERROR",
+            message: "プランの上限設定が不足しています。",
+          });
+          return;
+        }
 
-    const processUrlSummary = async (
-      writeEvent?: SummaryStreamEventWriter,
-    ): Promise<UrlSummaryResult> => {
-      const response = await fetch(url);
-
-      // HTMLを正しいエンコーディングでデコード
-      const htmlText = await decodeHtmlWithCorrectEncoding(response);
-
-      // UTF-8のBlobとして再生成してAIに渡す
-      const utf8Blob = new Blob([htmlText], {
-        type: "text/html; charset=utf-8",
-      });
-
-      const reserved = await reserveAiSummaryQuota(c.env.MY_MEMO_D1, user.id);
-      if (!reserved) {
-        return {
-          ok: false,
-          failure: {
+        const memoUsage = await getUsage(db, user.id, PLAN_METRICS.memoTotal);
+        if (
+          memoEntitlement.limit !== null &&
+          memoUsage >= memoEntitlement.limit
+        ) {
+          await writeError({
             code: "QUOTA_EXCEEDED",
-            message: `AI要約の今月の上限（${aiEntitlement.limit ?? "無制限"}回）に達しています。`,
-          },
-        };
-      }
+            message: `メモの上限（${memoEntitlement.limit}件）に達しています。`,
+          });
+          return;
+        }
 
-      const [markdown] = await c.env.AI.toMarkdown([
-        {
-          name: url,
-          blob: utf8Blob,
-        },
-      ]);
+        const processUrlSummary = async (): Promise<UrlSummaryResult> => {
+          const response = await fetch(url);
 
-      if (markdown.format === "error") {
-        return {
-          ok: false,
-          failure: {
-            code: "AI_SUMMARY_ERROR",
-            message: "ページを要約できませんでした。",
-            redirect: "/",
-          },
-        };
-      }
+          // HTMLを正しいエンコーディングでデコード
+          const htmlText = await decodeHtmlWithCorrectEncoding(response);
 
-      const m = markdown.data.match(/\s*title:\s*(?<title>.+?)\s*\n[\s\S]*?/m);
-      const title = m?.groups?.title;
-      const messages = [
-        {
-          role: "user" as const,
-          content:
-            "以下の内容を、日本語で200文字程度の概要と2~5個の箇条書きで、markdown形式にまとめてください。出力形式は概要と箇条書きのみで、タイトルセクション等は含めないでください。\n\n" +
-            markdown.data,
-        },
-      ];
+          // UTF-8のBlobとして再生成してAIに渡す
+          const utf8Blob = new Blob([htmlText], {
+            type: "text/html; charset=utf-8",
+          });
 
-      if (writeEvent) {
-        await writeEvent("status", { message: "要約を生成しています…" });
-      }
+          const reserved = await reserveAiSummaryQuota(
+            c.env.MY_MEMO_D1,
+            user.id,
+          );
+          if (!reserved) {
+            return {
+              ok: false,
+              failure: {
+                code: "QUOTA_EXCEEDED",
+                message: `AI要約の今月の上限（${aiEntitlement.limit ?? "無制限"}回）に達しています。`,
+              },
+            };
+          }
 
-      const summary = writeEvent
-        ? await readWorkersAiChatStream(
+          const [markdown] = await c.env.AI.toMarkdown([
+            {
+              name: url,
+              blob: utf8Blob,
+            },
+          ]);
+
+          if (markdown.format === "error") {
+            return {
+              ok: false,
+              failure: {
+                code: "AI_SUMMARY_ERROR",
+                message: "ページを要約できませんでした。",
+              },
+            };
+          }
+
+          const m = markdown.data.match(
+            /\s*title:\s*(?<title>.+?)\s*\n[\s\S]*?/m,
+          );
+          const title = m?.groups?.title;
+          const messages = [
+            {
+              role: "user" as const,
+              content:
+                "以下の内容を、日本語で200文字程度の概要と2~5個の箇条書きで、markdown形式にまとめてください。出力形式は概要と箇条書きのみで、タイトルセクション等は含めないでください。\n\n" +
+                markdown.data,
+            },
+          ];
+
+          await writeEvent("status", { message: "要約を生成しています…" });
+
+          const summary = await readWorkersAiChatStream(
             await c.env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
               messages,
               stream: true,
             }),
             async (text) => writeEvent("chunk", { text }),
-          )
-        : (
-            await c.env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
-              messages,
-            })
-          ).choices[0]?.message.content;
+          );
 
-      if (!summary) {
-        return {
-          ok: false,
-          failure: {
-            code: "AI_SUMMARY_ERROR",
-            message: "AI要約を作成できませんでした。",
-            redirect: "/",
-          },
-        };
-      }
-
-      if (writeEvent) {
-        await writeEvent("status", { message: "要約を保存しています…" });
-      }
-
-      const inserted = await insertMemoWithinQuota(c.env.MY_MEMO_D1, {
-        id: crypto.randomUUID(),
-        title: decodeHtmlEntities(title || "No Title"),
-        content: summary,
-        userId: user.id,
-        aiGenerated: 1,
-        url,
-        categoryId: validated.category ?? null,
-        tags: validated.tags,
-      });
-      if (!inserted) {
-        return {
-          ok: false,
-          failure: {
-            code: "QUOTA_EXCEEDED",
-            message: "メモの上限に達したため、要約を保存できませんでした。",
-          },
-        };
-      }
-
-      return { ok: true };
-    };
-
-    if (wantsStream(c)) {
-      return streamSSE(c, async (stream) => {
-        const writeEvent: SummaryStreamEventWriter = (event, payload) =>
-          stream.writeSSE({
-            event,
-            data: JSON.stringify(payload),
-          });
-
-        try {
-          await writeEvent("status", { message: "ページを取得しています…" });
-          const result = await processUrlSummary(writeEvent);
-          if (!result.ok) {
-            await stream.writeSSE({
-              event: "error",
-              data: JSON.stringify(result.failure),
-            });
-            return;
+          if (!summary) {
+            return {
+              ok: false,
+              failure: {
+                code: "AI_SUMMARY_ERROR",
+                message: "AI要約を作成できませんでした。",
+              },
+            };
           }
 
-          await stream.writeSSE({
-            event: "complete",
-            data: JSON.stringify({ redirect: "/" }),
+          await writeEvent("status", { message: "要約を保存しています…" });
+
+          const inserted = await insertMemoWithinQuota(c.env.MY_MEMO_D1, {
+            id: crypto.randomUUID(),
+            title: decodeHtmlEntities(title || "No Title"),
+            content: summary,
+            userId: user.id,
+            aiGenerated: 1,
+            url,
+            categoryId: validated.category ?? null,
+            tags: validated.tags,
           });
-        } catch {
-          await stream.writeSSE({
-            event: "error",
-            data: JSON.stringify({
-              code: "AI_SUMMARY_ERROR",
-              message: "AI要約を作成できませんでした。",
-            }),
-          });
+          if (!inserted) {
+            return {
+              ok: false,
+              failure: {
+                code: "QUOTA_EXCEEDED",
+                message: "メモの上限に達したため、要約を保存できませんでした。",
+              },
+            };
+          }
+
+          return { ok: true };
+        };
+
+        await writeEvent("status", { message: "ページを取得しています…" });
+        const result = await processUrlSummary();
+        if (!result.ok) {
+          await writeError(result.failure);
+          return;
         }
-      });
-    }
 
-    const result = await processUrlSummary();
-    if (!result.ok) {
-      if (result.failure.redirect) return c.redirect(result.failure.redirect);
-      return quotaError(
-        c,
-        "/memos/url-summary",
-        result.failure.message,
-        result.failure.code,
-      );
-    }
-
-    return c.redirect("/");
+        await stream.writeSSE({
+          event: "complete",
+          data: JSON.stringify({ redirect: "/" }),
+        });
+      } catch {
+        await writeError({
+          code: "AI_SUMMARY_ERROR",
+          message: "AI要約を作成できませんでした。",
+        });
+      }
+    });
   });
 
 export default memosRoute;

@@ -56,9 +56,115 @@ beforeEach(async () => {
     db.prepare("DELETE FROM memos"),
     db.prepare("DELETE FROM user"),
     db.prepare(
+      "UPDATE plan_limits SET limit_value = 100 WHERE plan_id = 'free' AND metric = 'memo.total'",
+    ),
+    db.prepare(
+      "UPDATE plan_limits SET limit_value = 10 WHERE plan_id = 'free' AND metric = 'ai_summary.monthly'",
+    ),
+    db.prepare(
       "UPDATE plan_limits SET limit_value = 524288000 WHERE plan_id = 'free' AND metric = 'attachment.storage_bytes'",
     ),
   ]);
+});
+
+describe("JavaScript必須のメモAPI", () => {
+  it("メモ作成はAcceptに関係なく成功JSONを返す", async () => {
+    await addUser("create-json-user");
+
+    const response = await appForUser("create-json-user").fetch(
+      new Request("https://example.test/api/memos/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          title: "JSONで作成",
+          content: "本文",
+          tags: "",
+        }),
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toContain("application/json");
+    expect(await response.json()).toMatchObject({ memoId: expect.any(String) });
+  });
+
+  it("メモ作成の業務失敗はAcceptに関係なくcodeとmessageのJSONを返す", async () => {
+    await addUser("create-quota-user");
+    await run(
+      "UPDATE plan_limits SET limit_value = 0 WHERE plan_id = 'free' AND metric = 'memo.total'",
+    );
+
+    const response = await appForUser("create-quota-user").fetch(
+      new Request("https://example.test/api/memos/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          title: "作成できないメモ",
+          content: "本文",
+          tags: "",
+        }),
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get("Content-Type")).toContain("application/json");
+    expect(await response.json()).toMatchObject({
+      code: "QUOTA_EXCEEDED",
+      message: expect.any(String),
+    });
+  });
+
+  it("URL要約はSSE以外のリクエストを明示的に拒否する", async () => {
+    await addUser("url-non-sse-user");
+
+    const response = await appForUser("url-non-sse-user").fetch(
+      new Request("https://example.test/api/memos/url", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          url: "https://example.com/article",
+          tags: "",
+        }),
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(406);
+    expect(await response.json()).toEqual({
+      code: "SSE_REQUIRED",
+      message: "URL要約にはSSEに対応したリクエストが必要です。",
+    });
+  });
+
+  it("URL要約の業務失敗はSSEのerrorイベントで返す", async () => {
+    await addUser("url-sse-user");
+    await run(
+      "UPDATE plan_limits SET limit_value = 0 WHERE plan_id = 'free' AND metric = 'memo.total'",
+    );
+
+    const response = await appForUser("url-sse-user").fetch(
+      new Request("https://example.test/api/memos/url", {
+        method: "POST",
+        headers: {
+          Accept: "text/event-stream",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          url: "https://example.com/article",
+          tags: "",
+        }),
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toContain("text/event-stream");
+    expect(await response.text()).toContain(
+      'event: error\ndata: {"code":"QUOTA_EXCEEDED"',
+    );
+  });
 });
 
 describe("添付ファイルAPI", () => {

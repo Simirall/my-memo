@@ -27,7 +27,7 @@ export default defineConfig({
     })),
   ],
   test: {
-    include: ["app/**/*.integration.test.ts"],
+    include: ["app/**/*.integration.test.ts", "app/**/*.integration.test.tsx"],
     includeSource: [
       "app/routes/-features/sharing/share.ts",
       "app/routes/-features/tags/tags.ts",

@@ -12,16 +12,14 @@ import { TagInput } from "@/routes/-features/tags";
 export default function UrlSummaryForm({
   categories,
   tags = [],
-  error: initialError,
   initialUrl,
 }: {
   categories: ReadonlyArray<z.infer<typeof categorySchema.read>>;
   tags?: ReadonlyArray<Tag>;
-  error?: string;
   initialUrl?: string;
 }) {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(initialError);
+  const [error, setError] = useState<string>();
   const [progress, setProgress] = useState<string>();
   const [summary, setSummary] = useState("");
   const [url, setUrl] = useState(initialUrl ?? "");
@@ -51,7 +49,7 @@ export default function UrlSummaryForm({
       const response = await fetch(form.action, {
         method: "POST",
         body: new FormData(form),
-        headers: { Accept: "text/event-stream, application/json" },
+        headers: { Accept: "text/event-stream" },
       });
       if (!response.ok) {
         const payload = (await response.json().catch(() => ({}))) as {
@@ -70,10 +68,6 @@ export default function UrlSummaryForm({
         } else if (event === "complete") {
           window.location.assign(payload.redirect ?? "/");
         } else if (event === "error") {
-          if (payload.redirect) {
-            window.location.assign(payload.redirect);
-            return;
-          }
           throw new Error(payload.message ?? "AI要約を作成できませんでした。");
         }
       });

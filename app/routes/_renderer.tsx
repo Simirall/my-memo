@@ -2,6 +2,25 @@ import { jsxRenderer } from "hono/jsx-renderer";
 import { Link, Script } from "honox/server";
 import { RootLayout } from "@/routes/-shared";
 
+export const JAVASCRIPT_REQUIRED_MESSAGE =
+  "このアプリの利用には JavaScript が必要です。ブラウザーの設定で JavaScript を有効にして、ページを再読み込みしてください。";
+
+export const JavaScriptRequiredStyle = () => (
+  <noscript>
+    <style>{"#app-with-javascript { display: none !important; }"}</style>
+  </noscript>
+);
+
+export const JavaScriptRequiredFallback = () => (
+  <noscript>
+    <main className="flex min-h-screen items-center justify-center bg-base-100 p-4 text-base-content">
+      <div className="alert alert-warning w-fit" role="alert">
+        {JAVASCRIPT_REQUIRED_MESSAGE}
+      </div>
+    </main>
+  </noscript>
+);
+
 export default jsxRenderer(({ children }) => {
   return (
     <html lang="ja">
@@ -15,9 +34,13 @@ export default jsxRenderer(({ children }) => {
         <link href="/icons/apple-touch-icon.png" rel="apple-touch-icon" />
         <Link href="/app/style.css" rel="stylesheet" />
         <Script src="/app/client.ts" />
+        <JavaScriptRequiredStyle />
       </head>
       <body>
-        <RootLayout>{children}</RootLayout>
+        <JavaScriptRequiredFallback />
+        <div id="app-with-javascript">
+          <RootLayout>{children}</RootLayout>
+        </div>
       </body>
     </html>
   );

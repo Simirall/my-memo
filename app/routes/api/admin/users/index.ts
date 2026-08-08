@@ -14,12 +14,7 @@ const userChangeSchema = z.object({
 const usersRoute = new Hono<{ Bindings: CloudflareBindings }>();
 type AdminUsersContext = Context<{ Bindings: CloudflareBindings }>;
 
-const successResponse = (c: AdminUsersContext) => {
-  if (c.req.header("Accept")?.includes("application/json")) {
-    return c.json({ ok: true });
-  }
-  return c.redirect("/admin/users", 303);
-};
+const successResponse = (c: AdminUsersContext) => c.json({ ok: true });
 
 usersRoute.post("/:id", zValidator("form", userChangeSchema), async (c) => {
   const actor = c.get("user");
