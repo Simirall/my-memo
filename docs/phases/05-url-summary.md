@@ -20,7 +20,7 @@
   - Workers AI による要約生成
 - [ ] メモ機能の拡張 (`app/features/memo/`)
   - URL 投稿専用のエンドポイント (`POST /memos/url`) を実装。リクエストで `url` とオプションの `category_id`（カテゴリ UUID）を受け付け、`category_id` が指定された場合は当該ユーザーのカテゴリであることを検証してから処理を進める。
-  - 要約生成サービスを呼び出し、結果を `memos` テーブルに新規保存 (`ai_generated: 1`)。`category_id` が妥当な場合は `memos.category_id` に保存する。
+  - 要約生成サービスを呼び出し、結果を `memos` テーブルに新規保存 (`is_ai_summary: 1`)。`category_id` が妥当な場合は `memos.category_id` に保存する。
 
 ### 2.3 フロントエンド (HonoX)
 
@@ -44,7 +44,7 @@
    - `title`: AI 生成タイトル
    - `content`: AI 生成要約
    - `url`: 入力 URL
-   - `ai_generated`: 1
+   - `is_ai_summary`: 1
    として `memos` テーブルに保存。
 4. **レスポンス**: 保存完了後、メモ詳細画面または一覧画面へリダイレクト。
 
@@ -75,13 +75,13 @@
 #### MemoDetailPage.tsx (拡張)
 
 - **要約表示エリア**:
-  - `aiGenerated` が `1` の場合、AI 生成コンテンツであることを明示する。
+  - `isAiSummary` が `1` の場合、AI Summaryメモであることを明示する。
   - 可能ならカテゴリ名も表示してユーザーがどのカテゴリに保存されたかを明示する（`memo.category_id` → カテゴリ名を表示）。
   - daisyUI の `chat-bubble` や `alert` コンポーネントを活用する。
   - 例:
     ```tsx
     {
-      memo.aiGenerated === 1 && (
+      memo.isAiSummary === 1 && (
         <div className="alert alert-soft alert-info mt-4">
           <div className="flex flex-col">
             <span className="font-bold text-xs">✨ AI Summary</span>

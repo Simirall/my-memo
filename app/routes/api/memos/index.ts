@@ -238,7 +238,7 @@ memosRoute
       content: validated.content,
       url: validated.url ?? null,
       categoryId: validated.categoryId ?? null,
-      aiGenerated: 0,
+      isAiSummary: 0,
       tags: validated.tags,
     });
     if (!inserted) {
@@ -983,7 +983,7 @@ memosRoute
             title: decodeHtmlEntities(title || "No Title"),
             content: summary,
             userId: user.id,
-            aiGenerated: 1,
+            isAiSummary: 1,
             url,
             categoryId: validated.category ?? null,
             tags: validated.tags,

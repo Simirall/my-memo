@@ -359,7 +359,7 @@ describe("添付ファイルAPI", () => {
       };
     };
 
-    await run("UPDATE memos SET ai_generated = 1 WHERE id = ?", "edit-memo");
+    await run("UPDATE memos SET is_ai_summary = 1 WHERE id = ?", "edit-memo");
     const updated = await ownerApp.fetch(
       new Request("https://example.test/api/memos/edit-memo", {
         method: "PATCH",
@@ -386,14 +386,14 @@ describe("添付ファイルAPI", () => {
         content: string;
         url: string;
         category_id: string;
-        ai_generated: number;
+        is_ai_summary: number;
       }>();
     expect(savedMemo).toMatchObject({
       title: "更新タイトル",
       content: "更新本文",
       url: "https://example.test/updated",
       category_id: "edit-category",
-      ai_generated: 1,
+      is_ai_summary: 1,
     });
     expect(
       await db

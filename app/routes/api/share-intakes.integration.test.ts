@@ -279,7 +279,7 @@ describe("共有メディア仮保存API", () => {
     await addUser("share-owner");
     await run(
       `INSERT INTO memos
-        (id, user_id, title, content, ai_generated)
+        (id, user_id, title, content, is_ai_summary)
        VALUES ('existing-memo', 'share-owner', '既存', '既存', 0)`,
     );
     for (let index = 0; index < 5; index += 1) {

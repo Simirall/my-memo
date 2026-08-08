@@ -19,12 +19,12 @@ export const getMemoList = (
   if (categoryId) conditions.push(eq(schema.memosTable.categoryId, categoryId));
 
   if (query.type === "ai") {
-    conditions.push(eq(schema.memosTable.aiGenerated, 1));
+    conditions.push(eq(schema.memosTable.isAiSummary, 1));
   } else if (query.type === "link") {
-    conditions.push(eq(schema.memosTable.aiGenerated, 0));
+    conditions.push(eq(schema.memosTable.isAiSummary, 0));
     conditions.push(isNotNull(schema.memosTable.url));
   } else if (query.type === "normal") {
-    conditions.push(eq(schema.memosTable.aiGenerated, 0));
+    conditions.push(eq(schema.memosTable.isAiSummary, 0));
     conditions.push(isNull(schema.memosTable.url));
   }
 

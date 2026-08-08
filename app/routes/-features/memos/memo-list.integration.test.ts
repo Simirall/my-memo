@@ -37,7 +37,7 @@ const addMemo = (
 ) =>
   run(
     `INSERT INTO memos
-      (id, user_id, title, content, url, category_id, ai_generated, created_at, updated_at)
+      (id, user_id, title, content, url, category_id, is_ai_summary, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     id,
     userId,

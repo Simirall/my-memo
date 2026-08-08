@@ -37,7 +37,7 @@ function mount() {
         content: "AI本文",
         url: "https://example.com",
         categoryId: category.id,
-        aiGenerated: 1,
+        isAiSummary: 1,
         tags: [{ id: "tag-1", name: "既存タグ" }],
         attachments: [attachment],
       }}
@@ -56,7 +56,7 @@ describe("メモ編集フォーム", () => {
   it("AIラベルと既存のメモ項目・添付を初期表示する", async () => {
     mount();
 
-    await expect.element(page.getByText("✨ AI Generated")).toBeVisible();
+    await expect.element(page.getByText("✨ AI Summary")).toBeVisible();
     await expect
       .element(page.getByLabelText("Title"))
       .toHaveValue("AIタイトル");

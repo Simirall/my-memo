@@ -185,7 +185,7 @@ export const memosTable = sqliteTable(
     categoryId: text("category_id").references(() => categoriesTable.id, {
       onDelete: "set null",
     }),
-    aiGenerated: int("ai_generated").notNull().default(0),
+    isAiSummary: int("is_ai_summary").notNull().default(0),
     createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
     updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   },

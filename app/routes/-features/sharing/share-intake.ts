@@ -507,7 +507,7 @@ export const finalizeShareIntake = async (
         content: memo.content,
         url: memo.url,
         categoryId: memo.categoryId,
-        aiGenerated: 0,
+        isAiSummary: 0,
         tags: memo.tags,
       },
       finalAttachments.map((attachment) => ({ ...attachment, memoId, userId })),

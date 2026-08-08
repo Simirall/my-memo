@@ -18,7 +18,7 @@ type EditableMemo = {
   content: string;
   url: string | null;
   categoryId: string | null;
-  aiGenerated: number;
+  isAiSummary: number;
   tags: ReadonlyArray<Tag>;
   attachments: ReadonlyArray<MemoAttachment>;
 };
@@ -259,8 +259,8 @@ export default function EditMemoForm({
 
   return (
     <form className="flex flex-col gap-4" onSubmit={submit}>
-      {memo.aiGenerated === 1 && (
-        <div className="badge badge-soft badge-info">✨ AI Generated</div>
+      {memo.isAiSummary === 1 && (
+        <div className="badge badge-soft badge-info">✨ AI Summary</div>
       )}
       {error && (
         <div aria-live="polite" className="alert alert-error" role="alert">

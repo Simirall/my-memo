@@ -53,7 +53,7 @@ describe("タグの保存", () => {
         content: "a",
         url: null,
         categoryId: null,
-        aiGenerated: 0,
+        isAiSummary: 0,
         tags: ["仕事", "あとで"],
       }),
     ).toBe(true);
@@ -65,7 +65,7 @@ describe("タグの保存", () => {
         content: "b",
         url: null,
         categoryId: null,
-        aiGenerated: 0,
+        isAiSummary: 0,
         tags: ["仕事"],
       }),
     ).toBe(true);
@@ -103,7 +103,7 @@ describe("タグの保存", () => {
           content: memoId,
           url: null,
           categoryId: null,
-          aiGenerated: 0,
+          isAiSummary: 0,
           tags: ["共通"],
         }),
       ).toBe(true);
@@ -128,7 +128,7 @@ describe("タグの保存", () => {
       content: "relation",
       url: null,
       categoryId: null,
-      aiGenerated: 0,
+      isAiSummary: 0,
       tags: ["関連"],
     });
 

@@ -51,7 +51,7 @@
 | title       | TEXT | NOT NULL     | メモタイトル                 |
 | content     | TEXT | NOT NULL     | メモ本文（最大 10,000 文字） |
 | url         | TEXT |              | 添付 URL（Phase 5 で使用）   |
-| ai_generated | INTEGER | NOT NULL DEFAULT 0 | AI 生成フラグ（Phase 5 で使用）。要約テキストは `content` に保存 |
+| is_ai_summary | INTEGER | NOT NULL DEFAULT 0 | AI要約メモ種別（0:通常、1:AI要約）。要約テキストは `content` に保存 |
 | created_at  | TEXT | NOT NULL     | 作成日時                     |
 | updated_at  | TEXT | NOT NULL     | 更新日時                     |
 

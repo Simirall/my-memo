@@ -46,9 +46,9 @@ export const memoSchema = {
     url: (schema) =>
       schema.max(2048, "2048文字以内で入力してください").nullable().optional(),
     categoryId: (schema) => schema.nullable().optional(),
-    aiGenerated: (schema) => schema.optional(),
+    isAiSummary: (schema) => schema.optional(),
   })
-    .omit({ aiGenerated: true })
+    .omit({ isAiSummary: true })
     .extend({
       tags: tagNamesField,
       deleteAttachmentIds: z.array(z.string()).default([]),

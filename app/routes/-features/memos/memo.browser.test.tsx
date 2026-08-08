@@ -19,7 +19,7 @@ const memo = {
   content: "本文",
   url: null,
   categoryId: category.id,
-  aiGenerated: 0,
+  isAiSummary: 0,
   createdAt: "2026-08-02 00:00:00",
   updatedAt: "2026-08-02 00:00:00",
   category,
@@ -45,8 +45,8 @@ describe("メモ表示", () => {
     expect(card?.children).toHaveLength(2);
   });
 
-  it("カテゴリとAI Generatedバッジを同じ行に表示する", async () => {
-    mount(<Memo memo={{ ...memo, aiGenerated: 1 }} />);
+  it("カテゴリとAI Summaryバッジを同じ行に表示する", async () => {
+    mount(<Memo memo={{ ...memo, isAiSummary: 1 }} />);
 
     const categoryLink = document.querySelector(
       'a[href="/categories/category-1"]',

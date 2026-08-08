@@ -201,7 +201,7 @@ describe("使用量の集計と上限の適用", () => {
           content: id,
           url: null,
           categoryId: null,
-          aiGenerated: 0,
+          isAiSummary: 0,
         }),
       ),
     );
@@ -223,7 +223,7 @@ describe("使用量の集計と上限の適用", () => {
           content: id,
           url: null,
           categoryId: null,
-          aiGenerated: 0,
+          isAiSummary: 0,
         }),
       ).toBe(true);
     }
@@ -237,7 +237,7 @@ describe("使用量の集計と上限の適用", () => {
         content: "c",
         url: null,
         categoryId: null,
-        aiGenerated: 0,
+        isAiSummary: 0,
       }),
     ).toBe(false);
 
@@ -252,7 +252,7 @@ describe("使用量の集計と上限の適用", () => {
         content: "c",
         url: null,
         categoryId: null,
-        aiGenerated: 0,
+        isAiSummary: 0,
       }),
     ).toBe(true);
   });

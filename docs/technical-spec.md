@@ -93,7 +93,7 @@
 │ title                                                 │          │
 │ content                                               │          │
 │ url (nullable)                                        │          │
-│ ai_generated (INT, NOT NULL DEFAULT 0)                │          │
+│ is_ai_summary (INT, NOT NULL DEFAULT 0)                │          │
 │ created_at                                            │          │
 │ updated_at                                            │          │
 └──────────────────────────────────────────────────────────────────┘
@@ -148,7 +148,7 @@ Better AuthのDrizzleアダプターが以下のテーブルをD1で管理する
 | title       | TEXT |                                    | メモタイトル                 |
 | content     | TEXT | NOT NULL                           | メモ本文（最大 10,000 文字）  |
 | url         | TEXT |                                    | 添付 URL                  |
-| ai_generated| INTEGER | NOT NULL DEFAULT 0              | AI生成フラグ (0:手動, 1:AI) |
+| is_ai_summary| INTEGER | NOT NULL DEFAULT 0              | AI要約メモ種別 (0:通常, 1:AI要約) |
 | created_at  | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 作成日時                   |
 | updated_at  | TEXT | NOT NULL DEFAULT CURRENT_TIMESTAMP | 更新日時                   |
 
@@ -440,7 +440,7 @@ const auth = betterAuth({
    │ - content: AI 生成要約
    │ - url: 入力 URL
    │ - category_id: (任意) ユーザーが選択したカテゴリの UUID（指定があれば検証の上保存）
-   │ - ai_generated: 1
+   │ - is_ai_summary: 1
    │
    ▼
 6. 完了画面または詳細画面へリダイレクト

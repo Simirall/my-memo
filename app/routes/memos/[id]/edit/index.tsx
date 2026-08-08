@@ -65,7 +65,7 @@ export default createRoute(async (c) => {
               content: memo.content,
               url: memo.url,
               categoryId: memo.categoryId,
-              aiGenerated: memo.aiGenerated,
+              isAiSummary: memo.isAiSummary,
               tags,
               attachments: memo.attachments,
             }}

@@ -19,7 +19,7 @@ type MemoInsert = {
   content: string;
   url: string | null;
   categoryId: string | null;
-  aiGenerated: 0 | 1;
+  isAiSummary: 0 | 1;
   tags?: readonly string[];
 };
 
@@ -55,7 +55,7 @@ const buildMemoStatements = (
     db
       .prepare(
         `INSERT INTO memos
-          (id, user_id, title, content, url, category_id, ai_generated)
+          (id, user_id, title, content, url, category_id, is_ai_summary)
          SELECT ?, ?, ?, ?, ?, ?, ?
          WHERE EXISTS (
            SELECT 1
@@ -76,7 +76,7 @@ const buildMemoStatements = (
         memo.content,
         memo.url,
         memo.categoryId,
-        memo.aiGenerated,
+        memo.isAiSummary,
         memo.userId,
         memo.userId,
         ...(attachmentCount > 0

@@ -59,7 +59,7 @@ export const Memo = ({
           ) : (
             <h2 className="card-title text-xl">{memo.title}</h2>
           )}
-          {((showCategory && memo.category) || memo.aiGenerated === 1) && (
+          {((showCategory && memo.category) || memo.isAiSummary === 1) && (
             <div className="flex flex-wrap items-center gap-2">
               {showCategory && memo.category && (
                 <a
@@ -73,8 +73,8 @@ export const Memo = ({
                   {memo.category.name}
                 </a>
               )}
-              {memo.aiGenerated === 1 && (
-                <div className="badge">✨ AI Generated</div>
+              {memo.isAiSummary === 1 && (
+                <div className="badge">✨ AI Summary</div>
               )}
             </div>
           )}
