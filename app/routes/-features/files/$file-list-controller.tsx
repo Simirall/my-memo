@@ -70,6 +70,17 @@ export default function FileListController() {
       mediaContainer?.replaceChildren();
     };
 
+    const showMediaLoading = () => {
+      if (!mediaContainer) return null;
+      const loading = document.createElement("div");
+      loading.className = "flex min-h-40 items-center justify-center";
+      loading.setAttribute("role", "status");
+      loading.innerHTML =
+        '<span class="loading loading-spinner loading-lg"></span><span class="sr-only">原寸画像を読み込んでいます</span>';
+      mediaContainer.appendChild(loading);
+      return loading;
+    };
+
     const openDialog = (button: HTMLButtonElement) => {
       const data = button.dataset;
       opener = button;
@@ -112,12 +123,26 @@ export default function FileListController() {
       const endpoint = data.endpoint;
       const previewKind = data.previewKind;
       if (mediaContainer && endpoint && previewKind === "image") {
+        const loading = showMediaLoading();
         const image = document.createElement("img");
         image.alt = data.fileName ?? "画像ファイル";
         image.className =
           "mx-auto block max-h-[min(60dvh,32rem)] h-auto max-w-full rounded-box object-contain";
         image.loading = "lazy";
         image.src = `${endpoint}?preview=1`;
+        image.addEventListener("load", () => loading?.remove(), { once: true });
+        image.addEventListener(
+          "error",
+          () => {
+            loading?.remove();
+            const alert = document.createElement("div");
+            alert.className = "alert alert-error";
+            alert.setAttribute("role", "alert");
+            alert.textContent = "原寸画像を読み込めませんでした。";
+            mediaContainer.replaceChildren(alert);
+          },
+          { once: true },
+        );
         setDimension(image, data.mediaWidth);
         setHeight(image, data.mediaHeight);
         mediaContainer.appendChild(image);

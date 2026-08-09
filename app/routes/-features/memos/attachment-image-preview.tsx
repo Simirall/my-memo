@@ -47,6 +47,9 @@ export default function AttachmentImagePreview({
   const [transform, setTransform] =
     useState<PreviewTransform>(INITIAL_TRANSFORM);
   const [gestureOffset, setGestureOffset] = useState<Point>({ x: 0, y: 0 });
+  const [imageStatus, setImageStatus] = useState<
+    "loading" | "loaded" | "error"
+  >("loading");
 
   const current = attachments[currentIndex];
   const titleId = `attachment-preview-title-${memoId}`;
@@ -71,6 +74,7 @@ export default function AttachmentImagePreview({
       return;
     }
     resetView();
+    setImageStatus("loading");
     setCurrentIndex(nextIndex);
   };
 
@@ -108,6 +112,7 @@ export default function AttachmentImagePreview({
     if (initialIndex === null) return;
     setCurrentIndex(initialIndex);
     resetView();
+    setImageStatus("loading");
   }, [initialIndex]);
 
   useEffect(() => {
@@ -343,6 +348,23 @@ export default function AttachmentImagePreview({
           onWheel={onWheel}
           ref={viewportRef}
         >
+          {imageStatus === "loading" && (
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              role="status"
+            >
+              <span className="loading loading-spinner loading-lg" />
+              <span className="sr-only">原寸画像を読み込んでいます</span>
+            </div>
+          )}
+          {imageStatus === "error" && (
+            <div
+              className="alert alert-error absolute inset-x-4 top-1/2 -translate-y-1/2"
+              role="alert"
+            >
+              原寸画像を読み込めませんでした。
+            </div>
+          )}
           <img
             alt={current.fileName}
             className={`absolute inset-0 block size-full select-none object-contain ${transitionClass}`}
@@ -350,8 +372,14 @@ export default function AttachmentImagePreview({
             draggable="false"
             height={current.mediaHeight ?? undefined}
             onDragStart={(event: DragEvent) => event.preventDefault()}
+            onError={() => setImageStatus("error")}
+            onLoad={() => setImageStatus("loaded")}
             ref={imageRef}
-            src={`/api/attachments/${current.id}?preview=1`}
+            src={
+              initialIndex === null
+                ? undefined
+                : `/api/attachments/${current.id}?preview=1`
+            }
             style={{
               objectFit: "contain",
               transform: `translate3d(${transform.x + gestureOffset.x}px, ${transform.y + gestureOffset.y}px, 0) scale(${transform.scale})`,

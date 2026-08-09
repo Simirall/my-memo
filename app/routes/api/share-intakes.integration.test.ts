@@ -151,6 +151,11 @@ describe("共有メディア仮保存API", () => {
       "mediaDimensions",
       JSON.stringify([{ fileId: kept?.id, width: 1, height: 1 }]),
     );
+    form.set("thumbnailFileIds", JSON.stringify([kept?.id]));
+    form.append(
+      "thumbnails",
+      new File(["thumb"], `${kept?.id}.avif`, { type: "image/avif" }),
+    );
     const finalized = await ownerApp.fetch(
       new Request(
         `https://example.test/api/share-intakes/${intake.id}/finalize`,

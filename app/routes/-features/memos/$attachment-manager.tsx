@@ -6,7 +6,11 @@ import {
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS_PER_MEMO,
 } from "@/utils/attachment-constants";
-import { readMediaDimensions } from "@/utils/media-dimensions";
+import {
+  getAttachmentUploadBody,
+  type PendingAttachmentUpload,
+  prepareAttachmentUpload,
+} from "@/utils/attachment-upload-client";
 import AttachmentImagePreview from "./attachment-image-preview";
 
 type MemoAttachment = typeof memoAttachmentsTable.$inferSelect;
@@ -17,10 +21,7 @@ type AttachmentQuota = {
   maxFileBytes: number;
   maxFilesPerMemo: number;
 };
-type PendingAttachment = {
-  file: File;
-  dimensions: Awaited<ReturnType<typeof readMediaDimensions>>;
-};
+type PendingAttachment = PendingAttachmentUpload;
 
 const setInitialMediaVolume = (element: HTMLMediaElement | null) => {
   if (element) element.volume = 0.25;
@@ -109,13 +110,7 @@ export default function AttachmentManager({
       const pending: PendingAttachment[] = [];
       for (const file of selected) {
         try {
-          pending.push({
-            file,
-            dimensions: await readMediaDimensions(
-              file,
-              getAttachmentPreviewKind(file.type),
-            ),
-          });
+          pending.push(await prepareAttachmentUpload(file));
         } catch (cause) {
           throw new Error(
             `「${file.name}」の寸法を取得できませんでした。${
@@ -149,19 +144,8 @@ export default function AttachmentManager({
         const file = pending.file;
         const response = await fetch(`/api/memos/${memoId}/attachments`, {
           method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": file.type || "application/octet-stream",
-            "X-File-Size": String(file.size),
-            "X-File-Name": encodeURIComponent(file.name),
-            ...(pending.dimensions
-              ? {
-                  "X-Media-Width": String(pending.dimensions.width),
-                  "X-Media-Height": String(pending.dimensions.height),
-                }
-              : {}),
-          },
-          body: file,
+          headers: { Accept: "application/json" },
+          body: getAttachmentUploadBody(pending),
         });
         if (!response.ok) {
           const payload = (await response.json().catch(() => ({}))) as {
@@ -286,7 +270,7 @@ export default function AttachmentManager({
                       className="mx-auto block h-auto max-h-[min(60dvh,32rem)] w-full max-w-full rounded-box object-contain"
                       height={attachment.mediaHeight ?? undefined}
                       loading="lazy"
-                      src={`${endpoint}?preview=1`}
+                      src={`${endpoint}?variant=thumbnail`}
                       width={attachment.mediaWidth ?? undefined}
                     />
                   </button>

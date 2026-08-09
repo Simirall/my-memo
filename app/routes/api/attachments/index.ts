@@ -47,16 +47,34 @@ attachmentsRoute.get("/:id", async (c: AttachmentsContext) => {
   if (!attachment)
     return c.json({ message: "添付ファイルが見つかりません。" }, 404);
 
+  const variant = c.req.query("variant");
+  if (variant && variant !== "thumbnail") {
+    return c.json({ message: "画像の種類が不正です。" }, 400);
+  }
+  if (variant === "thumbnail" && !attachment.thumbnailR2Key) {
+    return c.json({ message: "サムネイルが見つかりません。" }, 404);
+  }
+  const isThumbnail = variant === "thumbnail";
+  const objectKey = isThumbnail
+    ? (attachment.thumbnailR2Key ?? attachment.r2Key)
+    : attachment.r2Key;
+  const objectSize = isThumbnail
+    ? (attachment.thumbnailSizeBytes ?? attachment.sizeBytes)
+    : attachment.sizeBytes;
+  const contentType = isThumbnail
+    ? (attachment.thumbnailContentType ?? attachment.contentType)
+    : attachment.contentType;
   const rangeHeader = c.req.header("Range");
   const range = rangeHeader
-    ? parseAttachmentRange(rangeHeader, attachment.sizeBytes)
+    ? parseAttachmentRange(rangeHeader, objectSize)
     : undefined;
   if (rangeHeader && !range) {
     return new Response(null, {
       status: 416,
       headers: {
         "Accept-Ranges": "bytes",
-        "Content-Range": `bytes */${attachment.sizeBytes}`,
+        "Content-Range": `bytes */${objectSize}`,
+        "Cache-Control": "private, max-age=31536000, immutable",
       },
     });
   }
@@ -64,19 +82,43 @@ attachmentsRoute.get("/:id", async (c: AttachmentsContext) => {
   // getPlatformProxy used by the local Vite adapter cannot serialize Headers.
   // A plain R2Range also keeps local development behavior aligned with workerd.
   const object = await c.env.MY_MEMO_FILES.get(
-    attachment.r2Key,
+    objectKey,
     range ? { range } : undefined,
   );
   if (!object || !("body" in object)) {
     return c.json({ message: "添付ファイルを取得できませんでした。" }, 404);
   }
+  const cacheHeaders = new Headers({
+    ETag: object.httpEtag,
+    "Cache-Control": "private, max-age=31536000, immutable",
+  });
+  if (object.uploaded) {
+    cacheHeaders.set("Last-Modified", object.uploaded.toUTCString());
+  }
+  const ifNoneMatch = c.req.header("If-None-Match");
+  const ifModifiedSince = c.req.header("If-Modified-Since");
+  const notModifiedByEtag =
+    !rangeHeader &&
+    ifNoneMatch
+      ?.split(",")
+      .map((value) => value.trim())
+      .includes(object.httpEtag);
+  const modifiedSince = ifModifiedSince ? Date.parse(ifModifiedSince) : NaN;
+  const notModifiedByDate =
+    !rangeHeader &&
+    !ifNoneMatch &&
+    object.uploaded &&
+    Number.isFinite(modifiedSince) &&
+    object.uploaded.getTime() <= modifiedSince + 999;
+  if (notModifiedByEtag || notModifiedByDate) {
+    return new Response(null, { status: 304, headers: cacheHeaders });
+  }
   const body = object.body;
 
-  const preview = c.req.query("preview") === "1";
-  const inline =
-    preview && getAttachmentPreviewKind(attachment.contentType) !== null;
+  const preview = c.req.query("preview") === "1" || isThumbnail;
+  const inline = preview && getAttachmentPreviewKind(contentType) !== null;
   const headers = new Headers({
-    "Content-Type": attachment.contentType,
+    "Content-Type": contentType,
     "Content-Disposition": attachmentContentDisposition(
       attachment.fileName,
       inline,
@@ -84,10 +126,11 @@ attachmentsRoute.get("/:id", async (c: AttachmentsContext) => {
     "X-Content-Type-Options": "nosniff",
     ETag: object.httpEtag,
     "Accept-Ranges": "bytes",
+    "Cache-Control": "private, max-age=31536000, immutable",
   });
   if (object.uploaded)
     headers.set("Last-Modified", object.uploaded.toUTCString());
-  if (object.range) {
+  if (range && object.range) {
     const range = object.range;
     const offset =
       "suffix" in range
@@ -128,7 +171,11 @@ attachmentsRoute.delete("/:id", async (c: AttachmentsContext) => {
     return c.json({ message: "添付ファイルが見つかりません。" }, 404);
 
   try {
-    await c.env.MY_MEMO_FILES.delete(attachment.r2Key);
+    await c.env.MY_MEMO_FILES.delete(
+      [attachment.r2Key, attachment.thumbnailR2Key].filter(
+        (key): key is string => Boolean(key),
+      ),
+    );
   } catch (error) {
     console.error(
       JSON.stringify({

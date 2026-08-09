@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { parseMediaDimensions } from "./attachment-constants";
+import {
+  parseMediaDimensions,
+  sanitizeAttachmentFileName,
+} from "./attachment-constants";
+
+describe("添付ファイル名", () => {
+  it("multipart由来の区切り文字と制御文字を除去して255文字に制限する", () => {
+    expect(sanitizeAttachmentFileName(" ../folder\\file\u0000.txt ")).toBe(
+      ".._folder_file_.txt",
+    );
+    expect(sanitizeAttachmentFileName("a".repeat(300))).toHaveLength(255);
+  });
+});
 
 describe("添付media寸法", () => {
   it("画像と動画は幅・高さを必須にする", () => {

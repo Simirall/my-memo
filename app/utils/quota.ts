@@ -6,6 +6,9 @@ export type MemoAttachmentInsert = {
   memoId: string;
   userId: string;
   r2Key: string;
+  thumbnailR2Key?: string | null;
+  thumbnailContentType?: string | null;
+  thumbnailSizeBytes?: number | null;
   fileName: string;
   contentType: string;
   sizeBytes: number;
@@ -124,8 +127,8 @@ const buildAttachmentStatement = (
   db
     .prepare(
       `INSERT INTO memo_attachments
-        (id, memo_id, user_id, r2_key, file_name, content_type, size_bytes, media_width, media_height, etag)
-       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        (id, memo_id, user_id, r2_key, thumbnail_r2_key, thumbnail_content_type, thumbnail_size_bytes, file_name, content_type, size_bytes, media_width, media_height, etag)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE EXISTS (
          SELECT 1 FROM memos WHERE id = ? AND user_id = ?
        )`,
@@ -135,6 +138,9 @@ const buildAttachmentStatement = (
       attachment.memoId,
       attachment.userId,
       attachment.r2Key,
+      attachment.thumbnailR2Key ?? null,
+      attachment.thumbnailContentType ?? null,
+      attachment.thumbnailSizeBytes ?? null,
       attachment.fileName,
       attachment.contentType,
       attachment.sizeBytes,
@@ -227,8 +233,8 @@ export async function insertAttachmentWithinQuota(
   const result = await db
     .prepare(
       `INSERT INTO memo_attachments
-        (id, memo_id, user_id, r2_key, file_name, content_type, size_bytes, media_width, media_height, etag)
-       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        (id, memo_id, user_id, r2_key, thumbnail_r2_key, thumbnail_content_type, thumbnail_size_bytes, file_name, content_type, size_bytes, media_width, media_height, etag)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE EXISTS (
          SELECT 1
          FROM memos AS m
@@ -249,6 +255,9 @@ export async function insertAttachmentWithinQuota(
       attachment.memoId,
       attachment.userId,
       attachment.r2Key,
+      attachment.thumbnailR2Key ?? null,
+      attachment.thumbnailContentType ?? null,
+      attachment.thumbnailSizeBytes ?? null,
       attachment.fileName,
       attachment.contentType,
       attachment.sizeBytes,

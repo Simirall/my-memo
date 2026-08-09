@@ -10,6 +10,9 @@ const attachments = [
     memoId: "memo-1",
     userId: "user-1",
     r2Key: "user-1/memo-1/image-1",
+    thumbnailR2Key: "user-1/memo-1/image-1.thumbnail",
+    thumbnailContentType: "image/avif",
+    thumbnailSizeBytes: 5,
     fileName: "first.png",
     contentType: "image/png",
     sizeBytes: 10,
@@ -23,6 +26,9 @@ const attachments = [
     memoId: "memo-1",
     userId: "user-1",
     r2Key: "user-1/memo-1/audio-1",
+    thumbnailR2Key: null,
+    thumbnailContentType: null,
+    thumbnailSizeBytes: null,
     fileName: "sound.mp3",
     contentType: "audio/mpeg",
     sizeBytes: 10,
@@ -36,6 +42,9 @@ const attachments = [
     memoId: "memo-1",
     userId: "user-1",
     r2Key: "user-1/memo-1/image-2",
+    thumbnailR2Key: "user-1/memo-1/image-2.thumbnail",
+    thumbnailContentType: "image/avif",
+    thumbnailSizeBytes: 5,
     fileName: "second.png",
     contentType: "image/png",
     sizeBytes: 10,
@@ -92,6 +101,13 @@ describe("メモ一覧の画像拡大プレビュー", () => {
     const opener = page.getByRole("button", {
       name: "画像「first.png」を拡大表示",
     });
+    expect(opener.element().querySelector("img")).toHaveAttribute(
+      "src",
+      "/api/attachments/image-1?variant=thumbnail",
+    );
+    expect(
+      document.querySelector("[data-attachment-preview-image]"),
+    ).not.toHaveAttribute("src");
     await opener.click();
 
     await expect.element(page.getByRole("dialog")).toBeVisible();

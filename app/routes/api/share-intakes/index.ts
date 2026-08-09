@@ -141,6 +141,34 @@ shareIntakesRoute.post(
 
     try {
       const validated = c.req.valid("form");
+      const form = await c.req.formData();
+      const thumbnailFileIdsValue = form.get("thumbnailFileIds");
+      let thumbnailFileIds: string[] = [];
+      try {
+        const parsed = JSON.parse(
+          typeof thumbnailFileIdsValue === "string"
+            ? thumbnailFileIdsValue
+            : "[]",
+        );
+        if (
+          !Array.isArray(parsed) ||
+          parsed.some((id) => typeof id !== "string")
+        ) {
+          throw new Error();
+        }
+        thumbnailFileIds = parsed;
+      } catch {
+        throw new ShareIntakeError("共有画像のサムネイル情報が不正です。", 400);
+      }
+      const thumbnailFiles = form
+        .getAll("thumbnails")
+        .filter((value): value is File => value instanceof File);
+      if (thumbnailFiles.length !== thumbnailFileIds.length) {
+        throw new ShareIntakeError(
+          "共有画像のサムネイルが不足しています。",
+          400,
+        );
+      }
       const categoryId = validated.categoryId ?? null;
       if (categoryId) {
         const category = await getAppDb(c.env)
@@ -168,6 +196,10 @@ shareIntakesRoute.post(
           categoryId,
           tags: validated.tags,
           mediaDimensions: validated.mediaDimensions,
+          thumbnails: thumbnailFiles.map((file, index) => ({
+            fileId: thumbnailFileIds[index] ?? "",
+            file,
+          })),
         },
       );
       return c.json(result);

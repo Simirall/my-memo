@@ -18,6 +18,11 @@ import {
   MAX_ATTACHMENTS_PER_MEMO,
 } from "@/utils/attachment-constants";
 import {
+  getAttachmentUploadBody,
+  type PendingAttachmentUpload,
+  prepareAttachmentUpload,
+} from "@/utils/attachment-upload-client";
+import {
   type ClipboardRejection,
   formatClipboardRejections,
   getClipboardFiles,
@@ -25,10 +30,8 @@ import {
   selectClipboardMedia,
   shouldCaptureClipboardPaste,
 } from "@/utils/clipboard-media";
-import {
-  readMediaDimensions,
-  readMediaDimensionsFromUrl,
-} from "@/utils/media-dimensions";
+import type { GeneratedThumbnail } from "@/utils/image-thumbnail";
+import { readMediaDimensionsFromUrl } from "@/utils/media-dimensions";
 
 type AttachmentQuota = {
   used: number;
@@ -37,10 +40,10 @@ type AttachmentQuota = {
   maxFileBytes: number;
   maxFilesPerMemo: number;
 };
-type PendingAttachment = {
-  id: string;
-  file: File;
-  dimensions: MediaDimensions | null;
+type PendingAttachment = PendingAttachmentUpload & { id: string };
+type SharedPreparedMedia = {
+  dimensions: MediaDimensions;
+  thumbnail: GeneratedThumbnail | null;
 };
 
 export default function CreateMemoForm({
@@ -73,6 +76,9 @@ export default function CreateMemoForm({
   const [sharedFiles, setSharedFiles] = useState(shareIntake?.files ?? []);
   const [sharedMediaDimensions, setSharedMediaDimensions] = useState<
     Record<string, MediaDimensions>
+  >({});
+  const [sharedThumbnails, setSharedThumbnails] = useState<
+    Record<string, GeneratedThumbnail>
   >({});
   const [sharedMediaError, setSharedMediaError] = useState<string>();
   const [isCheckingSharedMedia, setIsCheckingSharedMedia] = useState(
@@ -131,11 +137,32 @@ export default function CreateMemoForm({
           const kind = getAttachmentPreviewKind(file.contentType);
           if (kind !== "image" && kind !== "video") return null;
           try {
-            const dimensions = await readMediaDimensionsFromUrl(
-              `/api/share-intakes/${shareIntake.id}/files/${file.id}`,
-              kind,
-            );
-            return [file.id, dimensions] as const;
+            const endpoint = `/api/share-intakes/${shareIntake.id}/files/${file.id}`;
+            if (kind === "video") {
+              return [
+                file.id,
+                {
+                  dimensions: await readMediaDimensionsFromUrl(endpoint, kind),
+                  thumbnail: null,
+                },
+              ] as const;
+            }
+            const response = await fetch(endpoint);
+            if (!response.ok)
+              throw new Error("共有ファイルを取得できませんでした。");
+            const source = new File([await response.blob()], file.fileName, {
+              type: file.contentType,
+            });
+            const prepared = await prepareAttachmentUpload(source);
+            if (!prepared.dimensions)
+              throw new Error("共有画像の寸法を取得できませんでした。");
+            return [
+              file.id,
+              {
+                dimensions: prepared.dimensions,
+                thumbnail: prepared.thumbnail,
+              },
+            ] as const;
           } catch (cause) {
             throw new Error(
               `「${file.fileName}」の寸法を取得できませんでした。${
@@ -146,11 +173,21 @@ export default function CreateMemoForm({
         }),
       );
       if (generation !== sharedMediaAnalysisGeneration.current) return;
+      const preparedEntries = entries.filter(
+        (entry): entry is readonly [string, SharedPreparedMedia] =>
+          entry !== null,
+      );
       setSharedMediaDimensions(
         Object.fromEntries(
-          entries.filter(
-            (entry): entry is readonly [string, MediaDimensions] =>
-              entry !== null,
+          preparedEntries.flatMap(([id, prepared]) =>
+            prepared.dimensions ? [[id, prepared.dimensions] as const] : [],
+          ),
+        ),
+      );
+      setSharedThumbnails(
+        Object.fromEntries(
+          preparedEntries.flatMap(([id, prepared]) =>
+            prepared.thumbnail ? [[id, prepared.thumbnail] as const] : [],
           ),
         ),
       );
@@ -227,11 +264,7 @@ export default function CreateMemoForm({
         try {
           pending.push({
             id: crypto.randomUUID(),
-            file,
-            dimensions: await readMediaDimensions(
-              file,
-              getAttachmentPreviewKind(file.type),
-            ),
+            ...(await prepareAttachmentUpload(file)),
           });
         } catch {
           dimensionFailures.push({ file, reason: "dimensions" });
@@ -317,11 +350,7 @@ export default function CreateMemoForm({
         try {
           pending.push({
             id: crypto.randomUUID(),
-            file,
-            dimensions: await readMediaDimensions(
-              file,
-              getAttachmentPreviewKind(file.type),
-            ),
+            ...(await prepareAttachmentUpload(file)),
           });
         } catch (cause) {
           throw new Error(
@@ -354,23 +383,11 @@ export default function CreateMemoForm({
     const failed: PendingAttachment[] = [];
     let succeeded = 0;
     for (const item of pending) {
-      const file = item.file;
       try {
         const response = await fetch(`/api/memos/${memoId}/attachments`, {
           method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": file.type || "application/octet-stream",
-            "X-File-Size": String(file.size),
-            "X-File-Name": encodeURIComponent(file.name),
-            ...(item.dimensions
-              ? {
-                  "X-Media-Width": String(item.dimensions.width),
-                  "X-Media-Height": String(item.dimensions.height),
-                }
-              : {}),
-          },
-          body: file,
+          headers: { Accept: "application/json" },
+          body: getAttachmentUploadBody(item),
         });
         if (!response.ok) {
           failed.push(item);
@@ -407,6 +424,11 @@ export default function CreateMemoForm({
       }
       setSharedFiles(payload.files);
       setSharedMediaDimensions((current) => {
+        const next = { ...current };
+        delete next[fileId];
+        return next;
+      });
+      setSharedThumbnails((current) => {
         const next = { ...current };
         delete next[fileId];
         return next;
@@ -484,6 +506,15 @@ export default function CreateMemoForm({
               ([fileId, dimensions]) => ({ fileId, ...dimensions }),
             ),
           ),
+        );
+        for (const [fileId, thumbnail] of Object.entries(sharedThumbnails)) {
+          const extension =
+            thumbnail.blob.type === "image/avif" ? "avif" : "webp";
+          body.append("thumbnails", thumbnail.blob, `${fileId}.${extension}`);
+        }
+        body.set(
+          "thumbnailFileIds",
+          JSON.stringify(Object.keys(sharedThumbnails)),
         );
         const response = await fetch(
           `/api/share-intakes/${shareIntake.id}/finalize`,

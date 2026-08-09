@@ -17,8 +17,9 @@ import {
   memoTagsTable,
   tagsTable,
 } from "@/schema";
+import { parseAttachmentUploadForm } from "@/utils/attachment-upload";
 import {
-  decodeAttachmentFileName,
+  getAttachmentPreviewKind,
   getAttachmentQuota,
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS_PER_MEMO,
@@ -266,40 +267,16 @@ memosRoute
       .get();
     if (!memo) return c.json({ message: "メモが見つかりません。" }, 404);
 
-    const fileNameHeader = c.req.header("X-File-Name");
     const editId = c.req.header("X-Edit-Id");
-    const body = c.req.raw.body;
-    if (!fileNameHeader || fileNameHeader.length > 2048 || !editId) {
+    if (!editId) {
       return c.json({ message: "添付ファイル情報が不正です。" }, 400);
     }
     if (!/^[a-zA-Z0-9-]{1,80}$/.test(editId)) {
       return c.json({ message: "更新IDが不正です。" }, 400);
     }
-    if (!body) return c.json({ message: "ファイルが空です。" }, 400);
-
-    const declaredSizeHeader =
-      c.req.header("Content-Length") ?? c.req.header("X-File-Size");
-    const declaredSize = declaredSizeHeader ? Number(declaredSizeHeader) : NaN;
-    if (!Number.isSafeInteger(declaredSize) || declaredSize < 0) {
-      return c.json({ message: "ファイルサイズを確認できませんでした。" }, 411);
-    }
-    if (declaredSize > MAX_ATTACHMENT_BYTES) {
-      return c.json({ message: "1ファイルは25 MiB以下にしてください。" }, 413);
-    }
-
-    const contentType =
-      (c.req.header("Content-Type") || "application/octet-stream")
-        .split(";", 1)[0]
-        .trim()
-        .toLowerCase()
-        .slice(0, 255) || "application/octet-stream";
-    let mediaDimensions: { width: number; height: number } | null;
+    let upload: Awaited<ReturnType<typeof parseAttachmentUploadForm>>;
     try {
-      mediaDimensions = parseMediaDimensions(
-        contentType,
-        c.req.header("X-Media-Width"),
-        c.req.header("X-Media-Height"),
-      );
+      upload = await parseAttachmentUploadForm(c.req.raw);
     } catch (error) {
       return c.json(
         {
@@ -309,21 +286,42 @@ memosRoute
         400,
       );
     }
-    const fileName = decodeAttachmentFileName(fileNameHeader);
     const token = `${getEditAttachmentPrefix(user.id, memoId)}${editId}/${crypto.randomUUID()}`;
+    const thumbnailToken = upload.thumbnail ? `${token}.thumbnail` : null;
     try {
       const object = await putR2ObjectWithKnownLength(
         c.env.MY_MEMO_FILES,
         token,
-        body,
-        declaredSize,
-        { httpMetadata: { contentType } },
+        upload.original.stream(),
+        upload.original.size,
+        {
+          httpMetadata: {
+            contentType: upload.contentType,
+          },
+        },
       );
-      if (object.size !== declaredSize) {
-        await cleanupR2Keys(c.env.MY_MEMO_FILES, [token], {
-          event: "memo_edit_attachment_size_mismatch_cleanup_failed",
-          memoId,
-        });
+      const thumbnailObject =
+        upload.thumbnail && thumbnailToken
+          ? await putR2ObjectWithKnownLength(
+              c.env.MY_MEMO_FILES,
+              thumbnailToken,
+              upload.thumbnail.stream(),
+              upload.thumbnail.size,
+              { httpMetadata: { contentType: upload.thumbnail.type } },
+            )
+          : null;
+      if (
+        object.size !== upload.original.size ||
+        (upload.thumbnail && thumbnailObject?.size !== upload.thumbnail.size)
+      ) {
+        await cleanupR2Keys(
+          c.env.MY_MEMO_FILES,
+          [token, thumbnailToken].filter((key): key is string => Boolean(key)),
+          {
+            event: "memo_edit_attachment_size_mismatch_cleanup_failed",
+            memoId,
+          },
+        );
         return c.json(
           { message: "ファイルサイズを確認できませんでした。" },
           400,
@@ -332,19 +330,26 @@ memosRoute
       return c.json({
         attachment: {
           token,
-          fileName,
-          contentType,
+          thumbnailToken,
+          thumbnailContentType: upload.thumbnail?.type ?? null,
+          thumbnailSizeBytes: thumbnailObject?.size ?? null,
+          fileName: upload.fileName,
+          contentType: upload.contentType,
           sizeBytes: object.size,
-          mediaWidth: mediaDimensions?.width ?? null,
-          mediaHeight: mediaDimensions?.height ?? null,
+          mediaWidth: upload.mediaDimensions?.width ?? null,
+          mediaHeight: upload.mediaDimensions?.height ?? null,
           etag: object.etag,
         },
       });
     } catch (error) {
-      await cleanupR2Keys(c.env.MY_MEMO_FILES, [token], {
-        event: "memo_edit_attachment_upload_cleanup_failed",
-        memoId,
-      });
+      await cleanupR2Keys(
+        c.env.MY_MEMO_FILES,
+        [token, thumbnailToken].filter((key): key is string => Boolean(key)),
+        {
+          event: "memo_edit_attachment_upload_cleanup_failed",
+          memoId,
+        },
+      );
       console.error(
         JSON.stringify({
           event: "memo_edit_attachment_upload_failed",
@@ -403,7 +408,12 @@ memosRoute
     }
     const validated = parsed.data;
     const staged = validated.stagedAttachments;
-    const stagedKeys = staged.map((attachment) => attachment.token);
+    const stagedKeys = staged.flatMap((attachment) => {
+      if (!isEditAttachmentToken(attachment.token, user.id, memoId)) return [];
+      return attachment.thumbnailToken === `${attachment.token}.thumbnail`
+        ? [attachment.token, attachment.thumbnailToken]
+        : [attachment.token];
+    });
     const cleanupStaged = () =>
       cleanupR2Keys(c.env.MY_MEMO_FILES, stagedKeys, {
         event: "memo_edit_attachment_cleanup_failed",
@@ -417,7 +427,9 @@ memosRoute
     if (
       staged.some(
         (attachment) =>
-          !isEditAttachmentToken(attachment.token, user.id, memoId),
+          !isEditAttachmentToken(attachment.token, user.id, memoId) ||
+          (attachment.thumbnailToken !== null &&
+            attachment.thumbnailToken !== `${attachment.token}.thumbnail`),
       )
     ) {
       await cleanupStaged();
@@ -432,6 +444,15 @@ memosRoute
             ? null
             : String(attachment.mediaHeight),
         );
+        const isImage =
+          getAttachmentPreviewKind(attachment.contentType) === "image";
+        if (
+          isImage !== Boolean(attachment.thumbnailToken) ||
+          isImage !== Boolean(attachment.thumbnailContentType) ||
+          isImage !== Boolean(attachment.thumbnailSizeBytes)
+        ) {
+          throw new Error("画像のサムネイル情報が不正です。");
+        }
       }
     } catch (error) {
       await cleanupStaged();
@@ -527,12 +548,26 @@ memosRoute
       staged.map(async (attachment) => ({
         ...attachment,
         object: await c.env.MY_MEMO_FILES.head(attachment.token),
+        thumbnailObject: attachment.thumbnailToken
+          ? await c.env.MY_MEMO_FILES.head(attachment.thumbnailToken)
+          : null,
       })),
     );
     if (
       stagedObjects.some(
-        ({ object, sizeBytes, etag }) =>
-          !object || object.size !== sizeBytes || object.etag !== etag,
+        ({
+          object,
+          sizeBytes,
+          etag,
+          thumbnailToken,
+          thumbnailObject,
+          thumbnailSizeBytes,
+        }) =>
+          !object ||
+          object.size !== sizeBytes ||
+          object.etag !== etag ||
+          (thumbnailToken &&
+            (!thumbnailObject || thumbnailObject.size !== thumbnailSizeBytes)),
       )
     ) {
       await cleanupStaged();
@@ -584,13 +619,16 @@ memosRoute
       statements.push(
         c.env.MY_MEMO_D1.prepare(
           `INSERT INTO memo_attachments
-             (id, memo_id, user_id, r2_key, file_name, content_type, size_bytes, media_width, media_height, etag)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             (id, memo_id, user_id, r2_key, thumbnail_r2_key, thumbnail_content_type, thumbnail_size_bytes, file_name, content_type, size_bytes, media_width, media_height, etag)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).bind(
           crypto.randomUUID(),
           memoId,
           user.id,
           attachment.token,
+          attachment.thumbnailToken,
+          attachment.thumbnailContentType,
+          attachment.thumbnailSizeBytes,
           attachment.fileName,
           attachment.contentType,
           attachment.sizeBytes,
@@ -622,7 +660,10 @@ memosRoute
     await cleanupR2Keys(
       c.env.MY_MEMO_FILES,
       deleteIds
-        .map((id) => currentById.get(id)?.r2Key)
+        .flatMap((id) => {
+          const attachment = currentById.get(id);
+          return [attachment?.r2Key, attachment?.thumbnailR2Key];
+        })
         .filter((key): key is string => Boolean(key)),
       { event: "memo_edit_attachment_delete_failed", memoId },
     );
@@ -641,22 +682,19 @@ memosRoute
       .get();
     if (!memo) return c.json({ message: "メモが見つかりません。" }, 404);
 
-    const fileNameHeader = c.req.header("X-File-Name");
-    if (!fileNameHeader || fileNameHeader.length > 2048) {
-      return c.json({ message: "ファイル名が不正です。" }, 400);
+    let upload: Awaited<ReturnType<typeof parseAttachmentUploadForm>>;
+    try {
+      upload = await parseAttachmentUploadForm(c.req.raw);
+    } catch (error) {
+      return c.json(
+        {
+          message:
+            error instanceof Error ? error.message : "添付ファイルが不正です。",
+        },
+        400,
+      );
     }
-    const body = c.req.raw.body;
-    if (!body) return c.json({ message: "ファイルが空です。" }, 400);
-
-    const declaredSizeHeader =
-      c.req.header("Content-Length") ?? c.req.header("X-File-Size");
-    const declaredSize = declaredSizeHeader ? Number(declaredSizeHeader) : NaN;
-    if (!Number.isSafeInteger(declaredSize) || declaredSize < 0) {
-      return c.json({ message: "ファイルサイズを確認できませんでした。" }, 411);
-    }
-    if (declaredSize > MAX_ATTACHMENT_BYTES) {
-      return c.json({ message: "1ファイルは25 MiB以下にしてください。" }, 413);
-    }
+    const declaredSize = upload.original.size;
 
     const count = await db
       .select({ count: sql<number>`count(*)` })
@@ -688,43 +726,17 @@ memosRoute
       return c.json({ message: "添付容量の残りが足りません。" }, 409);
     }
 
-    const contentType =
-      (c.req.header("Content-Type") || "application/octet-stream")
-        .split(";", 1)[0]
-        .trim()
-        .toLowerCase()
-        .slice(0, 255) || "application/octet-stream";
-    let mediaDimensions: { width: number; height: number } | null;
-    try {
-      mediaDimensions = parseMediaDimensions(
-        contentType,
-        c.req.header("X-Media-Width"),
-        c.req.header("X-Media-Height"),
-      );
-    } catch (error) {
-      return c.json(
-        {
-          message:
-            error instanceof Error ? error.message : "添付寸法が不正です。",
-        },
-        400,
-      );
-    }
-    const fileName = decodeAttachmentFileName(fileNameHeader);
     const r2Key = `users/${user.id}/memos/${memoId}/${crypto.randomUUID()}`;
+    const thumbnailR2Key = upload.thumbnail ? `${r2Key}.thumbnail` : null;
     const cleanup = async () => {
-      try {
-        await c.env.MY_MEMO_FILES.delete(r2Key);
-      } catch (error) {
-        console.error(
-          JSON.stringify({
-            event: "memo_attachment_cleanup_failed",
-            memoId,
-            r2Key,
-            error: error instanceof Error ? error.message : String(error),
-          }),
-        );
-      }
+      await cleanupR2Keys(
+        c.env.MY_MEMO_FILES,
+        [r2Key, thumbnailR2Key].filter((key): key is string => Boolean(key)),
+        {
+          event: "memo_attachment_cleanup_failed",
+          memoId,
+        },
+      );
     };
 
     let object: R2Object;
@@ -732,12 +744,23 @@ memosRoute
       object = await putR2ObjectWithKnownLength(
         c.env.MY_MEMO_FILES,
         r2Key,
-        body,
+        upload.original.stream(),
         declaredSize,
         {
-          httpMetadata: { contentType },
+          httpMetadata: {
+            contentType: upload.contentType,
+          },
         },
       );
+      if (upload.thumbnail && thumbnailR2Key) {
+        await putR2ObjectWithKnownLength(
+          c.env.MY_MEMO_FILES,
+          thumbnailR2Key,
+          upload.thumbnail.stream(),
+          upload.thumbnail.size,
+          { httpMetadata: { contentType: upload.thumbnail.type } },
+        );
+      }
     } catch (error) {
       await cleanup();
       console.error(
@@ -778,11 +801,14 @@ memosRoute
         memoId,
         userId: user.id,
         r2Key,
-        fileName,
-        contentType,
+        thumbnailR2Key,
+        thumbnailContentType: upload.thumbnail?.type ?? null,
+        thumbnailSizeBytes: upload.thumbnail?.size ?? null,
+        fileName: upload.fileName,
+        contentType: upload.contentType,
         sizeBytes: object.size,
-        mediaWidth: mediaDimensions?.width ?? null,
-        mediaHeight: mediaDimensions?.height ?? null,
+        mediaWidth: upload.mediaDimensions?.width ?? null,
+        mediaHeight: upload.mediaDimensions?.height ?? null,
         etag: object.etag,
       });
     } catch (error) {
@@ -832,7 +858,10 @@ memosRoute
 
     if (memo) {
       const attachments = await db
-        .select({ r2Key: memoAttachmentsTable.r2Key })
+        .select({
+          r2Key: memoAttachmentsTable.r2Key,
+          thumbnailR2Key: memoAttachmentsTable.thumbnailR2Key,
+        })
         .from(memoAttachmentsTable)
         .where(
           and(
@@ -842,8 +871,10 @@ memosRoute
         );
       try {
         await Promise.all(
-          attachments.map((attachment) =>
-            c.env.MY_MEMO_FILES.delete(attachment.r2Key),
+          attachments.flatMap((attachment) =>
+            [attachment.r2Key, attachment.thumbnailR2Key]
+              .filter((key): key is string => Boolean(key))
+              .map((key) => c.env.MY_MEMO_FILES.delete(key)),
           ),
         );
       } catch (error) {

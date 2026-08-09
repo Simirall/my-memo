@@ -150,7 +150,7 @@ export default createRoute(async (c) => {
                             className="block h-full w-full object-contain"
                             height={file.mediaHeight ?? undefined}
                             loading="lazy"
-                            src={`/api/attachments/${encodeURIComponent(file.id)}?preview=1`}
+                            src={`/api/attachments/${encodeURIComponent(file.id)}?variant=thumbnail`}
                             width={file.mediaWidth ?? undefined}
                           />
                         ) : (

@@ -74,6 +74,11 @@ export const memoSchema = {
         .array(
           z.object({
             token: z.string().min(1),
+            thumbnailToken: z.string().min(1).nullable(),
+            thumbnailContentType: z
+              .enum(["image/avif", "image/webp"])
+              .nullable(),
+            thumbnailSizeBytes: z.number().int().positive().nullable(),
             fileName: z.string().min(1).max(255),
             contentType: z.string().min(1).max(255),
             sizeBytes: z.number().int().nonnegative(),

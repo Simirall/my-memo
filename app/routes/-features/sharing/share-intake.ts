@@ -2,10 +2,13 @@ import { and, eq } from "drizzle-orm";
 import { shareIntakeFilesTable, shareIntakesTable } from "@/schema";
 import {
   decodeAttachmentFileName,
+  getAttachmentPreviewKind,
   getAttachmentQuota,
+  isThumbnailContentType,
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS_PER_MEMO,
   MAX_SHARED_ATTACHMENT_BYTES,
+  MAX_THUMBNAIL_BYTES,
   parseMediaDimensions,
   SHARE_INTAKE_MAX_AGE_MS,
 } from "@/utils/attachments";
@@ -422,6 +425,7 @@ type FinalizeMemo = {
     width: number;
     height: number;
   }[];
+  thumbnails: readonly { fileId: string; file: File }[];
 };
 
 export const finalizeShareIntake = async (
@@ -442,6 +446,30 @@ export const finalizeShareIntake = async (
   const dimensionsByFileId = new Map(
     memo.mediaDimensions.map((dimensions) => [dimensions.fileId, dimensions]),
   );
+  const thumbnailsByFileId = new Map(
+    memo.thumbnails.map((thumbnail) => [thumbnail.fileId, thumbnail.file]),
+  );
+  if (thumbnailsByFileId.size !== memo.thumbnails.length) {
+    throw new ShareIntakeError("共有画像のサムネイルが重複しています。", 400);
+  }
+  for (const file of intake.files) {
+    const thumbnail = thumbnailsByFileId.get(file.id);
+    if (getAttachmentPreviewKind(file.contentType) === "image") {
+      if (
+        !thumbnail ||
+        thumbnail.size <= 0 ||
+        thumbnail.size > MAX_THUMBNAIL_BYTES ||
+        !isThumbnailContentType(thumbnail.type)
+      ) {
+        throw new ShareIntakeError("共有画像のサムネイルが不正です。", 400);
+      }
+    } else if (thumbnail) {
+      throw new ShareIntakeError(
+        "画像以外にはサムネイルを指定できません。",
+        400,
+      );
+    }
+  }
   if (dimensionsByFileId.size !== memo.mediaDimensions.length) {
     throw new ShareIntakeError("共有ファイルの寸法が重複しています。", 400);
   }
@@ -479,6 +507,9 @@ export const finalizeShareIntake = async (
     mediaWidth: number | null;
     mediaHeight: number | null;
     etag: string;
+    thumbnailR2Key: string | null;
+    thumbnailContentType: string | null;
+    thumbnailSizeBytes: number | null;
   }> = [];
   let committed = false;
 
@@ -512,6 +543,8 @@ export const finalizeShareIntake = async (
         );
       }
       const r2Key = `users/${userId}/memos/${memoId}/${crypto.randomUUID()}`;
+      const thumbnail = thumbnailsByFileId.get(staged.id);
+      const thumbnailR2Key = thumbnail ? `${r2Key}.thumbnail` : null;
       const object = await putR2ObjectWithKnownLength(
         env.MY_MEMO_FILES,
         r2Key,
@@ -526,6 +559,17 @@ export const finalizeShareIntake = async (
         );
       }
       finalKeys.push(r2Key);
+      let thumbnailObject: R2Object | null = null;
+      if (thumbnail && thumbnailR2Key) {
+        thumbnailObject = await putR2ObjectWithKnownLength(
+          env.MY_MEMO_FILES,
+          thumbnailR2Key,
+          thumbnail.stream(),
+          thumbnail.size,
+          { httpMetadata: { contentType: thumbnail.type } },
+        );
+        finalKeys.push(thumbnailR2Key);
+      }
       finalAttachments.push({
         id: crypto.randomUUID(),
         r2Key,
@@ -535,6 +579,9 @@ export const finalizeShareIntake = async (
         mediaWidth: mediaDimensions?.width ?? null,
         mediaHeight: mediaDimensions?.height ?? null,
         etag: object.etag,
+        thumbnailR2Key,
+        thumbnailContentType: thumbnail?.type ?? null,
+        thumbnailSizeBytes: thumbnailObject?.size ?? null,
       });
     }
 

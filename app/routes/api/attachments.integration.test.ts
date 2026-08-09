@@ -50,6 +50,27 @@ function appForUser(userId: string) {
   return app;
 }
 
+function attachmentForm(
+  name: string,
+  type: string,
+  contents: string,
+  dimensions?: { width: number; height: number },
+) {
+  const form = new FormData();
+  form.set("original", new File([contents], name, { type }));
+  if (type.startsWith("image/")) {
+    form.set(
+      "thumbnail",
+      new File(["thumb"], `${name}.thumbnail.avif`, { type: "image/avif" }),
+    );
+  }
+  if (dimensions) {
+    form.set("mediaWidth", String(dimensions.width));
+    form.set("mediaHeight", String(dimensions.height));
+  }
+  return form;
+}
+
 beforeEach(async () => {
   await db.batch([
     db.prepare("DELETE FROM memo_attachments"),
@@ -212,15 +233,11 @@ describe("添付ファイルAPI", () => {
     const upload = await ownerApp.fetch(
       new Request("https://example.test/api/memos/api-memo/attachments", {
         method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "image/png",
-          "X-File-Size": "6",
-          "X-File-Name": encodeURIComponent("画像.png"),
-          "X-Media-Width": "1",
-          "X-Media-Height": "1",
-        },
-        body: "abcdef",
+        headers: { Accept: "application/json" },
+        body: attachmentForm("画像.png", "image/png", "abcdef", {
+          width: 1,
+          height: 1,
+        }),
       }),
       env,
     );
@@ -230,6 +247,7 @@ describe("添付ファイルAPI", () => {
         id: string;
         sizeBytes: number;
         r2Key: string;
+        thumbnailR2Key: string;
         mediaWidth: number;
         mediaHeight: number;
       };
@@ -237,6 +255,30 @@ describe("添付ファイルAPI", () => {
     expect(uploaded.attachment.sizeBytes).toBe(6);
     expect(uploaded.attachment.mediaWidth).toBe(1);
     expect(uploaded.attachment.mediaHeight).toBe(1);
+
+    const thumbnail = await ownerApp.fetch(
+      new Request(
+        `https://example.test/api/attachments/${uploaded.attachment.id}?variant=thumbnail`,
+      ),
+      env,
+    );
+    expect(thumbnail.status).toBe(200);
+    expect(thumbnail.headers.get("Content-Type")).toBe("image/avif");
+    expect(thumbnail.headers.get("Cache-Control")).toBe(
+      "private, max-age=31536000, immutable",
+    );
+    expect(new TextDecoder().decode(await thumbnail.arrayBuffer())).toBe(
+      "thumb",
+    );
+
+    const notModified = await ownerApp.fetch(
+      new Request(
+        `https://example.test/api/attachments/${uploaded.attachment.id}?variant=thumbnail`,
+        { headers: { "If-None-Match": thumbnail.headers.get("ETag") ?? "" } },
+      ),
+      env,
+    );
+    expect(notModified.status).toBe(304);
 
     const preview = await ownerApp.fetch(
       new Request(
@@ -295,17 +337,19 @@ describe("添付ファイルAPI", () => {
     );
     expect(await quotaResponse.json()).toMatchObject({ used: 0 });
     expect(await env.MY_MEMO_FILES.head(uploaded.attachment.r2Key)).toBeNull();
+    expect(
+      await env.MY_MEMO_FILES.head(uploaded.attachment.thumbnailR2Key),
+    ).toBeNull();
 
     const secondUpload = await ownerApp.fetch(
       new Request("https://example.test/api/memos/api-memo/attachments", {
         method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/octet-stream",
-          "X-File-Size": "6",
-          "X-File-Name": encodeURIComponent("second.bin"),
-        },
-        body: "second",
+        headers: { Accept: "application/json" },
+        body: attachmentForm(
+          "second.bin",
+          "application/octet-stream",
+          "second",
+        ),
       }),
       env,
     );
@@ -335,13 +379,12 @@ describe("添付ファイルAPI", () => {
     const response = await appForUser("api-tiny-user").fetch(
       new Request("https://example.test/api/memos/api-tiny-memo/attachments", {
         method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/octet-stream",
-          "X-File-Size": "4",
-          "X-File-Name": encodeURIComponent("too-large.bin"),
-        },
-        body: "1234",
+        headers: { Accept: "application/json" },
+        body: attachmentForm(
+          "too-large.bin",
+          "application/octet-stream",
+          "1234",
+        ),
       }),
       env,
     );
@@ -367,12 +410,7 @@ describe("添付ファイルAPI", () => {
     const originalUpload = await ownerApp.fetch(
       new Request("https://example.test/api/memos/edit-memo/attachments", {
         method: "POST",
-        headers: {
-          "Content-Type": "text/plain",
-          "X-File-Size": "3",
-          "X-File-Name": encodeURIComponent("old.txt"),
-        },
-        body: "old",
+        body: attachmentForm("old.txt", "text/plain", "old"),
       }),
       env,
     );
@@ -383,13 +421,8 @@ describe("添付ファイルAPI", () => {
     const stagedResponse = await ownerApp.fetch(
       new Request("https://example.test/api/memos/edit-memo/edit-attachments", {
         method: "POST",
-        headers: {
-          "Content-Type": "text/plain",
-          "X-Edit-Id": "edit-request-1",
-          "X-File-Size": "3",
-          "X-File-Name": encodeURIComponent("new.txt"),
-        },
-        body: "new",
+        headers: { "X-Edit-Id": "edit-request-1" },
+        body: attachmentForm("new.txt", "text/plain", "new"),
       }),
       env,
     );
@@ -400,6 +433,9 @@ describe("添付ファイルAPI", () => {
         fileName: string;
         contentType: string;
         sizeBytes: number;
+        thumbnailToken: null;
+        thumbnailContentType: null;
+        thumbnailSizeBytes: null;
         etag: string;
       };
     };
@@ -488,13 +524,8 @@ describe("添付ファイルAPI", () => {
         "https://example.test/api/memos/atomic-memo/edit-attachments",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "text/plain",
-            "X-Edit-Id": "atomic-request-1",
-            "X-File-Size": "4",
-            "X-File-Name": encodeURIComponent("atomic.txt"),
-          },
-          body: "data",
+          headers: { "X-Edit-Id": "atomic-request-1" },
+          body: attachmentForm("atomic.txt", "text/plain", "data"),
         },
       ),
       env,
@@ -505,6 +536,9 @@ describe("添付ファイルAPI", () => {
         fileName: string;
         contentType: string;
         sizeBytes: number;
+        thumbnailToken: null;
+        thumbnailContentType: null;
+        thumbnailSizeBytes: null;
         etag: string;
       };
     };
@@ -529,6 +563,69 @@ describe("添付ファイルAPI", () => {
       .bind("atomic-memo")
       .first<{ title: string; content: string }>();
     expect(memo).toEqual({ title: "atomic-memo", content: "atomic-memo" });
+    expect(
+      await env.MY_MEMO_FILES.head(stagedPayload.attachment.token),
+    ).toBeNull();
+  });
+
+  it("更新時に未検証のサムネイルキーを削除しない", async () => {
+    await addUser("unsafe-key-owner");
+    await addMemo("unsafe-key-memo", "unsafe-key-owner");
+    const protectedKey = "users/another-user/memos/memo-1/protected-thumbnail";
+    await env.MY_MEMO_FILES.put(protectedKey, "protected");
+
+    const ownerApp = appForUser("unsafe-key-owner");
+    const stagedResponse = await ownerApp.fetch(
+      new Request(
+        "https://example.test/api/memos/unsafe-key-memo/edit-attachments",
+        {
+          method: "POST",
+          headers: { "X-Edit-Id": "unsafe-key-request" },
+          body: attachmentForm("unsafe.txt", "text/plain", "data"),
+        },
+      ),
+      env,
+    );
+    const stagedPayload = (await stagedResponse.json()) as {
+      attachment: {
+        token: string;
+        fileName: string;
+        contentType: string;
+        sizeBytes: number;
+        thumbnailToken: string | null;
+        thumbnailContentType: "image/webp" | null;
+        thumbnailSizeBytes: number | null;
+        etag: string;
+      };
+    };
+
+    const response = await ownerApp.fetch(
+      new Request("https://example.test/api/memos/unsafe-key-memo", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "更新しない",
+          content: "更新しない",
+          tags: [],
+          deleteAttachmentIds: [],
+          stagedAttachments: [
+            {
+              ...stagedPayload.attachment,
+              contentType: "image/png",
+              mediaWidth: 1,
+              mediaHeight: 1,
+              thumbnailToken: protectedKey,
+              thumbnailContentType: "image/webp",
+              thumbnailSizeBytes: 9,
+            },
+          ],
+        }),
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(400);
+    expect(await env.MY_MEMO_FILES.head(protectedKey)).not.toBeNull();
     expect(
       await env.MY_MEMO_FILES.head(stagedPayload.attachment.token),
     ).toBeNull();

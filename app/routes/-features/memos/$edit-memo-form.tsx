@@ -6,10 +6,14 @@ import { TagInput } from "@/routes/-features/tags";
 import type { memoAttachmentsTable } from "@/schema";
 import {
   formatAttachmentSize,
-  getAttachmentPreviewKind,
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS_PER_MEMO,
 } from "@/utils/attachment-constants";
+import {
+  getAttachmentUploadBody,
+  type PendingAttachmentUpload,
+  prepareAttachmentUpload,
+} from "@/utils/attachment-upload-client";
 import type { AttachmentQuota } from "@/utils/attachments";
 import {
   type ClipboardRejection,
@@ -19,7 +23,6 @@ import {
   selectClipboardMedia,
   shouldCaptureClipboardPaste,
 } from "@/utils/clipboard-media";
-import { readMediaDimensions } from "@/utils/media-dimensions";
 
 type MemoAttachment = typeof memoAttachmentsTable.$inferSelect;
 type EditableMemo = {
@@ -35,6 +38,9 @@ type EditableMemo = {
 
 type StagedAttachment = {
   token: string;
+  thumbnailToken: string | null;
+  thumbnailContentType: "image/avif" | "image/webp" | null;
+  thumbnailSizeBytes: number | null;
   fileName: string;
   contentType: string;
   sizeBytes: number;
@@ -43,11 +49,7 @@ type StagedAttachment = {
   etag: string;
 };
 
-type PendingFile = {
-  id: string;
-  file: File;
-  dimensions: Awaited<ReturnType<typeof readMediaDimensions>>;
-};
+type PendingFile = PendingAttachmentUpload & { id: string };
 
 const toTagNames = (tags: ReadonlyArray<Tag>) => tags.map((tag) => tag.name);
 
@@ -164,11 +166,7 @@ export default function EditMemoForm({
         try {
           pending.push({
             id: crypto.randomUUID(),
-            file,
-            dimensions: await readMediaDimensions(
-              file,
-              getAttachmentPreviewKind(file.type),
-            ),
+            ...(await prepareAttachmentUpload(file)),
           });
         } catch {
           dimensionFailures.push({ file, reason: "dimensions" });
@@ -256,11 +254,7 @@ export default function EditMemoForm({
         try {
           pending.push({
             id: crypto.randomUUID(),
-            file,
-            dimensions: await readMediaDimensions(
-              file,
-              getAttachmentPreviewKind(file.type),
-            ),
+            ...(await prepareAttachmentUpload(file)),
           });
         } catch (cause) {
           throw new Error(
@@ -307,30 +301,23 @@ export default function EditMemoForm({
   const stageFiles = async (editId: string) => {
     const staged: StagedAttachment[] = [];
     for (const pending of files) {
-      const file = pending.file;
       const response = await fetch(`/api/memos/${memo.id}/edit-attachments`, {
         method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": file.type || "application/octet-stream",
-          "X-Edit-Id": editId,
-          "X-File-Name": encodeURIComponent(file.name),
-          "X-File-Size": String(file.size),
-          ...(pending.dimensions
-            ? {
-                "X-Media-Width": String(pending.dimensions.width),
-                "X-Media-Height": String(pending.dimensions.height),
-              }
-            : {}),
-        },
-        body: file,
+        headers: { Accept: "application/json", "X-Edit-Id": editId },
+        body: getAttachmentUploadBody(pending),
       });
       const payload = (await response.json().catch(() => ({}))) as {
         attachment?: StagedAttachment;
         message?: string;
       };
       if (!response.ok || !payload.attachment) {
-        await cleanupStaged(staged.map((attachment) => attachment.token));
+        await cleanupStaged(
+          staged.flatMap((attachment) =>
+            [attachment.token, attachment.thumbnailToken].filter(
+              (token): token is string => Boolean(token),
+            ),
+          ),
+        );
         throw new Error(
           payload.message ?? "添付ファイルを準備できませんでした。",
         );

@@ -262,6 +262,9 @@ export const memoAttachmentsTable = sqliteTable(
       .notNull()
       .references(() => userTable.id, { onDelete: "cascade" }),
     r2Key: text("r2_key").notNull().unique(),
+    thumbnailR2Key: text("thumbnail_r2_key").unique(),
+    thumbnailContentType: text("thumbnail_content_type"),
+    thumbnailSizeBytes: integer("thumbnail_size_bytes"),
     fileName: text("file_name").notNull(),
     contentType: text("content_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
@@ -276,6 +279,11 @@ export const memoAttachmentsTable = sqliteTable(
     check(
       "memo_attachments_size_bytes_non_negative",
       sql`${table.sizeBytes} >= 0`,
+    ),
+    check(
+      "memo_attachments_thumbnail_fields",
+      sql`(${table.thumbnailR2Key} IS NULL AND ${table.thumbnailContentType} IS NULL AND ${table.thumbnailSizeBytes} IS NULL)
+        OR (${table.thumbnailR2Key} IS NOT NULL AND ${table.thumbnailContentType} IN ('image/avif', 'image/webp') AND ${table.thumbnailSizeBytes} > 0)`,
     ),
     check(
       "memo_attachments_media_dimensions_pair",
