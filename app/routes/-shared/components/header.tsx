@@ -10,7 +10,7 @@ export const Header = () => {
   const userRole = user ? (user as { role?: string }).role : undefined;
 
   return (
-    <header className="navbar sticky top-0 z-10 bg-base-100 shadow-sm">
+    <header className="navbar sticky top-0 z-20 bg-base-200 shadow-sm">
       <div className="flex-1">
         <a className="btn btn-ghost text-xl" href="/">
           My Memo
@@ -37,7 +37,7 @@ export const Header = () => {
             </div>
             {/* HonoX wraps LogoutButton in honox-island. Make that wrapper full-width so mx-auto can center the button. */}
             <ul
-              className="menu dropdown-content z-1 mt-3 flex w-52 flex-col items-stretch space-y-2 rounded-box bg-base-100 p-2 shadow [&>honox-island]:flex [&>honox-island]:w-full [&>honox-island]:justify-center"
+              className="menu dropdown-content z-1 mt-3 flex w-52 flex-col items-stretch space-y-2 rounded-box bg-base-300 p-2 shadow-lg [&>honox-island]:flex [&>honox-island]:w-full [&>honox-island]:justify-center"
               tabIndex={-1}
             >
               <li className="w-full">

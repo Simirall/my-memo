@@ -4,12 +4,18 @@ import { afterEach, describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
 import { SettingsLayout } from "./settings-layout";
 
-function mount(activeSection: "categories" | "tags") {
+function mount(activeSection: "categories" | "tags" | "files") {
   const container = document.createElement("div");
   document.body.appendChild(container);
   render(
     <SettingsLayout activeSection={activeSection}>
-      <h1>{activeSection === "categories" ? "カテゴリー" : "タグ"}</h1>
+      <h1>
+        {activeSection === "categories"
+          ? "カテゴリー"
+          : activeSection === "tags"
+            ? "タグ"
+            : "ファイル"}
+      </h1>
     </SettingsLayout>,
     container,
   );
@@ -36,11 +42,14 @@ describe("設定レイアウト", () => {
       .element(page.getByRole("link", { name: "タグ" }))
       .toHaveAttribute("href", "/settings/tags");
     await expect
+      .element(page.getByRole("link", { name: "ファイル" }))
+      .toHaveAttribute("href", "/settings/files");
+    await expect
       .element(page.getByLabelText("設定メニューを開く"))
       .toBeInTheDocument();
     expect(
       document.querySelectorAll('nav[aria-label="設定"] a svg'),
-    ).toHaveLength(4);
+    ).toHaveLength(5);
   });
 
   it("タグ設定ではタグの現在地を示す", async () => {
@@ -48,6 +57,14 @@ describe("設定レイアウト", () => {
 
     await expect
       .element(page.getByRole("link", { name: "タグ" }))
+      .toHaveAttribute("aria-current", "page");
+  });
+
+  it("ファイル設定ではファイルの現在地を示す", async () => {
+    mount("files");
+
+    await expect
+      .element(page.getByRole("link", { name: "ファイル" }))
       .toHaveAttribute("aria-current", "page");
   });
 });

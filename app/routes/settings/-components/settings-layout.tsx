@@ -1,11 +1,17 @@
 import creditCardIcon from "@phosphor-icons/core/assets/regular/credit-card.svg?raw";
+import fileIcon from "@phosphor-icons/core/assets/regular/file.svg?raw";
 import foldersIcon from "@phosphor-icons/core/assets/regular/folders.svg?raw";
 import tagIcon from "@phosphor-icons/core/assets/regular/tag.svg?raw";
 import userCircleIcon from "@phosphor-icons/core/assets/regular/user-circle.svg?raw";
 import type { Child } from "hono/jsx";
 import { PhosphorIcon } from "@/routes/-shared";
 
-export type SettingsSection = "account" | "plan" | "categories" | "tags";
+export type SettingsSection =
+  | "account"
+  | "plan"
+  | "categories"
+  | "tags"
+  | "files";
 
 const settingsItems: ReadonlyArray<{
   href: string;
@@ -36,6 +42,12 @@ const settingsItems: ReadonlyArray<{
     icon: tagIcon,
     label: "タグ",
     section: "tags",
+  },
+  {
+    href: "/settings/files",
+    icon: fileIcon,
+    label: "ファイル",
+    section: "files",
   },
 ];
 
