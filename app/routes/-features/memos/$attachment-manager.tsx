@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+import { useEffect, useMemo, useRef, useState } from "hono/jsx";
 import type { memoAttachmentsTable } from "@/schema";
 import {
   formatAttachmentSize,
@@ -7,6 +7,7 @@ import {
   MAX_ATTACHMENTS_PER_MEMO,
 } from "@/utils/attachment-constants";
 import { readMediaDimensions } from "@/utils/media-dimensions";
+import AttachmentImagePreview from "./attachment-image-preview";
 
 type MemoAttachment = typeof memoAttachmentsTable.$inferSelect;
 type AttachmentQuota = {
@@ -43,6 +44,16 @@ export default function AttachmentManager({
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingQuota, setIsCheckingQuota] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewOpenerRef = useRef<HTMLButtonElement | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const imageAttachments = useMemo(
+    () =>
+      attachments.filter(
+        (attachment) =>
+          getAttachmentPreviewKind(attachment.contentType) === "image",
+      ),
+    [attachments],
+  );
 
   useEffect(() => {
     if (!status) return;
@@ -256,14 +267,29 @@ export default function AttachmentManager({
                   {formatAttachmentSize(attachment.sizeBytes)}
                 </p>
                 {previewKind === "image" && (
-                  <img
-                    alt={attachment.fileName}
-                    className="mx-auto mt-2 block h-auto max-h-[min(60dvh,32rem)] w-full max-w-full rounded-box object-contain"
-                    height={attachment.mediaHeight ?? undefined}
-                    loading="lazy"
-                    src={`${endpoint}?preview=1`}
-                    width={attachment.mediaWidth ?? undefined}
-                  />
+                  <button
+                    aria-label={`画像「${attachment.fileName}」を拡大表示`}
+                    className="mt-2 block w-full cursor-zoom-in rounded-box focus-visible:outline-2 focus-visible:outline-base-content focus-visible:outline-offset-2"
+                    onClick={(event) => {
+                      previewOpenerRef.current =
+                        event.currentTarget as HTMLButtonElement;
+                      setPreviewIndex(
+                        imageAttachments.findIndex(
+                          (image) => image.id === attachment.id,
+                        ),
+                      );
+                    }}
+                    type="button"
+                  >
+                    <img
+                      alt={attachment.fileName}
+                      className="mx-auto block h-auto max-h-[min(60dvh,32rem)] w-full max-w-full rounded-box object-contain"
+                      height={attachment.mediaHeight ?? undefined}
+                      loading="lazy"
+                      src={`${endpoint}?preview=1`}
+                      width={attachment.mediaWidth ?? undefined}
+                    />
+                  </button>
                 )}
                 {previewKind === "audio" && (
                   <audio
@@ -374,6 +400,18 @@ export default function AttachmentManager({
         >
           {status}
         </div>
+      )}
+      {imageAttachments.length > 0 && (
+        <AttachmentImagePreview
+          attachments={imageAttachments}
+          initialIndex={previewIndex}
+          memoId={memoId}
+          onClosed={() => {
+            setPreviewIndex(null);
+            previewOpenerRef.current?.focus();
+            previewOpenerRef.current = null;
+          }}
+        />
       )}
     </section>
   );
