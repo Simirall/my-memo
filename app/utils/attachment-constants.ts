@@ -19,6 +19,8 @@ const previewTypes: ReadonlyMap<string, AttachmentPreviewKind> = new Map([
   ["audio/x-wav", "audio"],
   ["audio/mp4", "audio"],
   ["audio/webm", "audio"],
+  ["audio/x-m4a", "audio"],
+  ["audio/aac", "audio"],
   ["video/mp4", "video"],
   ["video/webm", "video"],
   ["video/ogg", "video"],
