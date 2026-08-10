@@ -12,7 +12,7 @@ export default defineConfig({
     include: ["hono/jsx/dom/jsx-dev-runtime"],
   },
   test: {
-    include: ["app/routes/**/*.browser.test.tsx"],
+    include: ["app/**/*.browser.test.tsx"],
     browser: {
       enabled: true,
       provider: playwright(),

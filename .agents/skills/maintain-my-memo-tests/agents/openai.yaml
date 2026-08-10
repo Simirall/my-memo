@@ -1,0 +1,4 @@
+interface:
+  display_name: "my-memo テスト保守"
+  short_description: "my-memoのテスト設計・追加・監査基準を一貫させる"
+  default_prompt: "$maintain-my-memo-tests を使い、ブラウザやライブラリ内部を検証せずにテストを追加またはレビューしてください。"

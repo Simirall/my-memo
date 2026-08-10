@@ -15,7 +15,7 @@ afterEach(() => {
 });
 
 describe("操作メニュー", () => {
-  it("FABのSpeed Dialとして表示する", async () => {
+  it("作成メニューから2つの作成方法へ移動できる", async () => {
     mount();
 
     await page.getByRole("button", { name: "作成メニューを開く" }).click();
@@ -28,20 +28,14 @@ describe("操作メニュー", () => {
     await expect
       .element(page.getByRole("link", { name: "Categories" }))
       .not.toBeInTheDocument();
-    await expect
-      .element(page.getByRole("button", { name: "作成メニューを開く" }))
-      .toHaveClass("btn-primary");
   });
 
-  it("CloseでSpeed Dialを閉じる", async () => {
+  it("閉じる操作後はメニュー内からフォーカスを外す", async () => {
     mount();
 
     await page.getByRole("button", { name: "作成メニューを開く" }).click();
     await page.getByRole("button", { name: "作成メニューを閉じる" }).click();
 
     expect(document.activeElement?.closest(".fab")).toBeNull();
-    await expect
-      .element(page.getByRole("link", { name: "メモを作成" }))
-      .toBeInTheDocument();
   });
 });

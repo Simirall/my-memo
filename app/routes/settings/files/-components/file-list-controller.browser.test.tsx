@@ -75,7 +75,6 @@ describe("ファイル一覧モーダル", () => {
     ).toBe("仕事メモ");
     const image = document.querySelector("[data-file-dialog-media] img");
     expect(image).toHaveAttribute("src", "/api/attachments/file-1?preview=1");
-    expect(image).toHaveClass("max-h-[min(60dvh,32rem)]", "object-contain");
 
     await page
       .getByRole("button", { name: "ファイル詳細を閉じる" })
@@ -124,12 +123,6 @@ describe("ファイル一覧モーダル", () => {
 
     const status = page.getByText("ファイルを削除しました。");
     await expect.element(status).toBeVisible();
-    await expect.element(status).toHaveClass("alert-soft", "alert-success");
-    expect(document.querySelector("[data-file-list-controller]")).toHaveClass(
-      "toast",
-      "toast-end",
-      "toast-bottom",
-    );
     await expect
       .element(page.getByRole("button", { name: "詳細" }))
       .not.toBeInTheDocument();

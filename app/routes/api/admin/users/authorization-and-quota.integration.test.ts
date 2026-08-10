@@ -11,6 +11,7 @@ import {
 } from "@/features/access-control/authorization";
 import {
   insertMemoWithinQuota,
+  releaseAiSummaryQuota,
   reserveAiSummaryQuota,
 } from "@/features/access-control/quota";
 import usersRoute from "./index";
@@ -293,6 +294,34 @@ describe("使用量の集計と上限の適用", () => {
     );
     expect(reservations.every(Boolean)).toBe(true);
     expect(await reserveAiSummaryQuota(db, "missing-user")).toBe(false);
+  });
+
+  it("月境界を越えて失敗しても予約した月だけを返却する", async () => {
+    await addPlan("month-boundary", 100, 10);
+    await addUser("month-boundary-user", { planId: "month-boundary" });
+    const reservedPeriod = "2026-07-01";
+    const nextPeriod = "2026-08-01";
+
+    expect(
+      await reserveAiSummaryQuota(db, "month-boundary-user", reservedPeriod),
+    ).toBe(true);
+    expect(
+      await reserveAiSummaryQuota(db, "month-boundary-user", nextPeriod),
+    ).toBe(true);
+
+    await releaseAiSummaryQuota(db, "month-boundary-user", reservedPeriod);
+
+    const counters = await db
+      .prepare(
+        `SELECT period_start, used FROM usage_counters
+         WHERE user_id = ? AND metric = ? ORDER BY period_start`,
+      )
+      .bind("month-boundary-user", PLAN_METRICS.aiSummaryMonthly)
+      .all<{ period_start: string; used: number }>();
+    expect(counters.results).toEqual([
+      { period_start: reservedPeriod, used: 0 },
+      { period_start: nextPeriod, used: 1 },
+    ]);
   });
 });
 

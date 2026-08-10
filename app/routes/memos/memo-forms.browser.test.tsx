@@ -75,7 +75,6 @@ describe("メモ作成フォーム", () => {
     await expect
       .element(status)
       .toHaveTextContent("1件のメディアを追加しました。（非対応形式1件）");
-    await expect.element(status).toHaveClass("alert-soft", "alert-success");
     const statusElement = document.querySelector('[role="status"]');
     const fileInput =
       document.querySelector<HTMLInputElement>("#memo-attachments");
@@ -544,11 +543,6 @@ describe("添付ファイル管理", () => {
     expect(video?.preload).toBe("metadata");
     expect(video?.width).toBe(1920);
     expect(video?.height).toBe(1080);
-    expect(video).toHaveClass(
-      "max-h-[min(60dvh,32rem)]",
-      "object-contain",
-      "mx-auto",
-    );
 
     const input =
       document.querySelector<HTMLInputElement>('input[type="file"]');
@@ -568,7 +562,6 @@ describe("添付ファイル管理", () => {
     const status = page.getByRole("status");
     await expect.element(status).toHaveTextContent("1件の添付を保存しました。");
     expect(input?.value).toBe("");
-    expect(document.querySelector('[role="status"]')).toHaveClass("alert-soft");
 
     await expect.element(status).not.toBeInTheDocument();
   });

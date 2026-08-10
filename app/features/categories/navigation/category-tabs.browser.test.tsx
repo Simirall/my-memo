@@ -30,26 +30,8 @@ describe("カテゴリタブ", () => {
     );
 
     await expect
-      .element(page.getByRole("navigation", { name: "メモのカテゴリー" }))
-      .toHaveClass("sticky");
-    await expect
-      .element(page.getByRole("navigation", { name: "メモのカテゴリー" }))
-      .toHaveClass("top-20");
-    await expect
-      .element(page.getByRole("navigation", { name: "メモのカテゴリー" }))
-      .toHaveClass("bg-secondary/30");
-    await expect
       .element(page.getByRole("link", { name: "すべて" }))
       .toHaveAttribute("aria-current", "page");
-    await expect
-      .element(page.getByRole("link", { name: "すべて" }))
-      .toHaveClass("!bg-secondary-content");
-    await expect
-      .element(page.getByRole("link", { name: "すべて" }))
-      .toHaveClass("!text-secondary");
-    await expect
-      .element(page.getByRole("link", { name: "仕事" }))
-      .toHaveClass("!text-secondary-content");
     await expect
       .element(page.getByRole("link", { name: "仕事" }))
       .toHaveAttribute(

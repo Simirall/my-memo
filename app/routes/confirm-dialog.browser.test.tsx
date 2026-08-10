@@ -54,9 +54,6 @@ describe("共通確認モーダル", () => {
     await expect
       .element(dialog.getByRole("button", { name: "キャンセル", exact: true }))
       .toHaveFocus();
-    await expect
-      .element(dialog.getByRole("button", { name: "削除", exact: true }))
-      .toHaveClass("btn-error");
   });
 
   it("キャンセル後はモーダルを閉じて起点へフォーカスを戻す", async () => {

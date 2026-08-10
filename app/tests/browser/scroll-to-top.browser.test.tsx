@@ -2,7 +2,7 @@
 import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
-import ScrollToTopButton from "./$scroll-to-top";
+import ScrollToTopButton from "@/islands/$scroll-to-top";
 
 function mount() {
   const container = document.createElement("div");
@@ -25,20 +25,17 @@ afterEach(() => {
 });
 
 describe("トップへ戻るボタン", () => {
-  it("ページをスクロールすると表示する", async () => {
+  it("ページをスクロールした場合だけキーボード操作の対象にする", async () => {
     mount();
 
     const button = page.getByRole("button", { name: "トップへ戻る" });
-    await expect.element(button).toHaveClass("opacity-0");
-    await expect.element(button).toHaveClass("pointer-events-none");
-    await expect.element(button).toHaveClass("transition-opacity");
+    await expect.element(button).toHaveAttribute("tabindex", "-1");
 
     setScrollY(120);
 
-    await expect.element(button).toBeVisible();
-    await expect.element(button).toHaveClass("bottom-4");
-    await expect.element(button).toHaveClass("left-4");
-    await expect.element(button).toHaveClass("opacity-100");
+    await vi.waitFor(() => {
+      expect(button.element().tabIndex).toBe(0);
+    });
   });
 
   it("クリックするとページ先頭へスムーズに戻る", async () => {

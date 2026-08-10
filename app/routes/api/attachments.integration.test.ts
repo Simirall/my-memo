@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import attachmentsRoute from "./attachments/index";
 import memosRoute from "./memos/index";
 
@@ -86,6 +86,11 @@ beforeEach(async () => {
       "UPDATE plan_limits SET limit_value = 524288000 WHERE plan_id = 'free' AND metric = 'attachment.storage_bytes'",
     ),
   ]);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("JavaScript必須のメモAPI", () => {
@@ -185,6 +190,52 @@ describe("JavaScript必須のメモAPI", () => {
     expect(await response.text()).toContain(
       'event: error\ndata: {"code":"QUOTA_EXCEEDED"',
     );
+  });
+
+  it("AI変換に失敗した場合は予約した月次利用回数を戻す", async () => {
+    await addUser("url-ai-error-user");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("<html><title>題名</title><body>本文</body></html>", {
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+      ),
+    );
+    const testEnv = {
+      MY_MEMO_D1: env.MY_MEMO_D1,
+      MY_MEMO_FILES: env.MY_MEMO_FILES,
+      AI: {
+        toMarkdown: vi.fn().mockResolvedValue([{ format: "error" }]),
+      },
+    } as unknown as CloudflareBindings;
+
+    const response = await appForUser("url-ai-error-user").fetch(
+      new Request("https://example.test/api/memos/url", {
+        method: "POST",
+        headers: {
+          Accept: "text/event-stream",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          url: "https://example.com/article",
+          tags: "",
+        }),
+      }),
+      testEnv,
+    );
+
+    expect(await response.text()).toContain(
+      'event: error\ndata: {"code":"AI_SUMMARY_ERROR"',
+    );
+    expect(
+      await db
+        .prepare(
+          "SELECT used FROM usage_counters WHERE user_id = ? AND metric = 'ai_summary.monthly'",
+        )
+        .bind("url-ai-error-user")
+        .first<{ used: number }>(),
+    ).toEqual({ used: 0 });
   });
 });
 

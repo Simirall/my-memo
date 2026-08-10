@@ -10,10 +10,13 @@
     "db:local:migrate": "wrangler d1 migrations apply my_memo_d1 --local",
     "db:local:reset": "rm -rf .wrangler/state/v3/d1",
     "db:remote:migrate": "wrangler d1 migrations apply my_memo_d1 --remote",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "pnpm run test:unit && pnpm run test:integration",
+    "test:unit": "vitest run --config=vitest.unit.config.ts",
+    "test:integration": "vitest run",
+    "test:watch": "vitest --config=vitest.unit.config.ts",
     "test:browser": "vitest run --config=vitest.browser.config.ts",
-    "test:all": "pnpm run test && pnpm run test:browser",
+    "test:collect": "node scripts/check-test-collection.mjs",
+    "test:all": "pnpm run test:collect && pnpm run test && pnpm run test:browser",
     "ai-config": "mise run --no-cache sync-ai"
   },
   "dependencies": {

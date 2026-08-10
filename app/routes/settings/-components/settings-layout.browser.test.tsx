@@ -47,9 +47,6 @@ describe("設定レイアウト", () => {
     await expect
       .element(page.getByLabelText("設定メニューを開く"))
       .toBeInTheDocument();
-    expect(
-      document.querySelectorAll('nav[aria-label="設定"] a svg'),
-    ).toHaveLength(5);
   });
 
   it("タグ設定ではタグの現在地を示す", async () => {

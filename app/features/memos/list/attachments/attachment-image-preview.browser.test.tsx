@@ -219,12 +219,6 @@ describe("メモ一覧の画像拡大プレビュー", () => {
       "[data-attachment-preview-image]",
     );
 
-    expect(image).toHaveClass(
-      "absolute",
-      "inset-0",
-      "size-full",
-      "object-contain",
-    );
     expect(getComputedStyle(image as HTMLImageElement).objectFit).toBe(
       "contain",
     );

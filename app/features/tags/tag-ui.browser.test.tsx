@@ -40,10 +40,6 @@ describe("タグUI", () => {
     await expect
       .element(page.getByRole("button", { name: "windowsを外す" }))
       .toBeInTheDocument();
-    await expect
-      .element(page.getByRole("button", { name: "windowsを外す" }))
-      .toHaveClass("btn-circle");
-    await expect.element(page.getByText("#windows")).toHaveClass("badge-soft");
   });
 
   it("タグ候補を選択してチップを解除できる", async () => {
@@ -65,17 +61,6 @@ describe("タグUI", () => {
     await expect.element(page.getByText("#仕事")).toBeInTheDocument();
     await page.getByRole("button", { name: "仕事を外す" }).click();
     await expect.element(page.getByText("#仕事")).not.toBeInTheDocument();
-  });
-
-  it("タグ候補を入力欄の下に重ねて表示する", async () => {
-    mount(<TagInput availableTags={[tag]} inputId="tags" />);
-
-    await page.getByRole("textbox").fill("仕");
-
-    const listbox = document.querySelector('[role="listbox"]');
-    expect(listbox).toHaveClass("absolute");
-    expect(listbox).toHaveClass("top-full");
-    expect(listbox?.parentElement).toHaveClass("relative");
   });
 
   it("既存タグと完全一致する入力では新規候補を表示しない", async () => {
@@ -103,7 +88,7 @@ describe("タグUI", () => {
     await page.getByRole("textbox").fill("仕事");
 
     await expect.element(page.getByRole("listbox")).not.toBeInTheDocument();
-    await expect.element(page.getByText("#仕事")).toHaveClass("badge-primary");
+    await expect.element(page.getByText("#仕事")).toBeVisible();
   });
 
   it("カードのタグバッジは現在の一覧条件を維持し、編集モーダルは一括保存する", async () => {
@@ -142,22 +127,7 @@ describe("タグUI", () => {
         "href",
         "/categories/category-1?sort=asc&type=link&tag=tag-1",
       );
-    await expect
-      .element(page.getByRole("link", { name: "#仕事" }))
-      .toHaveClass("badge-soft");
-    await expect
-      .element(page.getByRole("link", { name: "#仕事" }))
-      .toHaveClass("badge-info");
     await page.getByRole("button", { name: "タグを編集: テストメモ" }).click();
-    await expect
-      .element(page.getByRole("button", { name: "タグを編集: テストメモ" }))
-      .toHaveClass("btn-accent");
-    await expect
-      .element(page.getByRole("button", { name: "タグを編集: テストメモ" }))
-      .toHaveClass("btn-square");
-    expect(
-      document.querySelector('button[aria-label="タグを編集: テストメモ"] svg'),
-    ).not.toBeNull();
     await expect.element(page.getByRole("dialog")).toBeInTheDocument();
     await page.getByRole("button", { name: "仕事を外す" }).click();
     await page.getByRole("button", { name: "保存" }).click();
@@ -202,9 +172,6 @@ describe("タグUI", () => {
     await page
       .getByRole("button", { name: "タグを編集: タグなしメモ" })
       .click();
-    expect(document.querySelector("dialog .modal-box")).toHaveClass(
-      "overflow-visible",
-    );
     await page.getByRole("textbox").fill("windows");
     await page
       .getByRole("option", { name: "#windowsを新しいタグとして追加" })

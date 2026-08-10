@@ -27,10 +27,7 @@ describe("JavaScript必須の共通レンダラー", () => {
     expect(html.indexOf("<noscript><main", bodyIndex)).toBeGreaterThan(
       bodyIndex,
     );
-    expect(html).toContain("alert alert-warning w-fit");
-    expect(html).toContain(
-      'class="flex min-h-screen items-center justify-center bg-base-100 p-4 text-base-content"',
-    );
+    expect(html).toContain('role="alert"');
     expect(html).toContain('<div id="app-with-javascript">');
     expect(html).toContain("通常のアプリ");
   });

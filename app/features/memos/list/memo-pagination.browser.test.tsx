@@ -41,12 +41,6 @@ describe("メモ一覧ページング", () => {
       .element(page.getByRole("link", { name: "1ページ目" }))
       .toHaveAttribute("aria-current", "page");
     await expect
-      .element(page.getByRole("link", { name: "1ページ目" }))
-      .toHaveClass("btn-soft");
-    await expect
-      .element(page.getByRole("link", { name: "1ページ目" }))
-      .toHaveClass("btn-primary");
-    await expect
       .element(page.getByRole("link", { name: "2ページ目" }))
       .toHaveAttribute("href", "/?sort=asc&page=2&type=ai");
     await expect
@@ -72,9 +66,6 @@ describe("メモ一覧ページング", () => {
     await expect
       .element(page.getByRole("link", { name: "6ページ目" }))
       .toHaveAttribute("aria-current", "page");
-    await expect
-      .element(page.getByRole("link", { name: "6ページ目" }))
-      .toHaveClass("btn-soft");
     await expect
       .element(page.getByRole("link", { name: "7ページ目" }))
       .toHaveAttribute("href", "/categories/category-1?page=7&tag=tag-1");

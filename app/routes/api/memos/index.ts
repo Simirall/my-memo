@@ -4,6 +4,7 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import {
+  currentUtcMonthStart,
   getAppDb,
   getEntitlement,
   getUsage,
@@ -12,6 +13,7 @@ import {
 import {
   insertAttachmentWithinQuota,
   insertMemoWithinQuota,
+  releaseAiSummaryQuota,
   reserveAiSummaryQuota,
 } from "@/features/access-control/quota";
 import {
@@ -1017,9 +1019,11 @@ memosRoute
             type: "text/html; charset=utf-8",
           });
 
+          const reservationPeriodStart = currentUtcMonthStart();
           const reserved = await reserveAiSummaryQuota(
             c.env.MY_MEMO_D1,
             user.id,
+            reservationPeriodStart,
           );
           if (!reserved) {
             return {
@@ -1030,80 +1034,92 @@ memosRoute
               },
             };
           }
-
-          const [markdown] = await c.env.AI.toMarkdown([
-            {
-              name: url,
-              blob: utf8Blob,
-            },
-          ]);
-
-          if (markdown.format === "error") {
-            return {
-              ok: false,
-              failure: {
-                code: "AI_SUMMARY_ERROR",
-                message: "ページを要約できませんでした。",
+          let reservationConsumed = false;
+          try {
+            const [markdown] = await c.env.AI.toMarkdown([
+              {
+                name: url,
+                blob: utf8Blob,
               },
-            };
-          }
+            ]);
 
-          const m = markdown.data.match(
-            /\s*title:\s*(?<title>.+?)\s*\n[\s\S]*?/m,
-          );
-          const title = m?.groups?.title;
-          const messages = [
-            {
-              role: "user" as const,
-              content:
-                "以下の内容を、日本語で200文字程度の概要と2~5個の箇条書きで、markdown形式にまとめてください。出力形式は概要と箇条書きのみで、タイトルセクション等は含めないでください。\n\n" +
-                markdown.data,
-            },
-          ];
+            if (markdown.format === "error") {
+              return {
+                ok: false,
+                failure: {
+                  code: "AI_SUMMARY_ERROR",
+                  message: "ページを要約できませんでした。",
+                },
+              };
+            }
 
-          await writeEvent("status", { message: "要約を生成しています…" });
-
-          const summary = await readWorkersAiChatStream(
-            await c.env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
-              messages,
-              stream: true,
-            }),
-            async (text) => writeEvent("chunk", { text }),
-          );
-
-          if (!summary) {
-            return {
-              ok: false,
-              failure: {
-                code: "AI_SUMMARY_ERROR",
-                message: "AI要約を作成できませんでした。",
+            const m = markdown.data.match(
+              /\s*title:\s*(?<title>.+?)\s*\n[\s\S]*?/m,
+            );
+            const title = m?.groups?.title;
+            const messages = [
+              {
+                role: "user" as const,
+                content:
+                  "以下の内容を、日本語で200文字程度の概要と2~5個の箇条書きで、markdown形式にまとめてください。出力形式は概要と箇条書きのみで、タイトルセクション等は含めないでください。\n\n" +
+                  markdown.data,
               },
-            };
+            ];
+
+            await writeEvent("status", { message: "要約を生成しています…" });
+
+            const summary = await readWorkersAiChatStream(
+              await c.env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
+                messages,
+                stream: true,
+              }),
+              async (text) => writeEvent("chunk", { text }),
+            );
+
+            if (!summary) {
+              return {
+                ok: false,
+                failure: {
+                  code: "AI_SUMMARY_ERROR",
+                  message: "AI要約を作成できませんでした。",
+                },
+              };
+            }
+
+            await writeEvent("status", { message: "要約を保存しています…" });
+
+            const inserted = await insertMemoWithinQuota(c.env.MY_MEMO_D1, {
+              id: crypto.randomUUID(),
+              title: decodeHtmlEntities(title || "No Title"),
+              content: summary,
+              userId: user.id,
+              isAiSummary: 1,
+              url,
+              categoryId: validated.category ?? null,
+              tags: validated.tags,
+            });
+            if (!inserted) {
+              return {
+                ok: false,
+                failure: {
+                  code: "QUOTA_EXCEEDED",
+                  message:
+                    "メモの上限に達したため、要約を保存できませんでした。",
+                },
+              };
+            }
+
+            reservationConsumed = true;
+            return { ok: true };
+          } finally {
+            if (!reservationConsumed) {
+              await releaseAiSummaryQuota(
+                c.env.MY_MEMO_D1,
+                user.id,
+                reservationPeriodStart,
+              );
+            }
           }
-
-          await writeEvent("status", { message: "要約を保存しています…" });
-
-          const inserted = await insertMemoWithinQuota(c.env.MY_MEMO_D1, {
-            id: crypto.randomUUID(),
-            title: decodeHtmlEntities(title || "No Title"),
-            content: summary,
-            userId: user.id,
-            isAiSummary: 1,
-            url,
-            categoryId: validated.category ?? null,
-            tags: validated.tags,
-          });
-          if (!inserted) {
-            return {
-              ok: false,
-              failure: {
-                code: "QUOTA_EXCEEDED",
-                message: "メモの上限に達したため、要約を保存できませんでした。",
-              },
-            };
-          }
-
-          return { ok: true };
         };
 
         await writeEvent("status", { message: "ページを取得しています…" });
