@@ -132,4 +132,64 @@ describe("メモ表示", () => {
       ),
     ).not.toBeNull();
   });
+
+  it("外部画像を遅延読み込みとリファラー抑止付きで表示する", () => {
+    mount(
+      <Memo
+        memo={{
+          ...memo,
+          content: "![外部画像](https://example.invalid/image.png)",
+        }}
+      />,
+    );
+
+    const image = document.querySelector<HTMLImageElement>(
+      '[data-memo-card="memo-1"] img[src="https://example.invalid/image.png"]',
+    );
+    expect(image).toHaveAttribute("loading", "lazy");
+    expect(image).toHaveAttribute("decoding", "async");
+    expect(image).toHaveAttribute("referrerpolicy", "no-referrer");
+  });
+
+  it("GFMの表を表示する", () => {
+    mount(
+      <Memo
+        memo={{
+          ...memo,
+          content: "| 項目 | 状態 |\n| --- | --- |\n| 確認 | 済み |",
+        }}
+      />,
+    );
+
+    expect(document.querySelector("table")).not.toBeNull();
+  });
+
+  it("外部リンクを安全な固定属性で新しいタブに開く", async () => {
+    mount(
+      <Memo
+        memo={{
+          ...memo,
+          content: "[外部サイト](https://example.com)",
+        }}
+      />,
+    );
+
+    const link = page.getByRole("link", { name: "外部サイト" });
+    await expect.element(link).toHaveAttribute("target", "_blank");
+    await expect.element(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("壊れた外部画像URLでもメモ表示を維持する", () => {
+    mount(
+      <Memo
+        memo={{
+          ...memo,
+          content: "![壊れた画像](https://example.invalid/missing.png)",
+        }}
+      />,
+    );
+
+    expect(document.querySelector('[data-memo-card="memo-1"]')).not.toBeNull();
+    expect(document.querySelector('img[alt="壊れた画像"]')).not.toBeNull();
+  });
 });

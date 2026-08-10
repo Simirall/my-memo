@@ -415,9 +415,10 @@ export default function EditMemoForm({
           value={title}
         />
       </label>
-      <label className="flex flex-col gap-1" htmlFor="edit-memo-content">
-        Content
+      <div className="flex flex-col gap-1">
+        <label htmlFor="edit-memo-content">Content</label>
         <textarea
+          aria-describedby="edit-memo-content-help"
           className="textarea min-h-40 w-full!"
           id="edit-memo-content"
           maxLength={10000}
@@ -430,7 +431,10 @@ export default function EditMemoForm({
         >
           {content}
         </textarea>
-      </label>
+        <p className="text-base-content/60 text-xs" id="edit-memo-content-help">
+          Markdownで入力できます。
+        </p>
+      </div>
       <label className="flex flex-col gap-1" htmlFor="edit-memo-url">
         URL (optional)
         <input

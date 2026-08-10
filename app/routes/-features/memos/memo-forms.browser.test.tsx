@@ -38,6 +38,17 @@ afterEach(() => {
 });
 
 describe("メモ作成フォーム", () => {
+  it("本文欄にMarkdown入力の案内を表示する", async () => {
+    mount(<CreateMemoForm categories={[]} />);
+
+    await expect
+      .element(page.getByText("Markdownで入力できます。"))
+      .toBeVisible();
+    expect(
+      document.querySelector("#memo-content")?.getAttribute("aria-describedby"),
+    ).toBe("memo-content-help");
+  });
+
   it("本文にメディアを貼り付け、テキストの混在時はメディアだけ追加する", async () => {
     vi.spyOn(window, "fetch").mockResolvedValue(
       Response.json({

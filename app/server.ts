@@ -3,11 +3,15 @@ import { trimTrailingSlash } from "hono/trailing-slash";
 import { createHono } from "honox/factory";
 import { createApp } from "honox/server";
 import { getAuth } from "./auth";
+import { htmlSecurityHeaders } from "./utils/security-headers";
 
 const baseApp = createHono();
 
 // URLは末尾スラッシュなしに統一する
 baseApp.use(trimTrailingSlash());
+
+// 既存画面への影響を観測してからCSPを強制する
+baseApp.use("*", htmlSecurityHeaders);
 
 // セッション情報を取得してコンテキストにセットするミドルウェア
 baseApp.use("*", async (c, next) => {

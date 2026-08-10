@@ -24,4 +24,4 @@ export {
 } from "./memo-list-query";
 export { MemoPagination } from "./memo-pagination";
 export { memoSchema, memoWithTagsSchema, tagUpdateSchema } from "./memo-schema";
-export { sanitizeHtml } from "./sanitize-html";
+export { renderMarkdown } from "./render-markdown";

@@ -37,6 +37,10 @@ import {
   reserveAiSummaryQuota,
 } from "@/utils/quota";
 import { putR2ObjectWithKnownLength } from "@/utils/r2-upload";
+import {
+  MAX_MEMO_UPDATE_JSON_BYTES,
+  readLimitedJson,
+} from "@/utils/read-limited-json";
 
 const memosRoute = new Hono<{ Bindings: CloudflareBindings }>();
 type MemosContext = Context<{ Bindings: CloudflareBindings }>;
@@ -388,6 +392,19 @@ memosRoute
     const user = c.get("user");
     if (!user) return c.json({ message: "認証が必要です。" }, 401);
 
+    const body = await readLimitedJson(c.req.raw, MAX_MEMO_UPDATE_JSON_BYTES);
+    if (!body.ok) {
+      return c.json(
+        {
+          message:
+            body.reason === "too_large"
+              ? "更新内容が大きすぎます。"
+              : "入力内容が不正です。",
+        },
+        body.reason === "too_large" ? 413 : 400,
+      );
+    }
+
     const memoId = c.req.param("id");
     const db = getAppDb(c.env);
     const memo = await db
@@ -397,9 +414,7 @@ memosRoute
       .get();
     if (!memo) return c.json({ message: "メモが見つかりません。" }, 404);
 
-    const parsed = memoSchema.update.safeParse(
-      await c.req.json().catch(() => null),
-    );
+    const parsed = memoSchema.update.safeParse(body.value);
     if (!parsed.success) {
       return c.json(
         { message: parsed.error.issues[0]?.message ?? "入力内容が不正です。" },

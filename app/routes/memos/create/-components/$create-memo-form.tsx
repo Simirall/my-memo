@@ -666,9 +666,10 @@ export default function CreateMemoForm({
           value={title}
         />
       </label>
-      <label className="flex flex-col gap-1" htmlFor="memo-content">
-        Content
+      <div className="flex flex-col gap-1">
+        <label htmlFor="memo-content">Content</label>
         <textarea
+          aria-describedby="memo-content-help"
           className="textarea min-h-40 w-full!"
           id="memo-content"
           maxLength={10000}
@@ -680,7 +681,10 @@ export default function CreateMemoForm({
           required
           value={content}
         />
-      </label>
+        <p className="text-base-content/60 text-xs" id="memo-content-help">
+          Markdownで入力できます。
+        </p>
+      </div>
       <label className="flex flex-col gap-1" htmlFor="memo-url">
         URL (optional)
         <input

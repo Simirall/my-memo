@@ -73,6 +73,19 @@ afterEach(() => {
 });
 
 describe("メモ編集フォーム", () => {
+  it("本文欄にMarkdown入力の案内を表示する", async () => {
+    mount();
+
+    await expect
+      .element(page.getByText("Markdownで入力できます。"))
+      .toBeVisible();
+    expect(
+      document
+        .querySelector("#edit-memo-content")
+        ?.getAttribute("aria-describedby"),
+    ).toBe("edit-memo-content-help");
+  });
+
   it("既存添付の容量を二重計上せずメディアを貼り付けられる", async () => {
     vi.spyOn(window, "fetch").mockResolvedValue(
       Response.json({
