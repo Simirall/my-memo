@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "hono/jsx";
 import type z from "zod";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   getAttachmentUploadBody,
   type PendingAttachmentUpload,
@@ -79,6 +80,7 @@ export default function EditMemoForm({
   const [status, setStatus] = useState<string>();
   const [isCheckingFiles, setIsCheckingFiles] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
   const isLeavingAfterSave = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
@@ -372,9 +374,9 @@ export default function EditMemoForm({
   };
 
   const cancel = (event: MouseEvent) => {
-    if (isDirty && !window.confirm("未保存の変更を破棄しますか？")) {
-      event.preventDefault();
-    }
+    if (!isDirty) return;
+    event.preventDefault();
+    setIsDiscardConfirmOpen(true);
   };
 
   return (
@@ -597,6 +599,18 @@ export default function EditMemoForm({
           {isSaving ? <span className="loading loading-spinner" /> : "更新"}
         </button>
       </div>
+      <ConfirmDialog
+        confirmLabel="破棄"
+        description="未保存の変更を破棄しますか？"
+        destructive
+        onCancel={() => setIsDiscardConfirmOpen(false)}
+        onConfirm={() => {
+          setIsDiscardConfirmOpen(false);
+          window.location.assign(returnTo);
+        }}
+        open={isDiscardConfirmOpen}
+        title="変更破棄の確認"
+      />
     </form>
   );
 }

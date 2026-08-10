@@ -126,7 +126,11 @@ export const Memo = ({
         >
           編集
         </a>
-        <DeleteButton action={`/api/memos/delete/${memo.id}`} />
+        <DeleteButton
+          action={`/api/memos/delete/${memo.id}`}
+          confirmMessage={`「${memo.title}」を削除しますか？`}
+          label={`メモ「${memo.title}」を削除`}
+        />
       </div>
     </div>
   );

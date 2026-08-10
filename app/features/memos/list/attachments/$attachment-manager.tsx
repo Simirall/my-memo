@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "hono/jsx";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   getAttachmentUploadBody,
   type PendingAttachmentUpload,
@@ -44,6 +45,8 @@ export default function AttachmentManager({
   const [status, setStatus] = useState<string>();
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingQuota, setIsCheckingQuota] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] =
+    useState<MemoAttachment>();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewOpenerRef = useRef<HTMLButtonElement | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
@@ -186,7 +189,6 @@ export default function AttachmentManager({
   };
 
   const deleteAttachment = async (attachment: MemoAttachment) => {
-    if (!window.confirm(`「${attachment.fileName}」を削除しますか？`)) return;
     setIsLoading(true);
     setError(undefined);
     try {
@@ -239,7 +241,7 @@ export default function AttachmentManager({
                     <button
                       className="btn btn-ghost btn-xs"
                       disabled={isLoading || isCheckingQuota}
-                      onClick={() => deleteAttachment(attachment)}
+                      onClick={() => setAttachmentToDelete(attachment)}
                       type="button"
                     >
                       削除
@@ -397,6 +399,23 @@ export default function AttachmentManager({
           }}
         />
       )}
+      <ConfirmDialog
+        confirmLabel="削除"
+        description={
+          attachmentToDelete
+            ? `「${attachmentToDelete.fileName}」を削除しますか？`
+            : ""
+        }
+        destructive
+        onCancel={() => setAttachmentToDelete(undefined)}
+        onConfirm={() => {
+          const attachment = attachmentToDelete;
+          setAttachmentToDelete(undefined);
+          if (attachment) void deleteAttachment(attachment);
+        }}
+        open={Boolean(attachmentToDelete)}
+        title="削除の確認"
+      />
     </section>
   );
 }

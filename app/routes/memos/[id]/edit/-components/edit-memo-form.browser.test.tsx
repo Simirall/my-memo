@@ -236,4 +236,26 @@ describe("メモ編集フォーム", () => {
       .element(page.getByRole("link", { name: "キャンセル" }))
       .toHaveAttribute("href", "/");
   });
+
+  it("未保存の変更がある場合は破棄確認を表示し、キャンセルできる", async () => {
+    mount();
+    await page.getByLabelText("本文").fill("変更後の本文");
+    const cancelLink = page.getByRole("link", { name: "キャンセル" });
+
+    await cancelLink.click();
+
+    const dialog = page.getByRole("dialog", { name: "変更破棄の確認" });
+    await expect.element(dialog).toBeVisible();
+    await expect
+      .element(page.getByText("未保存の変更を破棄しますか？"))
+      .toBeVisible();
+    await expect
+      .element(dialog.getByRole("button", { name: "キャンセル", exact: true }))
+      .toHaveFocus();
+
+    await dialog
+      .getByRole("button", { name: "キャンセル", exact: true })
+      .click();
+    expect(document.activeElement).toBe(cancelLink.element());
+  });
 });

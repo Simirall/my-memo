@@ -1,4 +1,11 @@
-import { useEffect, useState } from "hono/jsx";
+import { useEffect, useRef, useState } from "hono/jsx";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+
+type FileToDelete = {
+  id: string;
+  name: string;
+  fromDetail: boolean;
+};
 
 const getElement = <T extends Element>(
   root: { querySelector: (selector: string) => Element | null },
@@ -39,6 +46,8 @@ const setHeight = (
 export default function FileListController() {
   const [error, setError] = useState<string>();
   const [status, setStatus] = useState<string>();
+  const [fileToDelete, setFileToDelete] = useState<FileToDelete>();
+  const confirmDeleteRef = useRef<(target: FileToDelete) => void>(() => {});
 
   useEffect(() => {
     if (!error && !status) return;
@@ -175,9 +184,7 @@ export default function FileListController() {
         (card) => card.dataset.fileCard === fileId,
       );
 
-    const deleteFile = async (fileId: string, fileName: string) => {
-      if (!window.confirm(`「${fileName}」を削除しますか？`)) return;
-
+    const deleteFile = async (fileId: string) => {
       setError(undefined);
       setStatus("削除しています…");
       try {
@@ -229,6 +236,11 @@ export default function FileListController() {
       }
     };
 
+    confirmDeleteRef.current = (target) => {
+      if (target.fromDetail && dialog.open) dialog.close();
+      void deleteFile(target.id);
+    };
+
     const onGridClick = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
@@ -238,10 +250,11 @@ export default function FileListController() {
       if (deleteButton) {
         event.preventDefault();
         event.stopPropagation();
-        void deleteFile(
-          deleteButton.dataset.fileId ?? "",
-          deleteButton.dataset.fileName ?? "",
-        );
+        setFileToDelete({
+          id: deleteButton.dataset.fileId ?? "",
+          name: deleteButton.dataset.fileName ?? "",
+          fromDetail: false,
+        });
         return;
       }
 
@@ -260,10 +273,11 @@ export default function FileListController() {
       );
       if (!deleteButton) return;
       event.preventDefault();
-      void deleteFile(
-        deleteButton.dataset.fileId ?? "",
-        deleteButton.dataset.fileName ?? "",
-      );
+      setFileToDelete({
+        id: deleteButton.dataset.fileId ?? "",
+        name: deleteButton.dataset.fileName ?? "",
+        fromDetail: true,
+      });
     };
 
     const onClose = () => {
@@ -293,6 +307,7 @@ export default function FileListController() {
     }
 
     return () => {
+      confirmDeleteRef.current = () => {};
       grid.removeEventListener("click", onGridClick);
       dialog.removeEventListener("click", onDialogClick);
       dialog.removeEventListener("close", onClose);
@@ -303,30 +318,48 @@ export default function FileListController() {
   }, []);
 
   return (
-    <div
-      className="toast toast-end toast-bottom pointer-events-none z-50"
-      data-file-list-controller
-    >
-      {error && (
-        <div
-          aria-atomic="true"
-          aria-live="polite"
-          className="alert alert-soft alert-error pointer-events-auto w-[min(24rem,calc(100vw-2rem))] shadow-lg"
-          role="alert"
-        >
-          {error}
-        </div>
-      )}
-      {status && (
-        <div
-          aria-atomic="true"
-          aria-live="polite"
-          className="alert alert-soft alert-success pointer-events-auto w-[min(24rem,calc(100vw-2rem))] shadow-lg"
-          role="status"
-        >
-          {status}
-        </div>
-      )}
-    </div>
+    <>
+      <div
+        className="toast toast-end toast-bottom pointer-events-none z-50"
+        data-file-list-controller
+      >
+        {error && (
+          <div
+            aria-atomic="true"
+            aria-live="polite"
+            className="alert alert-soft alert-error pointer-events-auto w-[min(24rem,calc(100vw-2rem))] shadow-lg"
+            role="alert"
+          >
+            {error}
+          </div>
+        )}
+        {status && (
+          <div
+            aria-atomic="true"
+            aria-live="polite"
+            className="alert alert-soft alert-success pointer-events-auto w-[min(24rem,calc(100vw-2rem))] shadow-lg"
+            role="status"
+          >
+            {status}
+          </div>
+        )}
+      </div>
+      <ConfirmDialog
+        confirmLabel="削除"
+        description={
+          fileToDelete ? `「${fileToDelete.name}」を削除しますか？` : ""
+        }
+        destructive
+        onCancel={() => setFileToDelete(undefined)}
+        onConfirm={() => {
+          const target = fileToDelete;
+          setFileToDelete(undefined);
+          if (!target) return;
+          confirmDeleteRef.current?.(target);
+        }}
+        open={Boolean(fileToDelete)}
+        title="削除の確認"
+      />
+    </>
   );
 }

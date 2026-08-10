@@ -1,11 +1,9 @@
 /** @jsxImportSource hono/jsx/dom */
 import { render } from "hono/jsx/dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import FileListController from "./$file-list-controller";
 import { FileDetailDialog } from "./file-detail-dialog";
-
-const originalConfirm = window.confirm;
 
 const mount = (previewKind: "image" | "audio" | "video" = "image") => {
   const container = document.createElement("div");
@@ -57,12 +55,7 @@ const mount = (previewKind: "image" | "audio" | "video" = "image") => {
   );
 };
 
-beforeEach(() => {
-  window.confirm = vi.fn(() => true);
-});
-
 afterEach(() => {
-  window.confirm = originalConfirm;
   vi.restoreAllMocks();
   document.body.replaceChildren();
 });
@@ -117,6 +110,17 @@ describe("ファイル一覧モーダル", () => {
     );
 
     await page.getByRole("button", { name: "削除" }).click();
+    await expect
+      .element(page.getByRole("dialog", { name: "削除の確認" }))
+      .toBeVisible();
+    await expect
+      .element(page.getByText("「photo.png」を削除しますか？"))
+      .toBeVisible();
+    expect(window.fetch).not.toHaveBeenCalled();
+    await page
+      .getByRole("dialog", { name: "削除の確認" })
+      .getByRole("button", { name: "削除", exact: true })
+      .click();
 
     const status = page.getByText("ファイルを削除しました。");
     await expect.element(status).toBeVisible();
@@ -149,6 +153,17 @@ describe("ファイル一覧モーダル", () => {
       ?.click();
 
     await expect
+      .element(page.getByRole("dialog", { name: "削除の確認" }))
+      .toBeVisible();
+    expect(
+      document.querySelector<HTMLDialogElement>("#file-detail-dialog")?.open,
+    ).toBe(true);
+    await page
+      .getByRole("dialog", { name: "削除の確認" })
+      .getByRole("button", { name: "削除", exact: true })
+      .click();
+
+    await expect
       .element(page.getByText("ファイルを削除しました。"))
       .toBeVisible();
     expect(document.querySelector("dialog")?.hasAttribute("open")).toBe(false);
@@ -166,10 +181,36 @@ describe("ファイル一覧モーダル", () => {
     );
 
     await page.getByRole("button", { name: "削除" }).click();
+    await page
+      .getByRole("dialog", { name: "削除の確認" })
+      .getByRole("button", { name: "削除", exact: true })
+      .click();
 
     await expect.element(page.getByText("削除に失敗しました。")).toBeVisible();
     await expect
       .element(page.getByRole("button", { name: "詳細" }))
       .toBeInTheDocument();
+  });
+
+  it("詳細からの削除確認をキャンセルすると詳細へ戻る", async () => {
+    const fetchMock = vi.spyOn(window, "fetch");
+    mount();
+    await page.getByRole("button", { name: "詳細" }).click();
+    await page
+      .getByRole("button", { name: "ファイル「photo.png」を削除" })
+      .click();
+
+    await page
+      .getByRole("dialog", { name: "削除の確認" })
+      .getByRole("button", { name: "キャンセル", exact: true })
+      .click();
+
+    expect(
+      document.querySelector<HTMLDialogElement>("#file-detail-dialog")?.open,
+    ).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(
+      document.querySelector("[data-file-dialog-delete]"),
+    );
   });
 });
