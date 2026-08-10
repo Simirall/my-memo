@@ -74,9 +74,7 @@ export const Memo = ({
                   {memo.category.name}
                 </a>
               )}
-              {memo.isAiSummary === 1 && (
-                <div className="badge">✨ AI Summary</div>
-              )}
+              {memo.isAiSummary === 1 && <div className="badge">✨ AI要約</div>}
             </div>
           )}
           <div className="flex min-w-0 items-center gap-2">

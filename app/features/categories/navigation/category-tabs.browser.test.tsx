@@ -30,13 +30,13 @@ describe("カテゴリタブ", () => {
     );
 
     await expect
-      .element(page.getByRole("navigation", { name: "Memo categories" }))
+      .element(page.getByRole("navigation", { name: "メモのカテゴリー" }))
       .toHaveClass("sticky");
     await expect
-      .element(page.getByRole("navigation", { name: "Memo categories" }))
+      .element(page.getByRole("navigation", { name: "メモのカテゴリー" }))
       .toHaveClass("top-20");
     await expect
-      .element(page.getByRole("navigation", { name: "Memo categories" }))
+      .element(page.getByRole("navigation", { name: "メモのカテゴリー" }))
       .toHaveClass("bg-secondary/30");
     await expect
       .element(page.getByRole("link", { name: "すべて" }))

@@ -57,7 +57,7 @@ export default createRoute(async (c) => {
 
   return c.render(
     <div>
-      <h1 className="sr-only">Memos</h1>
+      <h1 className="sr-only">メモ一覧</h1>
       <CategoryTabs
         activeCategoryId={null}
         categories={categories}

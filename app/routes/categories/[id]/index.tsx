@@ -50,7 +50,10 @@ export default createRoute(async (c) => {
   ]);
 
   if (!result) {
-    return c.render(<div>Category not found</div>);
+    c.status(404);
+    return c.render(
+      <div className="p-4 text-center">カテゴリーが見つかりません。</div>,
+    );
   }
   const query = parseMemoListQuery(
     new URL(c.req.url).searchParams,

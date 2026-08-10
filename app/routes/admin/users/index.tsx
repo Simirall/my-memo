@@ -14,7 +14,7 @@ export default createRoute(async (c) => {
   const db = getAppDb(c.env);
   const actor = await getFreshUser(db, sessionUser.id);
   if (actor?.role !== "admin") {
-    return c.text("Forbidden", 403);
+    return c.text("このページを表示する権限がありません。", 403);
   }
 
   const [users, plans] = await Promise.all([
@@ -38,7 +38,7 @@ export default createRoute(async (c) => {
   return c.render(
     <div className="mx-auto max-w-6xl space-y-6">
       <div>
-        <h1 className="font-bold text-2xl">User management</h1>
+        <h1 className="font-bold text-2xl">ユーザー管理</h1>
         <p className="text-base-content/70">
           管理者権限と利用プランを変更できます。
         </p>
@@ -47,9 +47,9 @@ export default createRoute(async (c) => {
         <table className="table">
           <thead>
             <tr>
-              <th>User</th>
-              <th>Email</th>
-              <th>Access</th>
+              <th scope="col">ユーザー名</th>
+              <th scope="col">メールアドレス</th>
+              <th scope="col">権限とプラン</th>
             </tr>
           </thead>
           <tbody>

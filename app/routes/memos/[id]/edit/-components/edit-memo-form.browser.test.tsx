@@ -122,7 +122,7 @@ describe("メモ編集フォーム", () => {
     );
     mount();
 
-    await expect.element(page.getByText("✨ AI Summary")).toBeVisible();
+    await expect.element(page.getByText("✨ AI要約")).toBeVisible();
     await new Promise((resolve) =>
       requestAnimationFrame(() => resolve(undefined)),
     );
@@ -141,16 +141,16 @@ describe("メモ編集フォーム", () => {
   it("AIラベルと既存のメモ項目・添付を初期表示する", async () => {
     mount();
 
-    await expect.element(page.getByText("✨ AI Summary")).toBeVisible();
+    await expect.element(page.getByText("✨ AI要約")).toBeVisible();
     await expect
-      .element(page.getByLabelText("Title"))
+      .element(page.getByLabelText("タイトル"))
       .toHaveValue("AIタイトル");
-    await expect.element(page.getByLabelText("Content")).toHaveValue("AI本文");
+    await expect.element(page.getByLabelText("本文")).toHaveValue("AI本文");
     await expect
-      .element(page.getByLabelText("URL (optional)"))
+      .element(page.getByLabelText("関連URL（任意）"))
       .toHaveValue("https://example.com");
     await expect
-      .element(page.getByLabelText("Category"))
+      .element(page.getByLabelText("カテゴリー"))
       .toHaveValue("category-1");
     await expect.element(page.getByText("資料.txt")).toBeVisible();
   });
@@ -214,7 +214,7 @@ describe("メモ編集フォーム", () => {
       );
     mount();
 
-    await page.getByLabelText("Content").fill("変更後の本文");
+    await page.getByLabelText("本文").fill("変更後の本文");
     await page.getByRole("button", { name: "更新" }).click();
 
     expect(fetchMock).toHaveBeenCalledWith(

@@ -28,9 +28,9 @@ describe("ユーザー権限変更フォーム", () => {
       .mockResolvedValue(Response.json({ ok: true }));
     mount();
 
-    await page.getByLabelText("Role").selectOptions("admin");
-    await page.getByLabelText("Plan").selectOptions("pro");
-    await page.getByRole("button", { name: "Save" }).click();
+    await page.getByLabelText("権限").selectOptions("admin");
+    await page.getByLabelText("プラン").selectOptions("pro");
+    await page.getByRole("button", { name: "変更を保存" }).click();
 
     await expect
       .element(page.getByRole("status"))
@@ -49,13 +49,13 @@ describe("ユーザー権限変更フォーム", () => {
     );
     mount();
 
-    await page.getByRole("button", { name: "Save" }).click();
+    await page.getByRole("button", { name: "変更を保存" }).click();
 
     await expect
       .element(page.getByRole("status"))
       .toHaveTextContent("最後の管理者の権限は外せません。");
     await expect
-      .element(page.getByRole("button", { name: "Save" }))
+      .element(page.getByRole("button", { name: "変更を保存" }))
       .toBeEnabled();
   });
 });

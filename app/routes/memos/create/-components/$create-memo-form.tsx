@@ -648,13 +648,15 @@ export default function CreateMemoForm({
           )}
           {isCheckingSharedMedia && (
             <p className="text-base-content/70 text-sm" role="status">
-              共有mediaの寸法を確認しています…
+              共有された画像や動画の寸法を確認しています…
             </p>
           )}
         </section>
       )}
-      <label className="flex flex-col gap-1" htmlFor="memo-title">
-        Title
+      <fieldset className="fieldset">
+        <label className="fieldset-legend" htmlFor="memo-title">
+          タイトル
+        </label>
         <input
           className="input w-full!"
           id="memo-title"
@@ -663,13 +665,16 @@ export default function CreateMemoForm({
           onInput={(event) =>
             setTitle((event.currentTarget as HTMLInputElement).value)
           }
+          placeholder="例：週末に買うもの"
           required
           type="text"
           value={title}
         />
-      </label>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="memo-content">Content</label>
+      </fieldset>
+      <fieldset className="fieldset">
+        <label className="fieldset-legend" htmlFor="memo-content">
+          本文
+        </label>
         <textarea
           aria-describedby="memo-content-help"
           className="textarea min-h-40 w-full!"
@@ -679,16 +684,19 @@ export default function CreateMemoForm({
           onInput={(event) =>
             setContent((event.currentTarget as HTMLTextAreaElement).value)
           }
+          placeholder="メモの内容を入力"
           ref={contentRef}
           required
           value={content}
         />
-        <p className="text-base-content/60 text-xs" id="memo-content-help">
+        <p className="label" id="memo-content-help">
           Markdownで入力できます。
         </p>
-      </div>
-      <label className="flex flex-col gap-1" htmlFor="memo-url">
-        URL (optional)
+      </fieldset>
+      <fieldset className="fieldset">
+        <label className="fieldset-legend" htmlFor="memo-url">
+          関連URL（任意）
+        </label>
         <input
           className="input w-full!"
           id="memo-url"
@@ -696,31 +704,37 @@ export default function CreateMemoForm({
           onInput={(event) =>
             setUrl((event.currentTarget as HTMLInputElement).value)
           }
+          placeholder="https://example.com"
           type="url"
           value={url}
         />
-      </label>
+      </fieldset>
       {categories.length > 0 && (
-        <label className="flex flex-col gap-1" htmlFor="memo-category">
-          Category
+        <fieldset className="fieldset">
+          <label className="fieldset-legend" htmlFor="memo-category">
+            カテゴリー
+          </label>
           <select
-            className="select w-full!"
+            className="select category-select w-full!"
             id="memo-category"
             name="categoryId"
           >
-            <option value="">Select Category</option>
+            <option value="">カテゴリーなし</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>
             ))}
           </select>
-        </label>
+        </fieldset>
       )}
-      <div className="flex flex-col gap-1">
-        <label htmlFor="memo-tags">Tags</label>
+      <fieldset className="fieldset">
+        <label className="fieldset-legend" htmlFor="memo-tags">
+          タグ
+        </label>
         <TagInput availableTags={tags} inputId="memo-tags" />
-      </div>
+        <p className="label">入力後にEnterキーで追加できます。</p>
+      </fieldset>
       {!shareIntake && (
         <section className="space-y-3">
           <h2 className="font-semibold">添付ファイル</h2>
@@ -813,7 +827,7 @@ export default function CreateMemoForm({
           </button>
         )}
         <button
-          aria-label="Create Memo"
+          aria-label="メモを作成"
           className="btn flex-1"
           disabled={
             isLoading ||
@@ -830,7 +844,7 @@ export default function CreateMemoForm({
           ) : shareIntake ? (
             "共有メモを保存"
           ) : (
-            "Create Memo"
+            "メモを作成"
           )}
         </button>
       </div>

@@ -112,42 +112,54 @@ export default function UrlSummaryForm({
           </pre>
         </div>
       )}
-      <label className="flex flex-col gap-1" htmlFor="summary-url">
-        URL
+      <fieldset className="fieldset">
+        <label className="fieldset-legend" htmlFor="summary-url">
+          要約するページのURL
+        </label>
         <input
-          className="input"
+          className="input w-full!"
           id="summary-url"
           name="url"
           onInput={(event) =>
             setUrl((event.currentTarget as HTMLInputElement).value)
           }
+          placeholder="https://example.com/article"
           required
           type="url"
           value={url}
         />
-      </label>
+      </fieldset>
       {categories.length > 0 && (
-        <label className="flex flex-col gap-1" htmlFor="summary-category">
-          Category
-          <select className="select" id="summary-category" name="category">
-            <option value="">Select Category</option>
+        <fieldset className="fieldset">
+          <label className="fieldset-legend" htmlFor="summary-category">
+            カテゴリー
+          </label>
+          <select
+            className="select category-select w-full!"
+            id="summary-category"
+            name="category"
+          >
+            <option value="">カテゴリーなし</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>
             ))}
           </select>
-        </label>
+        </fieldset>
       )}
-      <label className="flex flex-col gap-1" htmlFor="summary-tags">
-        Tags
+      <fieldset className="fieldset">
+        <label className="fieldset-legend" htmlFor="summary-tags">
+          タグ
+        </label>
         <TagInput availableTags={tags} inputId="summary-tags" />
-      </label>
+        <p className="label">入力後にEnterキーで追加できます。</p>
+      </fieldset>
       <button className="btn" disabled={isLoading} type="submit">
         {isLoading ? (
           <span className="loading loading-spinner" />
         ) : (
-          "Summarize Page"
+          "要約して保存"
         )}
       </button>
     </form>

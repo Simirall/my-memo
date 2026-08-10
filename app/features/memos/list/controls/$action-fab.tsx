@@ -31,9 +31,9 @@ const FabAction = ({
 );
 
 export const ActionFab = () => (
-  <aside aria-label="Quick actions" className="fab">
+  <aside aria-label="メモの作成メニュー" className="fab">
     <button
-      aria-label="Open quick actions"
+      aria-label="作成メニューを開く"
       className="btn btn-primary btn-lg btn-circle"
       tabIndex={0}
       type="button"
@@ -41,9 +41,9 @@ export const ActionFab = () => (
       <FabIcon svg={plusIcon} />
     </button>
     <div className="fab-close">
-      <span className={fabLabelClassName}>Close</span>
+      <span className={fabLabelClassName}>閉じる</span>
       <button
-        aria-label="Close quick actions"
+        aria-label="作成メニューを閉じる"
         className="btn btn-error btn-lg btn-circle"
         onClick={() => {
           (document.activeElement as HTMLElement | null)?.blur();
@@ -53,10 +53,10 @@ export const ActionFab = () => (
         <FabIcon svg={xIcon} />
       </button>
     </div>
-    <FabAction href="/memos/create" label="Create Memo" svg={notePencilIcon} />
+    <FabAction href="/memos/create" label="メモを作成" svg={notePencilIcon} />
     <FabAction
       href="/memos/url-summary"
-      label="Create WebPage Summary"
+      label="Webページを要約"
       svg={globeIcon}
     />
   </aside>

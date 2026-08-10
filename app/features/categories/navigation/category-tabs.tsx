@@ -19,7 +19,7 @@ export const CategoryTabs = ({
 }) => {
   return (
     <nav
-      aria-label="Memo categories"
+      aria-label="メモのカテゴリー"
       className="tabs tabs-box sticky top-20 z-10 w-full overflow-x-auto bg-secondary/30 text-secondary-content shadow backdrop-blur-sm"
     >
       <a

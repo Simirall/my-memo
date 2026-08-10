@@ -48,11 +48,10 @@ export default function UserAccessForm({ user, plans }: UserAccessFormProps) {
       method="post"
       onSubmit={submit}
     >
-      <label
-        className="flex flex-col gap-1 text-sm"
-        htmlFor={`role-${user.id}`}
-      >
-        Role
+      <fieldset className="fieldset">
+        <label className="fieldset-legend" htmlFor={`role-${user.id}`}>
+          権限
+        </label>
         <select
           className="select select-sm"
           id={`role-${user.id}`}
@@ -62,18 +61,17 @@ export default function UserAccessForm({ user, plans }: UserAccessFormProps) {
           }
         >
           <option selected={role === "user"} value="user">
-            user
+            一般ユーザー
           </option>
           <option selected={role === "admin"} value="admin">
-            admin
+            管理者
           </option>
         </select>
-      </label>
-      <label
-        className="flex flex-col gap-1 text-sm"
-        htmlFor={`plan-${user.id}`}
-      >
-        Plan
+      </fieldset>
+      <fieldset className="fieldset">
+        <label className="fieldset-legend" htmlFor={`plan-${user.id}`}>
+          プラン
+        </label>
         <select
           className="select select-sm"
           id={`plan-${user.id}`}
@@ -88,9 +86,9 @@ export default function UserAccessForm({ user, plans }: UserAccessFormProps) {
             </option>
           ))}
         </select>
-      </label>
+      </fieldset>
       <button className="btn btn-sm" disabled={isSaving} type="submit">
-        {isSaving ? "Saving…" : "Save"}
+        {isSaving ? "保存中…" : "変更を保存"}
       </button>
       {message && (
         <span aria-live="polite" className="text-sm" role="status">

@@ -45,7 +45,7 @@ describe("メモ表示", () => {
     expect(card?.children).toHaveLength(2);
   });
 
-  it("カテゴリとAI Summaryバッジを同じ行に表示する", async () => {
+  it("カテゴリとAI要約バッジを同じ行に表示する", async () => {
     mount(<Memo memo={{ ...memo, isAiSummary: 1 }} />);
 
     const categoryLink = document.querySelector(

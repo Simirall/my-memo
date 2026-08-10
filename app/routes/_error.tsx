@@ -8,7 +8,15 @@ const handler: ErrorHandler = (e, c) => {
   c.status(500);
 
   return c.render(
-    <div className="p-4 text-center text-4xl">Internal Server Error</div>,
+    <div className="space-y-4 p-4 text-center">
+      <h1 className="font-bold text-4xl">エラーが発生しました</h1>
+      <p className="text-base-content/70">
+        時間をおいて、もう一度お試しください。
+      </p>
+      <a className="btn" href="/">
+        メモ一覧へ戻る
+      </a>
+    </div>,
   );
 };
 

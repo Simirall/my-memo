@@ -24,3 +24,36 @@
 @utility memo-card-grid-row {
   grid-row: span 2;
 }
+
+@supports (appearance: base-select) {
+  .category-select,
+  .category-select::picker(select) {
+    appearance: base-select;
+  }
+
+  .category-select::picker(select) {
+    padding: 0.25rem;
+    color: var(--color-base-content);
+    background-color: var(--color-base-300);
+    border: var(--border) solid var(--color-base-300);
+    border-radius: var(--radius-field);
+    box-shadow: 0 0.5rem 1rem rgb(0 0 0 / 25%);
+  }
+
+  .category-select option {
+    padding: 0.5rem 0.75rem;
+    color: var(--color-base-content);
+    background-color: transparent;
+    border-radius: var(--radius-field);
+  }
+
+  .category-select option + option {
+    margin-block-start: 0.25rem;
+  }
+
+  .category-select option:hover,
+  .category-select option:focus-visible,
+  .category-select option:checked {
+    background-color: var(--color-base-200);
+  }
+}

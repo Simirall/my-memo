@@ -37,6 +37,12 @@ export default createRoute(async (c) => {
     <div className="flex justify-center p-4 sm:p-8">
       <div className="card w-full max-w-2xl bg-base-100 shadow-sm">
         <div className="card-body [&>honox-island]:block [&>honox-island]:w-full">
+          <div>
+            <h1 className="font-bold text-2xl">メモを作成</h1>
+            <p className="text-base-content/70">
+              残しておきたい内容を入力します。
+            </p>
+          </div>
           <CreateMemoForm
             categories={categories}
             error={c.req.query("error")}

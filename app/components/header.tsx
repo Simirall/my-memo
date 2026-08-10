@@ -27,7 +27,7 @@ export const Header = () => {
             >
               <div className="w-10 rounded-full">
                 {user.image ? (
-                  <img alt="User avatar" src={user.image} />
+                  <img alt={`${user.name}のアバター`} src={user.image} />
                 ) : (
                   <span className="flex size-full items-center justify-center bg-base-300 font-bold">
                     {user.name.slice(0, 1).toUpperCase()}

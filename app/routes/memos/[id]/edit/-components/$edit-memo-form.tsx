@@ -385,7 +385,7 @@ export default function EditMemoForm({
       ref={formRef}
     >
       {memo.isAiSummary === 1 && (
-        <div className="badge badge-soft badge-info">✨ AI Summary</div>
+        <div className="badge badge-soft badge-info">✨ AI要約</div>
       )}
       {error && (
         <div aria-live="polite" className="alert alert-error" role="alert">
@@ -401,8 +401,10 @@ export default function EditMemoForm({
           {status}
         </div>
       )}
-      <label className="flex flex-col gap-1" htmlFor="edit-memo-title">
-        Title
+      <fieldset className="fieldset">
+        <label className="fieldset-legend" htmlFor="edit-memo-title">
+          タイトル
+        </label>
         <input
           className="input w-full!"
           id="edit-memo-title"
@@ -410,13 +412,16 @@ export default function EditMemoForm({
           onInput={(event) =>
             setTitle((event.currentTarget as HTMLInputElement).value)
           }
+          placeholder="例：週末に買うもの"
           required
           type="text"
           value={title}
         />
-      </label>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="edit-memo-content">Content</label>
+      </fieldset>
+      <fieldset className="fieldset">
+        <label className="fieldset-legend" htmlFor="edit-memo-content">
+          本文
+        </label>
         <textarea
           aria-describedby="edit-memo-content-help"
           className="textarea min-h-40 w-full!"
@@ -425,18 +430,21 @@ export default function EditMemoForm({
           onInput={(event) =>
             setContent((event.currentTarget as HTMLTextAreaElement).value)
           }
+          placeholder="メモの内容を入力"
           ref={contentRef}
           required
           value={content}
         >
           {content}
         </textarea>
-        <p className="text-base-content/60 text-xs" id="edit-memo-content-help">
+        <p className="label" id="edit-memo-content-help">
           Markdownで入力できます。
         </p>
-      </div>
-      <label className="flex flex-col gap-1" htmlFor="edit-memo-url">
-        URL (optional)
+      </fieldset>
+      <fieldset className="fieldset">
+        <label className="fieldset-legend" htmlFor="edit-memo-url">
+          関連URL（任意）
+        </label>
         <input
           className="input w-full!"
           id="edit-memo-url"
@@ -444,37 +452,43 @@ export default function EditMemoForm({
           onInput={(event) =>
             setUrl((event.currentTarget as HTMLInputElement).value)
           }
+          placeholder="https://example.com"
           type="url"
           value={url}
         />
-      </label>
-      <label className="flex flex-col gap-1" htmlFor="edit-memo-category">
-        Category
+      </fieldset>
+      <fieldset className="fieldset">
+        <label className="fieldset-legend" htmlFor="edit-memo-category">
+          カテゴリー
+        </label>
         <select
-          className="select w-full!"
+          className="select category-select w-full!"
           id="edit-memo-category"
           onChange={(event) =>
             setCategoryId((event.currentTarget as HTMLSelectElement).value)
           }
           value={categoryId}
         >
-          <option value="">Select Category</option>
+          <option value="">カテゴリーなし</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
             </option>
           ))}
         </select>
-      </label>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="edit-memo-tags">Tags</label>
+      </fieldset>
+      <fieldset className="fieldset">
+        <label className="fieldset-legend" htmlFor="edit-memo-tags">
+          タグ
+        </label>
         <TagInput
           availableTags={availableTags}
           initialTags={tags}
           inputId="edit-memo-tags"
           onTagsChange={setTags}
         />
-      </div>
+        <p className="label">入力後にEnterキーで追加できます。</p>
+      </fieldset>
       <section className="space-y-3">
         <h2 className="font-semibold">添付ファイル</h2>
         {attachments.length > 0 && (
