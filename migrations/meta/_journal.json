@@ -64,6 +64,13 @@
       "when": 1786290941522,
       "tag": "0008_naive_gauntlet",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1786379602302,
+      "tag": "0009_certain_rocket_racer",
+      "breakpoints": true
     }
   ]
 }

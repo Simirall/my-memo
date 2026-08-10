@@ -193,4 +193,8 @@ describe("ファイル一覧取得", () => {
     ).toBe("alert(1) 本文 リンク");
     expect(getMemoExcerpt("あ".repeat(161), 160)).toHaveLength(161);
   });
+
+  it("本文がない場合は空の抜粋を返す", () => {
+    expect(getMemoExcerpt(null)).toBe("");
+  });
 });

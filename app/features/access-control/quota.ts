@@ -24,7 +24,7 @@ type MemoInsert = {
   id: string;
   userId: string;
   title: string;
-  content: string;
+  content: string | null;
   url: string | null;
   categoryId: string | null;
   isAiSummary: 0 | 1;

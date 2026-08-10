@@ -115,6 +115,55 @@ describe("JavaScript必須のメモAPI", () => {
     expect(await response.json()).toMatchObject({ memoId: expect.any(String) });
   });
 
+  it("タイトルだけで作成し空白だけの本文をNULLとして更新する", async () => {
+    const userId = "nullable-content-user";
+    await addUser(userId);
+    const app = appForUser(userId);
+
+    const created = await app.fetch(
+      new Request("https://example.test/api/memos/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          title: "タイトルだけのメモ",
+          content: "",
+          tags: "",
+        }),
+      }),
+      env,
+    );
+    expect(created.status).toBe(200);
+    const { memoId } = (await created.json()) as { memoId: string };
+    expect(
+      await db
+        .prepare("SELECT content FROM memos WHERE id = ?")
+        .bind(memoId)
+        .first<{ content: string | null }>(),
+    ).toEqual({ content: null });
+
+    const updated = await app.fetch(
+      new Request(`https://example.test/api/memos/${memoId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "更新後もタイトルだけ",
+          content: " \t\n　",
+          tags: [],
+          deleteAttachmentIds: [],
+          stagedAttachments: [],
+        }),
+      }),
+      env,
+    );
+    expect(updated.status).toBe(200);
+    expect(
+      await db
+        .prepare("SELECT content FROM memos WHERE id = ?")
+        .bind(memoId)
+        .first<{ content: string | null }>(),
+    ).toEqual({ content: null });
+  });
+
   it("メモ作成の業務失敗はAcceptに関係なくcodeとmessageのJSONを返す", async () => {
     await addUser("create-quota-user");
     await run(

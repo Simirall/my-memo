@@ -13,6 +13,10 @@ const tagNamesField = z.preprocess((value) => {
 }, z.array(z.string()));
 
 const memoReadSchema = createSelectSchema(memosTable);
+const memoContentField = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? null : value),
+  z.string().max(10000, "10,000文字以内で入力してください").nullable(),
+);
 const mediaDimensionsField = z.preprocess(
   (value) => {
     if (value === undefined || value === "") return [];
@@ -51,7 +55,6 @@ export const memoSchema = {
   create: createInsertSchema(memosTable, {
     userId: (schema) => schema.optional(),
     title: (schema) => schema.max(255, "255文字以内で入力してください"),
-    content: (schema) => schema.max(10000, "10,000文字以内で入力してください"),
     url: (schema) =>
       schema.max(2048, "2048文字以内で入力してください").optional(),
     categoryId: (schema) =>
@@ -59,11 +62,14 @@ export const memoSchema = {
         if (val === "") return null;
         return val;
       }),
-  }).extend({ tags: tagNamesField, mediaDimensions: mediaDimensionsField }),
+  }).extend({
+    content: memoContentField,
+    tags: tagNamesField,
+    mediaDimensions: mediaDimensionsField,
+  }),
   update: createInsertSchema(memosTable, {
     userId: (schema) => schema.optional(),
     title: (schema) => schema.max(255, "255文字以内で入力してください"),
-    content: (schema) => schema.max(10000, "10,000文字以内で入力してください"),
     url: (schema) =>
       schema.max(2048, "2048文字以内で入力してください").nullable().optional(),
     categoryId: (schema) => schema.nullable().optional(),
@@ -71,6 +77,7 @@ export const memoSchema = {
   })
     .omit({ isAiSummary: true })
     .extend({
+      content: memoContentField,
       tags: tagNamesField,
       deleteAttachmentIds: z.array(z.string()).default([]),
       stagedAttachments: z

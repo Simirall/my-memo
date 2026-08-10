@@ -38,6 +38,22 @@ afterEach(() => {
 });
 
 describe("メモ作成フォーム", () => {
+  it("本文を任意としてタイトルだけで送信する", async () => {
+    const fetchSpy = vi
+      .spyOn(window, "fetch")
+      .mockResolvedValue(Response.json({ message: "確認用" }, { status: 500 }));
+    mount(<CreateMemoForm categories={[]} />);
+
+    const content = page.getByLabelText("本文（任意）");
+    await expect.element(content).not.toBeRequired();
+    await page.getByLabelText("タイトル").fill("タイトルだけのメモ");
+    await page.getByRole("button", { name: "メモを作成" }).click();
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const body = fetchSpy.mock.calls[0]?.[1]?.body as FormData;
+    expect(body.get("content")).toBe("");
+  });
+
   it("本文欄にMarkdown入力の案内を表示する", async () => {
     mount(<CreateMemoForm categories={[]} />);
 

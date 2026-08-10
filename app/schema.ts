@@ -180,7 +180,7 @@ export const memosTable = sqliteTable(
       .notNull()
       .references(() => userTable.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
-    content: text("content").notNull(),
+    content: text("content"),
     url: text("url"),
     categoryId: text("category_id").references(() => categoriesTable.id, {
       onDelete: "set null",

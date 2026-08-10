@@ -416,7 +416,7 @@ export const removeShareIntake = async (
 
 type FinalizeMemo = {
   title: string;
-  content: string;
+  content: string | null;
   url: string | null;
   categoryId: string | null;
   tags: readonly string[];

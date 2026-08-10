@@ -673,7 +673,7 @@ export default function CreateMemoForm({
       </fieldset>
       <fieldset className="fieldset">
         <label className="fieldset-legend" htmlFor="memo-content">
-          本文
+          本文（任意）
         </label>
         <textarea
           aria-describedby="memo-content-help"
@@ -686,7 +686,6 @@ export default function CreateMemoForm({
           }
           placeholder="メモの内容を入力"
           ref={contentRef}
-          required
           value={content}
         />
         <p className="label" id="memo-content-help">

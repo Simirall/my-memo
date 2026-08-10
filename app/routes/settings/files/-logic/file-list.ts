@@ -133,7 +133,8 @@ export const getFileCategories = async (db: FileListDb, userId: string) =>
     .where(eq(schema.categoriesTable.userId, userId))
     .orderBy(asc(schema.categoriesTable.name));
 
-export const getMemoExcerpt = (content: string, maxLength = 160) => {
+export const getMemoExcerpt = (content: string | null, maxLength = 160) => {
+  if (content === null) return "";
   const plainText = content
     .replace(/<[^>]*>/g, " ")
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")

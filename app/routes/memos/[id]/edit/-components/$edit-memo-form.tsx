@@ -29,7 +29,7 @@ type MemoAttachment = typeof memoAttachmentsTable.$inferSelect;
 type EditableMemo = {
   id: string;
   title: string;
-  content: string;
+  content: string | null;
   url: string | null;
   categoryId: string | null;
   isAiSummary: number;
@@ -66,7 +66,7 @@ export default function EditMemoForm({
   returnTo: string;
 }) {
   const [title, setTitle] = useState(memo.title);
-  const [content, setContent] = useState(memo.content);
+  const [content, setContent] = useState(memo.content ?? "");
   const [url, setUrl] = useState(memo.url ?? "");
   const [categoryId, setCategoryId] = useState(memo.categoryId ?? "");
   const [tags, setTags] = useState<Tag[]>([...memo.tags]);
@@ -97,7 +97,7 @@ export default function EditMemoForm({
   );
   const isDirty =
     title !== memo.title ||
-    content !== memo.content ||
+    content !== (memo.content ?? "") ||
     url !== (memo.url ?? "") ||
     categoryId !== (memo.categoryId ?? "") ||
     JSON.stringify(toTagNames(tags)) !==
@@ -345,7 +345,7 @@ export default function EditMemoForm({
         },
         body: JSON.stringify({
           title,
-          content,
+          content: content.trim() === "" ? null : content,
           url: url || null,
           categoryId: categoryId || null,
           tags: toTagNames(tags),
@@ -422,7 +422,7 @@ export default function EditMemoForm({
       </fieldset>
       <fieldset className="fieldset">
         <label className="fieldset-legend" htmlFor="edit-memo-content">
-          本文
+          本文（任意）
         </label>
         <textarea
           aria-describedby="edit-memo-content-help"
@@ -434,7 +434,6 @@ export default function EditMemoForm({
           }
           placeholder="メモの内容を入力"
           ref={contentRef}
-          required
           value={content}
         >
           {content}

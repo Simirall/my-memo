@@ -103,13 +103,16 @@ export const Memo = ({
           </div>
         </div>
         <div className="grid content-start">
-          <div className="*:space-y-4 [&_h1,&_h2]:font-bold [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_img]:max-h-[70vh] [&_img]:max-w-full [&_img]:object-contain [&_ol]:list-inside [&_ol]:list-decimal [&_p]:whitespace-pre-wrap [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_ul]:list-inside [&_ul]:list-disc">
-            <div
-              dangerouslySetInnerHTML={{
-                __html: renderMarkdown(memo.content),
-              }}
-            />
-          </div>
+          {memo.content !== null && (
+            <div className="*:space-y-4 [&_h1,&_h2]:font-bold [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_img]:max-h-[70vh] [&_img]:max-w-full [&_img]:object-contain [&_ol]:list-inside [&_ol]:list-decimal [&_p]:whitespace-pre-wrap [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_ul]:list-inside [&_ul]:list-disc">
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: renderMarkdown(memo.content),
+                }}
+                data-memo-content
+              />
+            </div>
+          )}
           <AttachmentManager
             initialAttachments={memo.attachments}
             memoId={memo.id}

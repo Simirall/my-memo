@@ -29,7 +29,7 @@ const attachment = {
   createdAt: "2026-08-02 00:00:00",
 };
 
-function mount() {
+function mount(content: string | null = "AI本文") {
   const container = document.createElement("div");
   document.body.appendChild(container);
   render(
@@ -39,7 +39,7 @@ function mount() {
       memo={{
         id: "memo-1",
         title: "AIタイトル",
-        content: "AI本文",
+        content,
         url: "https://example.com",
         categoryId: category.id,
         isAiSummary: 1,
@@ -73,6 +73,29 @@ afterEach(() => {
 });
 
 describe("メモ編集フォーム", () => {
+  it("本文なしのメモを空欄で表示しNULLとして更新する", async () => {
+    const fetchMock = vi
+      .spyOn(window, "fetch")
+      .mockResolvedValue(
+        Response.json({ message: "テスト用エラー" }, { status: 400 }),
+      );
+    mount(null);
+
+    const content = page.getByLabelText("本文（任意）");
+    await expect.element(content).toHaveValue("");
+    await expect.element(content).not.toBeRequired();
+    await page.getByLabelText("タイトル").fill("更新タイトル");
+    await page.getByRole("button", { name: "更新" }).click();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/memos/memo-1",
+      expect.objectContaining({
+        method: "PATCH",
+        body: expect.stringContaining('"content":null'),
+      }),
+    );
+  });
+
   it("本文欄にMarkdown入力の案内を表示する", async () => {
     mount();
 

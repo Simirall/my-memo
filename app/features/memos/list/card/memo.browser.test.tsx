@@ -36,6 +36,15 @@ afterEach(() => {
 });
 
 describe("メモ表示", () => {
+  it("本文がない場合は本文領域を表示しない", async () => {
+    mount(<Memo memo={{ ...memo, content: null }} />);
+
+    expect(document.querySelector("[data-memo-content]")).toBeNull();
+    await expect
+      .element(page.getByRole("heading", { name: "テストメモ" }))
+      .toBeVisible();
+  });
+
   it("タグの有無にかかわらず対象メモのタグを編集できる", async () => {
     mount(<Memo memo={memo} />);
     await expect
