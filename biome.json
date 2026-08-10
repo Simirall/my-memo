@@ -23,11 +23,56 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
+      "correctness": {
+        "noPrivateImports": "error"
+      },
       "nursery": {
         "useSortedClasses": "error"
+      },
+      "performance": {
+        "noBarrelFile": "error"
+      },
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": [
+                  "@/routes/-features/**",
+                  "@/routes/-shared/**",
+                  "@/utils/**"
+                ],
+                "message": "Removed architecture boundary. Import the owning route or feature implementation directly."
+              }
+            ]
+          }
+        }
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["app/features/**/*.{ts,tsx}"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/routes/**", "**/routes/**"],
+                    "message": "Features must not depend on routes."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double"

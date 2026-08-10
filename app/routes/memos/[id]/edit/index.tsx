@@ -1,11 +1,9 @@
 import { and, asc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
-import {
-  EditMemoForm,
-  getSafeMemoListReturnTo,
-} from "@/routes/-features/memos";
+import { getSafeMemoListReturnTo } from "@/features/memos/list/query/memo-list-query";
 import * as schema from "@/schema";
+import EditMemoForm from "./-components/$edit-memo-form";
 
 export default createRoute(async (c) => {
   const user = c.get("user");

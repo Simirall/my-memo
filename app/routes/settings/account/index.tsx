@@ -1,5 +1,5 @@
 import { createRoute } from "honox/factory";
-import { InstallPrompt } from "@/routes/-shared";
+import InstallPrompt from "@/islands/$install-prompt";
 import { SettingsLayout } from "../-components/settings-layout";
 
 export default createRoute((c) => {

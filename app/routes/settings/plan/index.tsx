@@ -1,6 +1,9 @@
 import { createRoute } from "honox/factory";
-import { formatAttachmentSize } from "@/utils/attachment-constants";
-import { getAppDb, getPlanUsage } from "@/utils/authorization";
+import {
+  getAppDb,
+  getPlanUsage,
+} from "@/features/access-control/authorization";
+import { formatAttachmentSize } from "@/features/attachments/model/attachment-constants";
 import { SettingsLayout } from "../-components/settings-layout";
 
 const formatLimit = (limit: number | null) =>

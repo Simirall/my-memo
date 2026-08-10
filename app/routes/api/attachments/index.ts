@@ -1,13 +1,15 @@
 import { and, eq } from "drizzle-orm";
 import { type Context, Hono } from "hono";
-import { memoAttachmentsTable } from "@/schema";
+import { getAppDb } from "@/features/access-control/authorization";
 import {
   attachmentContentDisposition,
   getAttachmentPreviewKind,
+} from "@/features/attachments/model/attachment-constants";
+import {
   getAttachmentQuota,
   parseAttachmentRange,
-} from "@/utils/attachments";
-import { getAppDb } from "@/utils/authorization";
+} from "@/features/attachments/server/attachments";
+import { memoAttachmentsTable } from "@/schema";
 
 const attachmentsRoute = new Hono<{ Bindings: CloudflareBindings }>();
 type AttachmentsContext = Context<{ Bindings: CloudflareBindings }>;

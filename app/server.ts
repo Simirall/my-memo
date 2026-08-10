@@ -2,8 +2,8 @@ import { showRoutes } from "hono/dev";
 import { trimTrailingSlash } from "hono/trailing-slash";
 import { createHono } from "honox/factory";
 import { createApp } from "honox/server";
+import { htmlSecurityHeaders } from "@/security/security-headers";
 import { getAuth } from "./auth";
-import { htmlSecurityHeaders } from "./utils/security-headers";
 
 const baseApp = createHono();
 

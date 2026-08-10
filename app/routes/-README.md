@@ -1,36 +1,28 @@
 # RouteベースのVertical Slice
 
-`app/routes`をアプリケーションの境界とします。HonoXのrouteファイルは
-このツリーに配置し、routeとして扱わないファイルやディレクトリには、先頭に
-`-`を付けます。
+`app/routes`をHTTPと画面の境界とします。HonoXのrouteファイルはこのツリーに配置し、routeとして扱わないファイルやディレクトリには先頭に`-`を付けます。
 
-このファイル名が`-README.md`なのは、HonoXが`app/routes`配下のMarkdownも
-routeとして探索するためです。
+このファイル名が`-README.md`なのは、HonoXが`app/routes`配下のMarkdownもrouteとして探索するためです。
 
 ## 所有範囲
 
-- 各routeは、自身の`index.tsx`、route専用コンポーネント、route専用Islandを所有します。
-- 複数routeで利用するドメインコードは、次のfeatureへ配置します。
-  - `-features/memos`
-  - `-features/categories`
-  - `-features/tags`
-  - `-features/sharing`
-- 複数featureにまたがるUI、ブラウザ処理、認証clientは`-shared`に配置します。
-- `app/schema.ts`、`app/auth.ts`、`app/utils/authorization.ts`、
-  `app/utils/quota.ts`は、永続化・認証認可の基盤として維持します。
+- 単一routeだけが利用するコンポーネント、Island、入力処理、テストは、そのrouteへco-locationします。
+- 2つ以上のrouteが実際に利用する業務コードだけを`app/features`へ配置します。将来の再利用予測だけではfeatureへ移しません。
+- 共通UIと共通Islandは、それぞれ`app/components`と`app/islands`へ配置します。
+- featureが大きくなった場合は、技術レイヤーより先に業務上の小ドメインで分割します。小ドメイン内で必要な場合だけ`client`や`server`などの技術レイヤーを設けます。
+- テストは対象実装と同じ小ドメインに隣接させ、テスト専用ディレクトリへ集約しません。
 
 ## import規約
 
-各featureは`index.ts`を公開入口とします。routeや他featureからは、feature内部の
-ファイルを直接参照せず、`index.ts`経由でimportします。
-
-feature内部のファイル同士は相対importを使用します。sliceをまたぐ参照には、
-`app/*`を指す`@/*` aliasを使用します。
+- バレルファイルは作成せず、利用する実装ファイルから直接importします。
+- feature内部のファイル同士は相対importまたは`@/*` aliasを使用できます。責務が離れた参照は、移動に強い`@/*` aliasを優先します。
+- `app/features`から`app/routes`を参照してはいけません。
+- route同士で内部実装を直接参照しません。共有が発生した実装は`app/features`へ昇格します。
+- route横断の統合テストは、対象route群を包含する最も近いrouteドメインに置けます。
 
 ## IslandとHonoXの除外規則
 
-route内にIslandをコロケーションする場合は、ファイル名を`$*.tsx`にします。
-例：`$create-memo-form.tsx`、`$user-access-form.tsx`。
+route内にIslandをco-locationする場合は、ファイル名を`$*.tsx`にします。`app/islands`の共通Islandも同じ命名規則を使用します。
 
 HonoXでは、次のファイル・ディレクトリはrouteとして扱われません。
 
@@ -39,5 +31,4 @@ HonoXでは、次のファイル・ディレクトリはrouteとして扱われ�
 - `$*.tsx`ファイル
 - `*.test.ts`、`*.test.tsx`、`*.spec.ts`、`*.spec.tsx`
 
-`$*.tsx`はroute探索から除外されますが、HonoXによってIslandとして変換され、
-SSRとclient hydrationの対象になります。
+`$*.tsx`はroute探索から除外されますが、HonoXによってIslandとして変換され、SSRとclient hydrationの対象になります。

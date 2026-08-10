@@ -3,6 +3,15 @@ import speakerHighIcon from "@phosphor-icons/core/assets/regular/speaker-high.sv
 import trashIcon from "@phosphor-icons/core/assets/regular/trash.svg?raw";
 import videoCameraIcon from "@phosphor-icons/core/assets/regular/video-camera.svg?raw";
 import { createRoute } from "honox/factory";
+import { PhosphorIcon } from "@/components/phosphor-icon";
+import { getAppDb } from "@/features/access-control/authorization";
+import {
+  formatAttachmentSize,
+  getAttachmentPreviewKind,
+} from "@/features/attachments/model/attachment-constants";
+import { SettingsLayout } from "../-components/settings-layout";
+import FileListController from "./-components/$file-list-controller";
+import { FileDetailDialog } from "./-components/file-detail-dialog";
 import {
   buildFileListUrl,
   getEmptyFileListRedirectUrl,
@@ -10,16 +19,7 @@ import {
   getFileList,
   getMemoExcerpt,
   parseFileListQuery,
-} from "@/routes/-features/files";
-import FileListController from "@/routes/-features/files/$file-list-controller";
-import { FileDetailDialog } from "@/routes/-features/files/file-detail-dialog";
-import { PhosphorIcon } from "@/routes/-shared";
-import {
-  formatAttachmentSize,
-  getAttachmentPreviewKind,
-} from "@/utils/attachment-constants";
-import { getAppDb } from "@/utils/authorization";
-import { SettingsLayout } from "../-components/settings-layout";
+} from "./-logic/file-list";
 
 const getPreviewLabel = (kind: ReturnType<typeof getAttachmentPreviewKind>) => {
   if (kind === "video") return "動画";

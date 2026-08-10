@@ -1,6 +1,6 @@
 import { useEffect, useState } from "hono/jsx";
-import type { PendingShare } from "@/routes/-features/sharing";
-import { writePendingShare } from "@/routes/-features/sharing";
+import { writePendingShare } from "@/features/sharing/client/share-client";
+import type { PendingShare } from "@/features/sharing/model/share";
 
 export default function ShareReceiver({ share }: { share: PendingShare }) {
   const [error, setError] = useState<string>();

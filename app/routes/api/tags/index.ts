@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { getAppDb } from "@/features/access-control/authorization";
 import { tagsTable } from "@/schema";
-import { getAppDb } from "@/utils/authorization";
 
 const tagsRoute = new Hono<{ Bindings: CloudflareBindings }>();
 

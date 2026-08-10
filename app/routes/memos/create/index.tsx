@@ -1,7 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
-import { getShareIntake } from "@/routes/-features/sharing/share-intake";
+import { getShareIntake } from "@/features/sharing/intake/share-intake";
 import { categoriesTable, tagsTable } from "@/schema";
 import CreateMemoForm from "./-components/$create-memo-form";
 

@@ -1,13 +1,13 @@
 import { useEffect, useState } from "hono/jsx";
 import type z from "zod";
-import type { categorySchema } from "@/routes/-features/categories";
+import type { categorySchema } from "@/features/categories/schema/category-schema";
 import {
   clearPendingShare,
-  getShareDestination,
   readPendingShare,
-} from "@/routes/-features/sharing";
-import type { Tag } from "@/routes/-features/tags";
-import { TagInput } from "@/routes/-features/tags";
+} from "@/features/sharing/client/share-client";
+import { getShareDestination } from "@/features/sharing/model/share";
+import type { Tag } from "@/features/tags/data/tags";
+import { TagInput } from "@/features/tags/input/tag-input";
 
 export default function UrlSummaryForm({
   categories,

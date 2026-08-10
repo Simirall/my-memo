@@ -1,5 +1,8 @@
 import { createRoute } from "honox/factory";
-import { getAppDb, getPlanUsage } from "@/utils/authorization";
+import {
+  getAppDb,
+  getPlanUsage,
+} from "@/features/access-control/authorization";
 import ShareConsumer from "./-components/$share-consumer";
 
 export default createRoute(async (c) => {

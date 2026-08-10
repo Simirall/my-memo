@@ -1,12 +1,12 @@
 import { parseBody } from "hono/utils/body";
 import { createRoute } from "honox/factory";
-import { normalizePendingShare } from "@/routes/-features/sharing";
+import { MAX_SHARED_ATTACHMENT_BYTES } from "@/features/attachments/model/attachment-constants";
 import {
   createShareIntake,
   getSharedFiles,
   ShareIntakeError,
-} from "@/routes/-features/sharing/share-intake";
-import { MAX_SHARED_ATTACHMENT_BYTES } from "@/utils/attachments";
+} from "@/features/sharing/intake/share-intake";
+import { normalizePendingShare } from "@/features/sharing/model/share";
 import ShareReceiver from "./-components/$share-receiver";
 
 const getString = (value: unknown) => (typeof value === "string" ? value : "");

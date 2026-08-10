@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
-import { htmlSecurityHeaders } from "./utils/security-headers";
+import { htmlSecurityHeaders } from "@/security/security-headers";
 
 const app = new Hono();
 app.use("*", htmlSecurityHeaders);

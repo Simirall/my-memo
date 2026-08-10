@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
-import { DeleteButton } from "@/routes/-shared";
+import { DeleteButton } from "@/islands/$delete-button";
 import { categoriesTable } from "@/schema";
 import { SettingsLayout } from "../-components/settings-layout";
 import { CreateCategoryForm } from "./-components/$create-category-form";

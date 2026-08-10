@@ -1,7 +1,7 @@
 import { createRoute } from "honox/factory";
-import { getUserTags } from "@/routes/-features/tags";
-import { DeleteButton } from "@/routes/-shared";
-import { getAppDb } from "@/utils/authorization";
+import { getAppDb } from "@/features/access-control/authorization";
+import { getUserTags } from "@/features/tags/data/tags";
+import { DeleteButton } from "@/islands/$delete-button";
 import { SettingsLayout } from "../-components/settings-layout";
 
 export default createRoute(async (c) => {

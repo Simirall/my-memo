@@ -1,10 +1,12 @@
 import { useEffect, useState } from "hono/jsx";
 import {
   clearPendingShare,
-  getShareDestination,
   readPendingShare,
+} from "@/features/sharing/client/share-client";
+import {
+  getShareDestination,
   type ShareDestination,
-} from "@/routes/-features/sharing";
+} from "@/features/sharing/model/share";
 
 export type ShareQuota = {
   memo: { used: number; limit: number | null };

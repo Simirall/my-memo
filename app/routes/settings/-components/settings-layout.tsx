@@ -4,7 +4,7 @@ import foldersIcon from "@phosphor-icons/core/assets/regular/folders.svg?raw";
 import tagIcon from "@phosphor-icons/core/assets/regular/tag.svg?raw";
 import userCircleIcon from "@phosphor-icons/core/assets/regular/user-circle.svg?raw";
 import type { Child } from "hono/jsx";
-import { PhosphorIcon } from "@/routes/-shared";
+import { PhosphorIcon } from "@/components/phosphor-icon";
 
 export type SettingsSection =
   | "account"

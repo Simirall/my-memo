@@ -1,6 +1,6 @@
 import { jsxRenderer } from "hono/jsx-renderer";
 import { Link, Script } from "honox/server";
-import { RootLayout } from "@/routes/-shared";
+import { RootLayout } from "@/components/root-layout";
 
 export const JAVASCRIPT_REQUIRED_MESSAGE =
   "このアプリの利用には JavaScript が必要です。ブラウザーの設定で JavaScript を有効にして、ページを再読み込みしてください。";

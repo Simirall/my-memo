@@ -1,4 +1,4 @@
-import { authClient } from "@/routes/-shared/auth-client";
+import { authClient } from "@/auth/auth-client";
 
 export const LoginButton = ({ callbackURL }: { callbackURL?: string }) => {
   const handleLogin = async () => {

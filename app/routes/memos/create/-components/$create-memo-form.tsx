@@ -1,27 +1,10 @@
 import { useEffect, useRef, useState } from "hono/jsx";
 import type z from "zod";
-import type { categorySchema } from "@/routes/-features/categories";
-import {
-  clearPendingShare,
-  getShareDestination,
-  readPendingShare,
-  type SharedMemoPrefill,
-} from "@/routes/-features/sharing";
-import type { ShareIntake } from "@/routes/-features/sharing/share-intake";
-import type { Tag } from "@/routes/-features/tags";
-import { TagInput } from "@/routes/-features/tags";
-import type { MediaDimensions } from "@/utils/attachment-constants";
-import {
-  formatAttachmentSize,
-  getAttachmentPreviewKind,
-  MAX_ATTACHMENT_BYTES,
-  MAX_ATTACHMENTS_PER_MEMO,
-} from "@/utils/attachment-constants";
 import {
   getAttachmentUploadBody,
   type PendingAttachmentUpload,
   prepareAttachmentUpload,
-} from "@/utils/attachment-upload-client";
+} from "@/features/attachments/client/attachment-upload-client";
 import {
   type ClipboardRejection,
   formatClipboardRejections,
@@ -29,9 +12,28 @@ import {
   hasSupportedClipboardMedia,
   selectClipboardMedia,
   shouldCaptureClipboardPaste,
-} from "@/utils/clipboard-media";
-import type { GeneratedThumbnail } from "@/utils/image-thumbnail";
-import { readMediaDimensionsFromUrl } from "@/utils/media-dimensions";
+} from "@/features/attachments/client/clipboard-media";
+import type { GeneratedThumbnail } from "@/features/attachments/client/image-thumbnail";
+import { readMediaDimensionsFromUrl } from "@/features/attachments/client/media-dimensions";
+import type { MediaDimensions } from "@/features/attachments/model/attachment-constants";
+import {
+  formatAttachmentSize,
+  getAttachmentPreviewKind,
+  MAX_ATTACHMENT_BYTES,
+  MAX_ATTACHMENTS_PER_MEMO,
+} from "@/features/attachments/model/attachment-constants";
+import type { categorySchema } from "@/features/categories/schema/category-schema";
+import {
+  clearPendingShare,
+  readPendingShare,
+} from "@/features/sharing/client/share-client";
+import type { ShareIntake } from "@/features/sharing/intake/share-intake";
+import {
+  getShareDestination,
+  type SharedMemoPrefill,
+} from "@/features/sharing/model/share";
+import type { Tag } from "@/features/tags/data/tags";
+import { TagInput } from "@/features/tags/input/tag-input";
 
 type AttachmentQuota = {
   used: number;

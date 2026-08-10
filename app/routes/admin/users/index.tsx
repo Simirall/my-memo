@@ -1,7 +1,10 @@
 import { asc, eq } from "drizzle-orm";
 import { createRoute } from "honox/factory";
+import {
+  getAppDb,
+  getFreshUser,
+} from "@/features/access-control/authorization";
 import { plansTable, userTable } from "@/schema";
-import { getAppDb, getFreshUser } from "@/utils/authorization";
 import UserAccessForm from "./-components/$user-access-form";
 
 export default createRoute(async (c) => {

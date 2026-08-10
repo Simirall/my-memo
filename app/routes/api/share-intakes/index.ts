@@ -1,17 +1,17 @@
 import { zValidator } from "@hono/zod-validator";
 import { and, eq } from "drizzle-orm";
 import { type Context, Hono } from "hono";
-import { memoSchema } from "@/routes/-features/memos";
+import { getAppDb } from "@/features/access-control/authorization";
+import { parseAttachmentRange } from "@/features/attachments/server/attachments";
+import { memoSchema } from "@/features/memos/schema/memo-schema";
 import {
   finalizeShareIntake,
   getShareIntake,
   removeShareIntake,
   removeShareIntakeFile,
   ShareIntakeError,
-} from "@/routes/-features/sharing/share-intake";
+} from "@/features/sharing/intake/share-intake";
 import { categoriesTable } from "@/schema";
-import { parseAttachmentRange } from "@/utils/attachments";
-import { getAppDb } from "@/utils/authorization";
 
 const shareIntakesRoute = new Hono<{ Bindings: CloudflareBindings }>();
 type ShareIntakesContext = Context<{ Bindings: CloudflareBindings }>;

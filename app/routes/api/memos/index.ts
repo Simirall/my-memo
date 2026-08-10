@@ -4,12 +4,34 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import {
-  decodeHtmlEntities,
-  decodeHtmlWithCorrectEncoding,
+  getAppDb,
+  getEntitlement,
+  getUsage,
+  PLAN_METRICS,
+} from "@/features/access-control/authorization";
+import {
+  insertAttachmentWithinQuota,
+  insertMemoWithinQuota,
+  reserveAiSummaryQuota,
+} from "@/features/access-control/quota";
+import {
+  getAttachmentPreviewKind,
+  MAX_ATTACHMENT_BYTES,
+  MAX_ATTACHMENTS_PER_MEMO,
+  parseMediaDimensions,
+} from "@/features/attachments/model/attachment-constants";
+import { parseAttachmentUploadForm } from "@/features/attachments/server/attachment-upload";
+import { getAttachmentQuota } from "@/features/attachments/server/attachments";
+import { putR2ObjectWithKnownLength } from "@/features/attachments/server/r2-upload";
+import {
   memoSchema,
   tagUpdateSchema,
-} from "@/routes/-features/memos";
-import { normalizeTagNames, replaceMemoTags } from "@/routes/-features/tags";
+} from "@/features/memos/schema/memo-schema";
+import { normalizeTagNames, replaceMemoTags } from "@/features/tags/data/tags";
+import {
+  MAX_MEMO_UPDATE_JSON_BYTES,
+  readLimitedJson,
+} from "@/routes/api/memos/-lib/read-limited-json";
 import {
   categoriesTable,
   memoAttachmentsTable,
@@ -17,30 +39,8 @@ import {
   memoTagsTable,
   tagsTable,
 } from "@/schema";
-import { parseAttachmentUploadForm } from "@/utils/attachment-upload";
-import {
-  getAttachmentPreviewKind,
-  getAttachmentQuota,
-  MAX_ATTACHMENT_BYTES,
-  MAX_ATTACHMENTS_PER_MEMO,
-  parseMediaDimensions,
-} from "@/utils/attachments";
-import {
-  getAppDb,
-  getEntitlement,
-  getUsage,
-  PLAN_METRICS,
-} from "@/utils/authorization";
-import {
-  insertAttachmentWithinQuota,
-  insertMemoWithinQuota,
-  reserveAiSummaryQuota,
-} from "@/utils/quota";
-import { putR2ObjectWithKnownLength } from "@/utils/r2-upload";
-import {
-  MAX_MEMO_UPDATE_JSON_BYTES,
-  readLimitedJson,
-} from "@/utils/read-limited-json";
+import { decodeHtmlEntities } from "./-lib/decode-html-entities";
+import { decodeHtmlWithCorrectEncoding } from "./-lib/decode-html-with-correct-encoding";
 
 const memosRoute = new Hono<{ Bindings: CloudflareBindings }>();
 type MemosContext = Context<{ Bindings: CloudflareBindings }>;

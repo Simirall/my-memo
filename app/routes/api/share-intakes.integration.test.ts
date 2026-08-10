@@ -1,11 +1,11 @@
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it } from "vitest";
-import { normalizePendingShare } from "@/routes/-features/sharing";
 import {
   createShareIntake,
   validateSharedFiles,
-} from "@/routes/-features/sharing/share-intake";
+} from "@/features/sharing/intake/share-intake";
+import { normalizePendingShare } from "@/features/sharing/model/share";
 import shareIntakesRoute from "./share-intakes/index";
 
 const db = env.MY_MEMO_D1;
