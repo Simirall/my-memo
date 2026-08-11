@@ -25,6 +25,9 @@ import {
 import { parseAttachmentUploadForm } from "@/features/attachments/server/attachment-upload";
 import { getAttachmentQuota } from "@/features/attachments/server/attachments";
 import { putR2ObjectWithKnownLength } from "@/features/attachments/server/r2-upload";
+import { normalizeLinkPreviewUrl } from "@/features/link-preview/model/link-preview";
+import { scheduleBackgroundTask } from "@/features/link-preview/server/background-task";
+import { refreshLinkPreviewCache } from "@/features/link-preview/server/link-preview-cache";
 import {
   memoSchema,
   tagUpdateSchema,
@@ -255,6 +258,14 @@ memosRoute
         "QUOTA_EXCEEDED",
         "メモの上限に達しました。最新の利用状況を確認してください。",
         403,
+      );
+    }
+
+    const previewUrl = validated.url;
+    if (previewUrl) {
+      scheduleBackgroundTask(
+        () => c.executionCtx,
+        () => refreshLinkPreviewCache(c.env.MY_MEMO_D1, previewUrl),
       );
     }
 
@@ -684,6 +695,17 @@ memosRoute
         .filter((key): key is string => Boolean(key)),
       { event: "memo_edit_attachment_delete_failed", memoId },
     );
+    const previewUrl = validated.url;
+    if (
+      previewUrl &&
+      normalizeLinkPreviewUrl(previewUrl) !==
+        (memo.url ? normalizeLinkPreviewUrl(memo.url) : null)
+    ) {
+      scheduleBackgroundTask(
+        () => c.executionCtx,
+        () => refreshLinkPreviewCache(c.env.MY_MEMO_D1, previewUrl),
+      );
+    }
     return c.json({ ok: true, redirect: "/" });
   })
   .post("/:id/attachments", async (c) => {
@@ -1108,6 +1130,11 @@ memosRoute
                 },
               };
             }
+
+            scheduleBackgroundTask(
+              () => c.executionCtx,
+              () => refreshLinkPreviewCache(c.env.MY_MEMO_D1, url),
+            );
 
             reservationConsumed = true;
             return { ok: true };

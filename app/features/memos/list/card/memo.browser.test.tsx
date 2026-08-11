@@ -36,6 +36,108 @@ afterEach(() => {
 });
 
 describe("メモ表示", () => {
+  it("メモタイトルを残してOGP全体を外部リンクとして表示する", async () => {
+    mount(
+      <Memo
+        memo={{
+          ...memo,
+          url: "https://example.com/article",
+          linkPreview: {
+            normalizedUrl: "https://example.com/article",
+            title: "OGPタイトル",
+            description: "OGP説明",
+            imageUrl: "https://images.example.com/card.jpg",
+            cardType: "summary",
+          },
+        }}
+      />,
+    );
+
+    await expect
+      .element(page.getByRole("link", { name: "テストメモ" }))
+      .toHaveAttribute("href", "https://example.com/article");
+    const preview = page.getByRole("link", {
+      name: "リンクプレビュー: OGPタイトル",
+    });
+    await expect
+      .element(preview)
+      .toHaveAttribute("href", "https://example.com/article");
+    await expect.element(preview).toHaveAttribute("target", "_blank");
+    await expect.element(page.getByText("OGP説明")).toBeVisible();
+
+    const image = document.querySelector<HTMLImageElement>(
+      "[data-link-preview-image]",
+    );
+    expect(image?.getAttribute("loading")).toBe("lazy");
+    expect(image?.getAttribute("referrerpolicy")).toBe("no-referrer");
+    expect(image?.getAttribute("alt")).toBe("");
+  });
+
+  it("summaryとlargeで高さを揃え画像幅だけを広げる", () => {
+    const preview = {
+      normalizedUrl: "https://example.com/article",
+      title: "OGPタイトル",
+      description: "説明",
+      imageUrl: "https://images.example.com/card.jpg",
+      cardType: "summary" as const,
+    };
+    mount(
+      <div>
+        <Memo
+          memo={{
+            ...memo,
+            id: "summary",
+            url: preview.normalizedUrl,
+            linkPreview: preview,
+          }}
+        />
+        <Memo
+          memo={{
+            ...memo,
+            id: "large",
+            url: preview.normalizedUrl,
+            linkPreview: { ...preview, cardType: "summary_large_image" },
+          }}
+        />
+      </div>,
+    );
+
+    const summary = document.querySelector<HTMLElement>(
+      '[data-link-preview-image="summary"]',
+    );
+    const large = document.querySelector<HTMLElement>(
+      '[data-link-preview-image="summary_large_image"]',
+    );
+    expect(summary?.getBoundingClientRect().height).toBe(96);
+    expect(large?.getBoundingClientRect().height).toBe(96);
+    expect(summary?.getBoundingClientRect().width).toBe(96);
+    expect(large?.getBoundingClientRect().width).toBe(160);
+  });
+
+  it("画像がないOGPでもタイトルと説明を表示する", async () => {
+    mount(
+      <Memo
+        memo={{
+          ...memo,
+          url: "https://example.com/article",
+          linkPreview: {
+            normalizedUrl: "https://example.com/article",
+            title: "画像なし記事",
+            description: "画像がなくても読める説明",
+            imageUrl: null,
+            cardType: "summary",
+          },
+        }}
+      />,
+    );
+
+    await expect.element(page.getByText("画像なし記事")).toBeVisible();
+    await expect
+      .element(page.getByText("画像がなくても読める説明"))
+      .toBeVisible();
+    expect(document.querySelector("[data-link-preview-image]")).toBeNull();
+  });
+
   it("本文がない場合は本文領域を表示しない", async () => {
     mount(<Memo memo={{ ...memo, content: null }} />);
 

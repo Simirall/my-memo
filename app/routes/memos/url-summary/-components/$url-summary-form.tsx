@@ -1,6 +1,7 @@
-import { useEffect, useState } from "hono/jsx";
+import { useEffect, useRef, useState } from "hono/jsx";
 import type z from "zod";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
+import { useFormSubmitShortcut } from "@/features/memos/input/use-form-submit-shortcut";
 import {
   clearPendingShare,
   readPendingShare,
@@ -23,6 +24,9 @@ export default function UrlSummaryForm({
   const [progress, setProgress] = useState<string>();
   const [summary, setSummary] = useState("");
   const [url, setUrl] = useState(initialUrl ?? "");
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useFormSubmitShortcut(formRef, isLoading);
 
   useEffect(() => {
     if (!new URLSearchParams(window.location.search).has("shared")) return;
@@ -89,6 +93,7 @@ export default function UrlSummaryForm({
       className="flex flex-col gap-4"
       method="post"
       onSubmit={submit}
+      ref={formRef}
     >
       {error && (
         <div aria-live="polite" className="alert alert-error" role="alert">

@@ -194,6 +194,46 @@ export const memosTable = sqliteTable(
   ],
 );
 
+export const linkPreviewCacheTable = sqliteTable(
+  "link_preview_cache",
+  {
+    normalizedUrl: text("normalized_url").primaryKey(),
+    title: text("title"),
+    description: text("description"),
+    imageUrl: text("image_url"),
+    cardType: text("card_type"),
+    status: text("status").notNull().default("pending"),
+    failureCount: integer("failure_count").notNull().default(0),
+    fetchedAt: text("fetched_at"),
+    expiresAt: text("expires_at"),
+    retryAfter: text("retry_after"),
+    lastReferencedAt: text("last_referenced_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    leaseUntil: text("lease_until"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("link_preview_cache_maintenance_idx").on(
+      table.lastReferencedAt,
+      table.leaseUntil,
+    ),
+    check(
+      "link_preview_cache_card_type",
+      sql`${table.cardType} IS NULL OR ${table.cardType} IN ('summary', 'summary_large_image')`,
+    ),
+    check(
+      "link_preview_cache_status",
+      sql`${table.status} IN ('pending', 'fetching', 'ready', 'failed')`,
+    ),
+    check(
+      "link_preview_cache_failure_count_non_negative",
+      sql`${table.failureCount} >= 0`,
+    ),
+  ],
+);
+
 export const categoriesTable = sqliteTable(
   "categories",
   {

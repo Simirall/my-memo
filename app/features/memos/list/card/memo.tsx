@@ -3,6 +3,7 @@ import type z from "zod";
 import { FolderOpenIcon } from "@/components/folder-open-icon";
 import { PhosphorIcon } from "@/components/phosphor-icon";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
+import type { LinkPreview } from "@/features/link-preview/server/link-preview-cache";
 import type { Tag } from "@/features/tags/data/tags";
 import { MemoTagList } from "@/features/tags/list/memo-tag-list";
 import { DeleteButton } from "@/islands/$delete-button";
@@ -11,6 +12,7 @@ import type { memoSchema } from "../../schema/memo-schema";
 import AttachmentManager from "../attachments/$attachment-manager";
 import type { MemoListQuery } from "../query/memo-list-query";
 import { buildMemoListUrl } from "../query/memo-list-query";
+import { LinkPreviewCard } from "./link-preview-card";
 import { renderMarkdown } from "./render-markdown";
 
 type MemoWithTags = z.infer<typeof memoSchema.read> & {
@@ -18,6 +20,7 @@ type MemoWithTags = z.infer<typeof memoSchema.read> & {
   tags?: ReadonlyArray<Tag>;
   memoTags?: ReadonlyArray<{ tag: Tag | null }>;
   attachments?: ReadonlyArray<typeof memoAttachmentsTable.$inferSelect>;
+  linkPreview?: LinkPreview;
 };
 
 export const Memo = ({
@@ -59,6 +62,9 @@ export const Memo = ({
             </a>
           ) : (
             <h2 className="card-title text-xl">{memo.title}</h2>
+          )}
+          {memo.url && memo.linkPreview && (
+            <LinkPreviewCard preview={memo.linkPreview} url={memo.url} />
           )}
           {((showCategory && memo.category) || memo.isAiSummary === 1) && (
             <div className="flex flex-wrap items-center gap-2">

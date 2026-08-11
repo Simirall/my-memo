@@ -30,6 +30,17 @@ function dispatchPaste(
   return event;
 }
 
+function pressCtrlEnter(target: EventTarget = window) {
+  target.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+      key: "Enter",
+    }),
+  );
+}
+
 afterEach(() => {
   document.body.replaceChildren();
   window.history.replaceState({}, "", "/");
@@ -38,6 +49,21 @@ afterEach(() => {
 });
 
 describe("メモ作成フォーム", () => {
+  it("フォーム外にフォーカスがあってもCtrl+Enterで送信する", async () => {
+    const outsideButton = document.createElement("button");
+    document.body.appendChild(outsideButton);
+    const fetchSpy = vi
+      .spyOn(window, "fetch")
+      .mockResolvedValue(Response.json({ message: "確認用" }, { status: 500 }));
+    mount(<CreateMemoForm categories={[]} />);
+
+    await page.getByLabelText("タイトル").fill("ショートカット送信");
+    outsideButton.focus();
+    pressCtrlEnter(outsideButton);
+
+    await expect.poll(() => fetchSpy.mock.calls.length).toBe(1);
+  });
+
   it("本文を任意としてタイトルだけで送信する", async () => {
     const fetchSpy = vi
       .spyOn(window, "fetch")
@@ -413,6 +439,23 @@ describe("メモ作成フォーム", () => {
       .element(page.getByRole("alert"))
       .toHaveTextContent("AI要約の今月の上限です。");
     await expect.element(url).toHaveValue("https://example.com/article");
+  });
+
+  it("入力欄にフォーカス中でもCtrl+EnterでAI要約を送信する", async () => {
+    const fetchSpy = vi
+      .spyOn(window, "fetch")
+      .mockResolvedValue(
+        Response.json({ message: "AI要約の今月の上限です。" }, { status: 403 }),
+      );
+    mount(<UrlSummaryForm categories={[]} />);
+
+    const url = page.getByLabelText("要約するページのURL");
+    await url.fill("https://example.com/article");
+    await url.click();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    pressCtrlEnter(document.activeElement ?? window);
+
+    await expect.poll(() => fetchSpy.mock.calls.length).toBe(1);
   });
 
   it("AI要約の部分応答を画面に表示してストリームエラーを通知する", async () => {

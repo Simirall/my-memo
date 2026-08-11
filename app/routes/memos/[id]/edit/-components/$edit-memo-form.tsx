@@ -21,6 +21,7 @@ import {
 } from "@/features/attachments/model/attachment-constants";
 import type { AttachmentQuota } from "@/features/attachments/server/attachments";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
+import { useFormSubmitShortcut } from "@/features/memos/input/use-form-submit-shortcut";
 import type { Tag } from "@/features/tags/data/tags";
 import { TagInput } from "@/features/tags/input/tag-input";
 import type { memoAttachmentsTable } from "@/schema";
@@ -88,6 +89,8 @@ export default function EditMemoForm({
   const clipboardPasteHandlerRef = useRef<
     ((event: ClipboardEvent) => Promise<void>) | undefined
   >(undefined);
+
+  useFormSubmitShortcut(formRef, isSaving || isCheckingFiles);
 
   const deletedBytes = attachments
     .filter((attachment) => deletedAttachmentIds.includes(attachment.id))

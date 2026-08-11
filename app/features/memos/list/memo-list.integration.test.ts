@@ -56,6 +56,7 @@ const memoIds = (result: Awaited<ReturnType<typeof getMemoList>>) =>
 
 beforeEach(async () => {
   await d1.batch([
+    d1.prepare("DELETE FROM link_preview_cache"),
     d1.prepare("DELETE FROM memo_attachments"),
     d1.prepare("DELETE FROM memo_tags"),
     d1.prepare("DELETE FROM tags"),
@@ -66,6 +67,38 @@ beforeEach(async () => {
 });
 
 describe("メモ一覧の並べ替え・絞り込み", () => {
+  it("関連URLに対応する利用可能なOGPメタデータを付加する", async () => {
+    await addUser("owner");
+    await addMemo("link", "owner", "2026-08-08 00:00:00", {
+      url: "https://EXAMPLE.com:443/article#top",
+    });
+    await run(
+      `INSERT INTO link_preview_cache
+        (normalized_url, title, description, image_url, card_type, status, expires_at, last_referenced_at)
+       VALUES (?, ?, ?, ?, 'summary', 'ready', ?, ?)`,
+      "https://example.com/article",
+      "OGPタイトル",
+      "OGP説明",
+      "https://images.example.com/card.jpg",
+      "2026-08-20T00:00:00.000Z",
+      "2026-08-01T00:00:00.000Z",
+    );
+
+    const result = await getMemoList(getMemoListDb(env), "owner", {
+      sort: "desc",
+      page: 1,
+    });
+
+    expect(result.items[0]?.linkPreview).toEqual({
+      normalizedUrl: "https://example.com/article",
+      title: "OGPタイトル",
+      description: "OGP説明",
+      imageUrl: "https://images.example.com/card.jpg",
+      cardType: "summary",
+    });
+    expect(result.linkPreviewUrlsToRefresh).toEqual([]);
+  });
+
   it("作成時間とIDで安定して昇順・降順に並べる", async () => {
     await addUser("owner");
     await addMemo("memo-b", "owner", "2026-08-08 00:00:00");

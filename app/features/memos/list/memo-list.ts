@@ -1,10 +1,14 @@
 import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import { normalizeLinkPreviewUrl } from "@/features/link-preview/model/link-preview";
+import {
+  getLinkPreviewDb,
+  getLinkPreviewsForList,
+} from "@/features/link-preview/server/link-preview-cache";
 import type { MemoListQuery } from "@/features/memos/list/query/memo-list-query";
 import * as schema from "@/schema";
 
 export const getMemoListDb = (env: Cloudflare.Env) =>
-  drizzle(env.MY_MEMO_D1, { schema });
+  getLinkPreviewDb(env.MY_MEMO_D1);
 
 type MemoListDb = ReturnType<typeof getMemoListDb>;
 
@@ -59,9 +63,24 @@ export const getMemoList = async (
     offset: (query.page - 1) * MEMO_LIST_PAGE_SIZE,
   });
 
+  const visibleRows = rows.slice(0, MEMO_LIST_PAGE_SIZE);
+  const linkPreviews = await getLinkPreviewsForList(
+    db,
+    visibleRows.flatMap((memo) => (memo.url ? [memo.url] : [])),
+  );
+
   return {
-    items: rows.slice(0, MEMO_LIST_PAGE_SIZE),
+    items: visibleRows.map((memo) => {
+      const normalizedUrl = memo.url ? normalizeLinkPreviewUrl(memo.url) : null;
+      return {
+        ...memo,
+        linkPreview: normalizedUrl
+          ? linkPreviews.previews.get(normalizedUrl)
+          : undefined,
+      };
+    }),
     hasNextPage: rows.length > MEMO_LIST_PAGE_SIZE,
+    linkPreviewUrlsToRefresh: linkPreviews.urlsToRefresh,
   };
 };
 

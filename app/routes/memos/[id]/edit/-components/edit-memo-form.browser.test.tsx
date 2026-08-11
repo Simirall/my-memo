@@ -67,12 +67,40 @@ function dispatchPaste(
   return event;
 }
 
+function pressCtrlEnter(target: EventTarget = window) {
+  target.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+      key: "Enter",
+    }),
+  );
+}
+
 afterEach(() => {
   document.body.replaceChildren();
   vi.restoreAllMocks();
 });
 
 describe("メモ編集フォーム", () => {
+  it("フォーム外にフォーカスがあってもCtrl+Enterで更新する", async () => {
+    const outsideButton = document.createElement("button");
+    document.body.appendChild(outsideButton);
+    const fetchMock = vi
+      .spyOn(window, "fetch")
+      .mockResolvedValue(
+        Response.json({ message: "テスト用エラー" }, { status: 400 }),
+      );
+    mount();
+
+    await page.getByLabelText("タイトル").fill("ショートカット更新");
+    outsideButton.focus();
+    pressCtrlEnter(outsideButton);
+
+    await expect.poll(() => fetchMock.mock.calls.length).toBe(1);
+  });
+
   it("本文なしのメモを空欄で表示しNULLとして更新する", async () => {
     const fetchMock = vi
       .spyOn(window, "fetch")

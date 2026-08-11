@@ -23,6 +23,7 @@ import {
   MAX_ATTACHMENTS_PER_MEMO,
 } from "@/features/attachments/model/attachment-constants";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
+import { useFormSubmitShortcut } from "@/features/memos/input/use-form-submit-shortcut";
 import {
   clearPendingShare,
   readPendingShare,
@@ -100,6 +101,16 @@ export default function CreateMemoForm({
   const clipboardPasteHandlerRef = useRef<
     ((event: ClipboardEvent) => Promise<void>) | undefined
   >(undefined);
+
+  useFormSubmitShortcut(
+    formRef,
+    isLoading ||
+      isCheckingAttachments ||
+      isCheckingSharedMedia ||
+      Boolean(sharedMediaError) ||
+      Boolean(createdMemoId) ||
+      (Boolean(shareIntake) && sharedFiles.length === 0),
+  );
 
   useEffect(() => {
     if (!new URLSearchParams(window.location.search).has("shared")) return;

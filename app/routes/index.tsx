@@ -2,6 +2,8 @@ import { asc, eq } from "drizzle-orm";
 import { getCookie } from "hono/cookie";
 import { createRoute } from "honox/factory";
 import { CategoryTabs } from "@/features/categories/navigation/category-tabs";
+import { scheduleBackgroundTask } from "@/features/link-preview/server/background-task";
+import { maintainLinkPreviewCache } from "@/features/link-preview/server/link-preview-cache";
 import { Memo } from "@/features/memos/list/card/memo";
 import { ActionFab } from "@/features/memos/list/controls/$action-fab";
 import MemoListControls from "@/features/memos/list/controls/$memo-list-controls";
@@ -46,6 +48,14 @@ export default createRoute(async (c) => {
     new Set(tags.map((tag) => tag.id)),
   );
   const result = await getMemoList(db, user.id, query);
+  scheduleBackgroundTask(
+    () => c.executionCtx,
+    () =>
+      maintainLinkPreviewCache(
+        c.env.MY_MEMO_D1,
+        result.linkPreviewUrlsToRefresh,
+      ),
+  );
   const emptyPageRedirect = getEmptyMemoListRedirectUrl(
     c.req.path,
     query,
