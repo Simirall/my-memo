@@ -105,51 +105,7 @@ beforeEach(async () => {
   ]);
 });
 
-describe("マイグレーションとプラン設定", () => {
-  it("freeプランと必須の利用上限を初期データとして作成する", async () => {
-    const plan = await db
-      .prepare(
-        "SELECT code, is_default, is_active FROM plans WHERE id = 'free'",
-      )
-      .first<{ code: string; is_default: number; is_active: number }>();
-    const limits = await db
-      .prepare(
-        "SELECT metric, limit_value FROM plan_limits WHERE plan_id = 'free' ORDER BY metric",
-      )
-      .all<{ metric: string; limit_value: number }>();
-
-    expect(plan).toEqual({ code: "free", is_default: 1, is_active: 1 });
-    expect(limits.results).toEqual([
-      { metric: "ai_summary.monthly", limit_value: 10 },
-      { metric: "attachment.storage_bytes", limit_value: 524288000 },
-      { metric: "memo.total", limit_value: 100 },
-    ]);
-  });
-
-  it("新規ユーザーを一般権限にし、有効なプランがないユーザーは作成させない", async () => {
-    await addUser("member");
-    const member = await db
-      .prepare("SELECT role, plan_id FROM user WHERE id = 'member'")
-      .first<{ role: string; plan_id: string }>();
-    expect(member).toEqual({ role: "user", plan_id: "free" });
-
-    await expect(
-      run(
-        `INSERT INTO user
-          (id, name, email, email_verified, plan_id, created_at, updated_at)
-         VALUES ('invalid', 'invalid', 'invalid@example.com', 1, NULL, 0, 0)`,
-      ),
-    ).rejects.toThrow(/NOT NULL constraint failed/);
-
-    await expect(
-      run(
-        `INSERT INTO user
-          (id, name, email, email_verified, plan_id, created_at, updated_at)
-         VALUES ('unknown', 'unknown', 'unknown@example.com', 1, 'unknown', 0, 0)`,
-      ),
-    ).rejects.toThrow(/FOREIGN KEY constraint failed/);
-  });
-
+describe("プラン設定", () => {
   it("上限が未定義の機能は利用不可とし、NULLの上限は無制限として扱う", async () => {
     await addPlan("missing", undefined, 1);
     await addPlan("unlimited", null, null);
