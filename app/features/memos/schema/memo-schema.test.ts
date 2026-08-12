@@ -39,6 +39,10 @@ describe("メモ本文の入力上限", () => {
 });
 
 describe("メモURLの入力制限", () => {
+  it("作成時の空URLをNULLにする", () => {
+    expect(memoSchema.create.shape.url.parse("")).toBeNull();
+  });
+
   it.each(["https://example.com/path", "http://example.com/"])(
     "HTTP(S) URL %s を受け付ける",
     (url) => {

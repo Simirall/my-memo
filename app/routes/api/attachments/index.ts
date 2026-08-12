@@ -9,6 +9,11 @@ import {
   getAttachmentQuota,
   parseAttachmentRange,
 } from "@/features/attachments/server/attachments";
+import {
+  enqueueAttachmentDeletion,
+  processR2DeletionJobs,
+} from "@/features/attachments/server/r2-deletion-jobs";
+import { scheduleBackgroundTask } from "@/features/link-preview/server/background-task";
 import { memoAttachmentsTable } from "@/schema";
 
 const attachmentsRoute = new Hono<{ Bindings: CloudflareBindings }>();
@@ -76,7 +81,8 @@ attachmentsRoute.get("/:id", async (c: AttachmentsContext) => {
       headers: {
         "Accept-Ranges": "bytes",
         "Content-Range": `bytes */${objectSize}`,
-        "Cache-Control": "private, max-age=31536000, immutable",
+        "Cache-Control": "private, no-store",
+        "Cross-Origin-Resource-Policy": "same-origin",
       },
     });
   }
@@ -92,7 +98,8 @@ attachmentsRoute.get("/:id", async (c: AttachmentsContext) => {
   }
   const cacheHeaders = new Headers({
     ETag: object.httpEtag,
-    "Cache-Control": "private, max-age=31536000, immutable",
+    "Cache-Control": "private, no-store",
+    "Cross-Origin-Resource-Policy": "same-origin",
   });
   if (object.uploaded) {
     cacheHeaders.set("Last-Modified", object.uploaded.toUTCString());
@@ -128,7 +135,8 @@ attachmentsRoute.get("/:id", async (c: AttachmentsContext) => {
     "X-Content-Type-Options": "nosniff",
     ETag: object.httpEtag,
     "Accept-Ranges": "bytes",
-    "Cache-Control": "private, max-age=31536000, immutable",
+    "Cache-Control": "private, no-store",
+    "Cross-Origin-Resource-Policy": "same-origin",
   });
   if (object.uploaded)
     headers.set("Last-Modified", object.uploaded.toUTCString());
@@ -172,31 +180,20 @@ attachmentsRoute.delete("/:id", async (c: AttachmentsContext) => {
   if (!attachment)
     return c.json({ message: "添付ファイルが見つかりません。" }, 404);
 
-  try {
-    await c.env.MY_MEMO_FILES.delete(
-      [attachment.r2Key, attachment.thumbnailR2Key].filter(
-        (key): key is string => Boolean(key),
-      ),
-    );
-  } catch (error) {
-    console.error(
-      JSON.stringify({
-        event: "memo_attachment_delete_failed",
-        attachmentId: attachment.id,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    );
-    return c.json({ message: "添付ファイルを削除できませんでした。" }, 502);
-  }
+  const deleted = await enqueueAttachmentDeletion(
+    c.env.MY_MEMO_D1,
+    attachment.id,
+    user.id,
+  );
+  if (!deleted)
+    return c.json({ message: "添付ファイルが見つかりません。" }, 404);
 
-  await db
-    .delete(memoAttachmentsTable)
-    .where(
-      and(
-        eq(memoAttachmentsTable.id, attachment.id),
-        eq(memoAttachmentsTable.userId, user.id),
-      ),
-    );
+  const createDeletionTask = () => processR2DeletionJobs(c.env);
+  const scheduled = scheduleBackgroundTask(
+    () => c.executionCtx,
+    createDeletionTask,
+  );
+  if (!scheduled) await createDeletionTask();
   return c.json({ ok: true });
 });
 

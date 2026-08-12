@@ -33,7 +33,7 @@ const errorResponse = (c: ShareIntakesContext, error: unknown) => {
   console.error(
     JSON.stringify({
       event: "share_intake_api_failed",
-      error: error instanceof Error ? error.message : String(error),
+      errorType: error instanceof Error ? error.name : "UnknownError",
     }),
   );
   return c.json({ message: "共有内容を処理できませんでした。" }, 500);

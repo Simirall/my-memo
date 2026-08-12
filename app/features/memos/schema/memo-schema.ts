@@ -22,6 +22,10 @@ const memoUrlField = z
   .string()
   .max(2048, "2048文字以内で入力してください")
   .refine(isSafeMemoUrl, "httpまたはhttpsのURLを入力してください");
+const optionalMemoUrlField = z.preprocess(
+  (value) => (value === "" ? null : value),
+  memoUrlField.nullable().optional(),
+);
 const mediaDimensionsField = z.preprocess(
   (value) => {
     if (value === undefined || value === "") return [];
@@ -60,7 +64,7 @@ export const memoSchema = {
   create: createInsertSchema(memosTable, {
     userId: (schema) => schema.optional(),
     title: (schema) => schema.max(255, "255文字以内で入力してください"),
-    url: () => memoUrlField.optional(),
+    url: () => optionalMemoUrlField,
     categoryId: (schema) =>
       schema.transform((val) => {
         if (val === "") return null;

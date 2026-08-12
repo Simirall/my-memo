@@ -77,6 +77,7 @@ function attachmentForm(
 
 beforeEach(async () => {
   await db.batch([
+    db.prepare("DELETE FROM r2_deletion_jobs"),
     db.prepare("DELETE FROM memo_attachments"),
     db.prepare("DELETE FROM memos"),
     db.prepare("DELETE FROM user"),
@@ -131,6 +132,7 @@ describe("JavaScript必須のメモAPI", () => {
         body: new URLSearchParams({
           title: "タイトルだけのメモ",
           content: "",
+          url: "",
           tags: "",
         }),
       }),
@@ -140,10 +142,10 @@ describe("JavaScript必須のメモAPI", () => {
     const { memoId } = (await created.json()) as { memoId: string };
     expect(
       await db
-        .prepare("SELECT content FROM memos WHERE id = ?")
+        .prepare("SELECT content, url FROM memos WHERE id = ?")
         .bind(memoId)
-        .first<{ content: string | null }>(),
-    ).toEqual({ content: null });
+        .first<{ content: string | null; url: string | null }>(),
+    ).toEqual({ content: null, url: null });
 
     const updated = await app.fetch(
       new Request(`https://example.test/api/memos/${memoId}`, {
@@ -368,8 +370,9 @@ describe("添付ファイルAPI", () => {
     );
     expect(thumbnail.status).toBe(200);
     expect(thumbnail.headers.get("Content-Type")).toBe("image/avif");
-    expect(thumbnail.headers.get("Cache-Control")).toBe(
-      "private, max-age=31536000, immutable",
+    expect(thumbnail.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(thumbnail.headers.get("Cross-Origin-Resource-Policy")).toBe(
+      "same-origin",
     );
     expect(new TextDecoder().decode(await thumbnail.arrayBuffer())).toBe(
       validAvifThumbnail,
@@ -383,6 +386,10 @@ describe("添付ファイルAPI", () => {
       env,
     );
     expect(notModified.status).toBe(304);
+    expect(notModified.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(notModified.headers.get("Cross-Origin-Resource-Policy")).toBe(
+      "same-origin",
+    );
 
     const preview = await ownerApp.fetch(
       new Request(
@@ -394,6 +401,10 @@ describe("添付ファイルAPI", () => {
     expect(preview.status).toBe(206);
     expect(preview.headers.get("Content-Disposition")).toContain("inline");
     expect(preview.headers.get("Content-Range")).toBe("bytes 0-2/6");
+    expect(preview.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(preview.headers.get("Cross-Origin-Resource-Policy")).toBe(
+      "same-origin",
+    );
     expect(new TextDecoder().decode(await preview.arrayBuffer())).toBe("abc");
 
     const suffixPreview = await ownerApp.fetch(
@@ -418,6 +429,10 @@ describe("添付ファイルAPI", () => {
     );
     expect(invalidRange.status).toBe(416);
     expect(invalidRange.headers.get("Content-Range")).toBe("bytes */6");
+    expect(invalidRange.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(invalidRange.headers.get("Cross-Origin-Resource-Policy")).toBe(
+      "same-origin",
+    );
 
     const other = await appForUser("api-other").fetch(
       new Request(

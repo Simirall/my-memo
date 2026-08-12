@@ -368,6 +368,41 @@ export const attachmentUploadReservationsTable = sqliteTable(
   ],
 );
 
+export const r2DeletionJobsTable = sqliteTable(
+  "r2_deletion_jobs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    ownerUserId: text("owner_user_id").notNull(),
+    objectKey: text("object_key").notNull().unique(),
+    status: text("status").notNull().default("pending"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    nextAttemptAt: text("next_attempt_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    leaseUntil: text("lease_until"),
+    lastFailure: text("last_failure"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("r2_deletion_jobs_due_idx").on(
+      table.status,
+      table.nextAttemptAt,
+      table.leaseUntil,
+    ),
+    check(
+      "r2_deletion_jobs_status",
+      sql`${table.status} IN ('pending', 'processing', 'failed')`,
+    ),
+    check(
+      "r2_deletion_jobs_attempt_count",
+      sql`${table.attemptCount} BETWEEN 0 AND 8`,
+    ),
+  ],
+);
+
 export const shareIntakesTable = sqliteTable(
   "share_intakes",
   {

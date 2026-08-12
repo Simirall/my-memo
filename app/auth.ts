@@ -108,7 +108,10 @@ export const getAuth = (env: Cloudflare.Env) => {
         },
       },
     },
-    trustedOrigins: ["http://localhost:5173"],
+    trustedOrigins: [
+      new URL(env.BETTER_AUTH_URL).origin,
+      ...(import.meta.env.DEV ? ["http://localhost:5173"] : []),
+    ],
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
     socialProviders: {

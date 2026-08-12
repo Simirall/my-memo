@@ -43,7 +43,7 @@ export async function cleanupExpiredUploads(
         JSON.stringify({
           event: "expired_attachment_cleanup_failed",
           reservationId: reservation.id,
-          error: error instanceof Error ? error.message : String(error),
+          errorType: error instanceof Error ? error.name : "UnknownError",
         }),
       );
     }

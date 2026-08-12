@@ -236,10 +236,8 @@ export const createShareIntake = async (
         JSON.stringify({
           event: "share_intake_staging_cleanup_failed",
           shareId,
-          error:
-            cleanupError instanceof Error
-              ? cleanupError.message
-              : String(cleanupError),
+          errorType:
+            cleanupError instanceof Error ? cleanupError.name : "UnknownError",
         }),
       );
     }
@@ -387,10 +385,8 @@ export const removeShareIntakeFile = async (
         JSON.stringify({
           event: "share_intake_reset_failed",
           shareId,
-          error:
-            resetError instanceof Error
-              ? resetError.message
-              : String(resetError),
+          errorType:
+            resetError instanceof Error ? resetError.name : "UnknownError",
         }),
       );
     }
@@ -451,10 +447,8 @@ export const removeShareIntake = async (
         JSON.stringify({
           event: "share_intake_reset_failed",
           shareId,
-          error:
-            resetError instanceof Error
-              ? resetError.message
-              : String(resetError),
+          errorType:
+            resetError instanceof Error ? resetError.name : "UnknownError",
         }),
       );
     }
@@ -715,10 +709,8 @@ export const finalizeShareIntake = async (
         JSON.stringify({
           event: "share_intake_staging_cleanup_failed",
           shareId,
-          error:
-            cleanupError instanceof Error
-              ? cleanupError.message
-              : String(cleanupError),
+          errorType:
+            cleanupError instanceof Error ? cleanupError.name : "UnknownError",
         }),
       );
     }
@@ -732,10 +724,10 @@ export const finalizeShareIntake = async (
           JSON.stringify({
             event: "share_intake_final_cleanup_failed",
             shareId,
-            error:
+            errorType:
               cleanupError instanceof Error
-                ? cleanupError.message
-                : String(cleanupError),
+                ? cleanupError.name
+                : "UnknownError",
           }),
         );
       }
@@ -752,10 +744,8 @@ export const finalizeShareIntake = async (
           JSON.stringify({
             event: "share_intake_reset_failed",
             shareId,
-            error:
-              resetError instanceof Error
-                ? resetError.message
-                : String(resetError),
+            errorType:
+              resetError instanceof Error ? resetError.name : "UnknownError",
           }),
         );
       }

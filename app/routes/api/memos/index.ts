@@ -24,6 +24,10 @@ import {
 } from "@/features/attachments/model/attachment-constants";
 import { parseAttachmentUploadForm } from "@/features/attachments/server/attachment-upload";
 import { getAttachmentQuota } from "@/features/attachments/server/attachments";
+import {
+  enqueueMemoDeletion,
+  processR2DeletionJobs,
+} from "@/features/attachments/server/r2-deletion-jobs";
 import { putR2ObjectWithKnownLength } from "@/features/attachments/server/r2-upload";
 import {
   releaseAttachmentReservation,
@@ -56,9 +60,6 @@ import { decodeHtmlEntities } from "./-lib/decode-html-entities";
 const memosRoute = new Hono<{ Bindings: CloudflareBindings }>();
 type MemosContext = Context<{ Bindings: CloudflareBindings }>;
 
-const wantsJson = (c: MemosContext) =>
-  c.req.header("Accept")?.includes("application/json") ?? false;
-
 const wantsStream = (c: MemosContext) =>
   c.req.header("Accept")?.includes("text/event-stream") ?? false;
 
@@ -83,10 +84,10 @@ const cleanupR2Keys = async (
         JSON.stringify({
           event: context.event,
           memoId: context.memoId,
-          error:
+          errorType:
             result.reason instanceof Error
-              ? result.reason.message
-              : String(result.reason),
+              ? result.reason.name
+              : "UnknownError",
         }),
       );
     }
@@ -401,7 +402,7 @@ memosRoute
         JSON.stringify({
           event: "memo_edit_attachment_upload_failed",
           memoId,
-          error: error instanceof Error ? error.message : String(error),
+          errorType: error instanceof Error ? error.name : "UnknownError",
         }),
       );
       return c.json(
@@ -747,7 +748,7 @@ memosRoute
         JSON.stringify({
           event: "memo_update_failed",
           memoId,
-          error: error instanceof Error ? error.message : String(error),
+          errorType: error instanceof Error ? error.name : "UnknownError",
         }),
       );
       return c.json({ message: "メモを更新できませんでした。" }, 500);
@@ -892,7 +893,7 @@ memosRoute
         JSON.stringify({
           event: "memo_attachment_upload_failed",
           memoId,
-          error: error instanceof Error ? error.message : String(error),
+          errorType: error instanceof Error ? error.name : "UnknownError",
         }),
       );
       return c.json(
@@ -946,8 +947,7 @@ memosRoute
         JSON.stringify({
           event: "memo_attachment_record_failed",
           memoId,
-          r2Key,
-          error: error instanceof Error ? error.message : String(error),
+          errorType: error instanceof Error ? error.name : "UnknownError",
         }),
       );
       return c.json({ message: "添付ファイルを記録できませんでした。" }, 502);
@@ -986,48 +986,19 @@ memosRoute
       .get();
 
     if (memo) {
-      const attachments = await db
-        .select({
-          r2Key: memoAttachmentsTable.r2Key,
-          thumbnailR2Key: memoAttachmentsTable.thumbnailR2Key,
-        })
-        .from(memoAttachmentsTable)
-        .where(
-          and(
-            eq(memoAttachmentsTable.memoId, memoId),
-            eq(memoAttachmentsTable.userId, user.id),
-          ),
+      const deleted = await enqueueMemoDeletion(
+        c.env.MY_MEMO_D1,
+        memoId,
+        user.id,
+      );
+      if (deleted) {
+        const createDeletionTask = () => processR2DeletionJobs(c.env);
+        const scheduled = scheduleBackgroundTask(
+          () => c.executionCtx,
+          createDeletionTask,
         );
-      try {
-        await Promise.all(
-          attachments.flatMap((attachment) =>
-            [attachment.r2Key, attachment.thumbnailR2Key]
-              .filter((key): key is string => Boolean(key))
-              .map((key) => c.env.MY_MEMO_FILES.delete(key)),
-          ),
-        );
-      } catch (error) {
-        console.error(
-          JSON.stringify({
-            event: "memo_attachment_delete_failed",
-            memoId,
-            error: error instanceof Error ? error.message : String(error),
-          }),
-        );
-        if (wantsJson(c)) {
-          return c.json(
-            { message: "添付ファイルを削除できませんでした。" },
-            502,
-          );
-        }
-        return c.redirect(
-          `/?error=${encodeURIComponent("添付ファイルを削除できませんでした。")}`,
-        );
+        if (!scheduled) await createDeletionTask();
       }
-
-      await db
-        .delete(memosTable)
-        .where(and(eq(memosTable.userId, user.id), eq(memosTable.id, memoId)));
     }
 
     return c.redirect("/");

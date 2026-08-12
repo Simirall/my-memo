@@ -36,6 +36,23 @@ CREATE UNIQUE INDEX `attachment_upload_reservations_thumbnail_r2_key_unique` ON 
 CREATE INDEX `attachment_upload_reservations_user_expires_idx` ON `attachment_upload_reservations` (`user_id`,`status`,`expires_at`);--> statement-breakpoint
 CREATE INDEX `attachment_upload_reservations_memo_idx` ON `attachment_upload_reservations` (`memo_id`);--> statement-breakpoint
 CREATE INDEX `attachment_upload_reservations_share_idx` ON `attachment_upload_reservations` (`share_intake_id`);--> statement-breakpoint
+CREATE TABLE `r2_deletion_jobs` (
+	`id` text PRIMARY KEY NOT NULL,
+	`owner_user_id` text NOT NULL,
+	`object_key` text NOT NULL,
+	`status` text DEFAULT 'pending' NOT NULL,
+	`attempt_count` integer DEFAULT 0 NOT NULL,
+	`next_attempt_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`lease_until` text,
+	`last_failure` text,
+	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	CONSTRAINT "r2_deletion_jobs_status" CHECK("r2_deletion_jobs"."status" IN ('pending', 'processing', 'failed')),
+	CONSTRAINT "r2_deletion_jobs_attempt_count" CHECK("r2_deletion_jobs"."attempt_count" BETWEEN 0 AND 8)
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `r2_deletion_jobs_object_key_unique` ON `r2_deletion_jobs` (`object_key`);--> statement-breakpoint
+CREATE INDEX `r2_deletion_jobs_due_idx` ON `r2_deletion_jobs` (`status`,`next_attempt_at`,`lease_until`);--> statement-breakpoint
 CREATE TABLE `authorization_audit_logs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`actor_user_id` text,

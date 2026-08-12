@@ -48,30 +48,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Vite's development modules are mutable and must never be cached.
-  const isDevelopmentAsset =
-    url.pathname.startsWith("/app/") ||
-    url.pathname.startsWith("/@vite/") ||
-    url.pathname.startsWith("/node_modules/");
-  if (isDevelopmentAsset) return;
-
-  const isStaticAsset =
-    url.pathname.startsWith("/static/") ||
-    url.pathname.startsWith("/icons/") ||
-    url.pathname === "/favicon.svg" ||
-    url.pathname === "/manifest.webmanifest";
-  if (!isStaticAsset) return;
-
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((response) => {
-        if (response.ok) {
-          const copy = response.clone();
-          void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-        }
-        return response;
-      });
-    }),
-  );
+  if (PRECACHE_URLS.includes(url.pathname)) {
+    event.respondWith(caches.match(request).then((cached) => cached ?? fetch(request)));
+  }
 });

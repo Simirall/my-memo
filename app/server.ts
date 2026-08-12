@@ -3,15 +3,20 @@ import { trimTrailingSlash } from "hono/trailing-slash";
 import { createHono } from "honox/factory";
 import { createApp } from "honox/server";
 import { cleanupExpiredUploads } from "@/features/attachments/server/expired-upload-cleanup";
-import { htmlSecurityHeaders } from "@/security/security-headers";
+import { processR2DeletionJobs } from "@/features/attachments/server/r2-deletion-jobs";
+import {
+  htmlSecurityHeaders,
+  sameOriginMutationProtection,
+} from "@/security/security-headers";
 import { getAuth } from "./auth";
 
 const baseApp = createHono();
 
 // URLは末尾スラッシュなしに統一する
 baseApp.use(trimTrailingSlash());
+baseApp.use("*", sameOriginMutationProtection);
 
-// 既存画面への影響を観測してからCSPを強制する
+// HTMLレスポンスへCSPと認証済みページのcache制御を適用する
 baseApp.use("*", htmlSecurityHeaders);
 
 // セッション情報を取得してコンテキストにセットするミドルウェア
@@ -72,7 +77,7 @@ baseApp.use("/login", async (c, next) => {
 
 const app = createApp({ app: baseApp });
 
-showRoutes(app);
+if (import.meta.env.DEV) showRoutes(app);
 
 export default {
   fetch: app.fetch.bind(app),
@@ -81,6 +86,8 @@ export default {
     env: CloudflareBindings,
     ctx: ExecutionContext,
   ) {
-    ctx.waitUntil(cleanupExpiredUploads(env));
+    ctx.waitUntil(
+      Promise.all([cleanupExpiredUploads(env), processR2DeletionJobs(env)]),
+    );
   },
 };

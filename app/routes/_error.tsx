@@ -4,7 +4,9 @@ const handler: ErrorHandler = (e, c) => {
   if ("getResponse" in e) {
     return e.getResponse();
   }
-  console.error(e.message);
+  console.error(
+    JSON.stringify({ event: "unhandled_request_error", errorType: e.name }),
+  );
   c.status(500);
 
   return c.render(

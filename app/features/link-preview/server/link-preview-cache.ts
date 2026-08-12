@@ -197,8 +197,7 @@ export const refreshLinkPreviewCache = async (
     console.error(
       JSON.stringify({
         event: "link_preview_refresh_failed",
-        url: normalizedUrl,
-        error: error instanceof Error ? error.message : String(error),
+        errorType: error instanceof Error ? error.name : "UnknownError",
       }),
     );
     return false;
