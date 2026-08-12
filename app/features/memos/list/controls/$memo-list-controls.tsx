@@ -50,7 +50,7 @@ export default function MemoListControls({
       <div className="collapse-content">
         <form action={action} className="w-full" method="get">
           <fieldset className="fieldset">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-end gap-3">
               <label className="fieldset min-w-36 flex-1" htmlFor="memo-sort">
                 <span className="fieldset-legend">作成時間</span>
                 <select
@@ -137,7 +137,7 @@ export default function MemoListControls({
                 </select>
               </label>
               <div>
-                <a className="btn btn-soft btn-warning" href={action}>
+                <a className="btn btn-soft btn-warning mb-1" href={action}>
                   すべて解除
                 </a>
               </div>
