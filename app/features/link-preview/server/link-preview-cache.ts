@@ -12,6 +12,7 @@ const SUCCESS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const LEASE_MS = 30 * 1000;
 const UNUSED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const CLEANUP_BATCH_SIZE = 10;
+const UPSERT_BATCH_SIZE = 10;
 
 export type LinkPreview = LinkPreviewMetadata & {
   normalizedUrl: string;
@@ -44,19 +45,27 @@ export const getLinkPreviewsForList = async (
   }
 
   const timestamp = toTimestamp(now);
-  await db
-    .insert(schema.linkPreviewCacheTable)
-    .values(
-      normalizedUrls.map((normalizedUrl) => ({
-        normalizedUrl,
-        lastReferencedAt: timestamp,
-        updatedAt: timestamp,
-      })),
-    )
-    .onConflictDoUpdate({
-      target: schema.linkPreviewCacheTable.normalizedUrl,
-      set: { lastReferencedAt: timestamp, updatedAt: timestamp },
-    });
+  for (
+    let index = 0;
+    index < normalizedUrls.length;
+    index += UPSERT_BATCH_SIZE
+  ) {
+    await db
+      .insert(schema.linkPreviewCacheTable)
+      .values(
+        normalizedUrls
+          .slice(index, index + UPSERT_BATCH_SIZE)
+          .map((normalizedUrl) => ({
+            normalizedUrl,
+            lastReferencedAt: timestamp,
+            updatedAt: timestamp,
+          })),
+      )
+      .onConflictDoUpdate({
+        target: schema.linkPreviewCacheTable.normalizedUrl,
+        set: { lastReferencedAt: timestamp, updatedAt: timestamp },
+      });
+  }
 
   const rows = await db
     .select()

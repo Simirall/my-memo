@@ -64,6 +64,25 @@ describe("リンクプレビューキャッシュ", () => {
     ).toEqual({ count: 1 });
   });
 
+  it("一覧上限の20URLをD1のバインド変数上限内で登録する", async () => {
+    // 20件を一括UPSERTするとDrizzleのバインド変数がD1上限の100個を超える。
+    const urls = Array.from(
+      { length: 20 },
+      (_, index) => `https://example.com/article-${index}`,
+    );
+
+    const result = await getLinkPreviewsForList(
+      getLinkPreviewDb(d1),
+      urls,
+      new Date("2026-08-11T00:00:00.000Z"),
+    );
+
+    expect(new Set(result.urlsToRefresh)).toEqual(new Set(urls));
+    await expect(
+      d1.prepare("SELECT COUNT(*) AS count FROM link_preview_cache").first(),
+    ).resolves.toEqual({ count: 20 });
+  });
+
   it("取得リースにより同じURLの並行fetchを一度だけ実行する", async () => {
     const fetcher = vi.fn<typeof fetch>(async () => response("並行取得"));
     const now = new Date("2026-08-11T00:00:00.000Z");

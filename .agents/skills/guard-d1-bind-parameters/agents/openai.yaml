@@ -1,0 +1,4 @@
+interface:
+  display_name: "D1バインド変数ガード"
+  short_description: "D1とDrizzleのバインド変数上限超過を設計・テストで防ぐ"
+  default_prompt: "$guard-d1-bind-parameters を使い、D1クエリのバインド変数数を確認して上限超過を防いでください。"
