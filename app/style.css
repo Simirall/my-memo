@@ -15,6 +15,12 @@
   --spacing-xl: 2rem;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
 :where(body, body *) {
   font-feature-settings: "palt";
 }
