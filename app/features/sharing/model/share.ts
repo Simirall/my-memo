@@ -1,7 +1,7 @@
 export const SHARE_STORAGE_KEY = "my-memo.pending-share";
-export const SHARE_MAX_AGE_MS = 30 * 60 * 1000;
-export const MAX_MEMO_TITLE_LENGTH = 255;
-export const MAX_MEMO_CONTENT_LENGTH = 10_000;
+const SHARE_MAX_AGE_MS = 30 * 60 * 1000;
+const MAX_MEMO_TITLE_LENGTH = 255;
+const MAX_MEMO_CONTENT_LENGTH = 10_000;
 
 export type PendingShare = {
   title: string;
@@ -34,7 +34,7 @@ const TRAILING_URL_PUNCTUATION = /[.,!?;:)}\]]+$/;
 const trimUrlCandidate = (value: string) =>
   value.trim().replace(TRAILING_URL_PUNCTUATION, "");
 
-export const parseHttpUrl = (value: string): string | undefined => {
+const parseHttpUrl = (value: string): string | undefined => {
   const candidate = trimUrlCandidate(value);
   if (!candidate) return undefined;
 
@@ -49,7 +49,7 @@ export const parseHttpUrl = (value: string): string | undefined => {
   }
 };
 
-export const extractHttpUrls = (value: string): string[] => {
+const extractHttpUrls = (value: string): string[] => {
   const urls = value.match(HTTP_URL_PATTERN) ?? [];
   const unique = new Map<string, string>();
 

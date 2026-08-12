@@ -25,9 +25,9 @@ import {
 } from "@/features/sharing/model/share";
 import { shareIntakeFilesTable, shareIntakesTable } from "@/schema";
 
-export const SHARE_STAGING_PREFIX = "share-staging";
+const SHARE_STAGING_PREFIX = "share-staging";
 
-export type ShareIntakeFile = {
+type ShareIntakeFile = {
   id: string;
   fileName: string;
   contentType: string;

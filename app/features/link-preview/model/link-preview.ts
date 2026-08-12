@@ -1,4 +1,4 @@
-export type LinkPreviewCardType = "summary" | "summary_large_image";
+type LinkPreviewCardType = "summary" | "summary_large_image";
 
 export type LinkPreviewMetadata = {
   title: string;

@@ -2,7 +2,6 @@ import {
   isPendingShare,
   isShareFresh,
   type PendingShare,
-  SHARE_MAX_AGE_MS,
   SHARE_STORAGE_KEY,
 } from "@/features/sharing/model/share";
 
@@ -37,5 +36,3 @@ export const writePendingShare = (pendingShare: PendingShare) => {
 export const clearPendingShare = () => {
   window.sessionStorage.removeItem(SHARE_STORAGE_KEY);
 };
-
-export const pendingShareMaxAge = SHARE_MAX_AGE_MS;

@@ -1,6 +1,6 @@
 import { getAttachmentPreviewKind } from "@/features/attachments/model/attachment-constants";
 
-export type ClipboardRejectionReason =
+type ClipboardRejectionReason =
   | "unsupported"
   | "file-size"
   | "file-count"

@@ -1,6 +1,5 @@
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import type { getAppDb } from "@/features/access-control/authorization";
-import type { getAttachmentPreviewKind } from "@/features/attachments/model/attachment-constants";
 import * as schema from "@/schema";
 
 export const FILE_LIST_PAGE_SIZE = 24;
@@ -11,15 +10,6 @@ export type FileListQuery = {
 };
 
 export type FileListDb = ReturnType<typeof getAppDb>;
-
-export type FileListItem = Awaited<
-  ReturnType<typeof getFileList>
->["items"][number];
-
-export type FilePreviewKind = Exclude<
-  ReturnType<typeof getAttachmentPreviewKind>,
-  null
->;
 
 const readSingleValue = (
   searchParams: URLSearchParams,

@@ -1,6 +1,6 @@
-export type MemoListSort = "asc" | "desc";
-export type MemoListType = "ai" | "link" | "normal";
-export type MemoListAttachment = "with" | "without";
+type MemoListSort = "asc" | "desc";
+type MemoListType = "ai" | "link" | "normal";
+type MemoListAttachment = "with" | "without";
 
 export type MemoListQuery = {
   sort: MemoListSort;
@@ -48,7 +48,7 @@ export const parseMemoListQuery = (
   };
 };
 
-export const toMemoListSearchParams = (query: MemoListQuery) => {
+const toMemoListSearchParams = (query: MemoListQuery) => {
   const searchParams = new URLSearchParams();
   if (query.sort === "asc") searchParams.set("sort", "asc");
   if (query.page > 1) searchParams.set("page", String(query.page));

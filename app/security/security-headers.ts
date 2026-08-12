@@ -2,7 +2,7 @@ import type { MiddlewareHandler } from "hono";
 
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-export const CONTENT_SECURITY_POLICY = [
+const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self' 'report-sample'",
   "style-src 'self' 'unsafe-inline'",

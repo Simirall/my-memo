@@ -7,8 +7,8 @@ export type PreviewTransform = {
 export type GestureDirection = "horizontal" | "vertical";
 
 export const MIN_PREVIEW_SCALE = 1;
-export const MAX_PREVIEW_SCALE = 3;
-export const PREVIEW_GESTURE_THRESHOLD_RATIO = 0.2;
+const MAX_PREVIEW_SCALE = 3;
+const PREVIEW_GESTURE_THRESHOLD_RATIO = 0.2;
 
 export const clampPreviewScale = (scale: number) =>
   Math.min(MAX_PREVIEW_SCALE, Math.max(MIN_PREVIEW_SCALE, scale));

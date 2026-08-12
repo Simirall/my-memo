@@ -1,6 +1,6 @@
 import { MAX_ATTACHMENTS_PER_MEMO } from "@/features/attachments/model/attachment-constants";
 
-export const ATTACHMENT_RESERVATION_MAX_AGE_MS = 30 * 60 * 1000;
+const ATTACHMENT_RESERVATION_MAX_AGE_MS = 30 * 60 * 1000;
 
 export type AttachmentUploadReservation = {
   id: string;

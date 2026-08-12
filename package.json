@@ -17,7 +17,8 @@
     "test:browser": "vitest run --config=vitest.browser.config.ts",
     "test:collect": "node scripts/check-test-collection.mjs",
     "test:all": "pnpm run test:collect && pnpm run test && pnpm run test:browser",
-    "ai-config": "mise run --no-cache sync-ai"
+    "ai-config": "mise run --no-cache sync-ai",
+    "knip": "knip"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.9.0",
@@ -37,11 +38,12 @@
     "@cloudflare/vitest-pool-workers": "0.21.0",
     "@hono/vite-build": "^1.11.1",
     "@hono/vite-dev-server": "^0.26.1",
-    "@types/markdown-it": "^14.1.2",
     "@types/node": "^26.2.0",
     "@vitest/browser-playwright": "^4.1.10",
     "drizzle-kit": "^0.31.10",
+    "knip": "^6.32.1",
     "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
     "vite": "^8.2.1",
     "vitest": "^4.1.10",
     "wrangler": "^4.120.1"

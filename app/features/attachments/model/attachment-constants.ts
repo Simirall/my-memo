@@ -3,7 +3,7 @@ export const MAX_THUMBNAIL_BYTES = 1024 * 1024;
 export const MAX_ATTACHMENTS_PER_MEMO = 5;
 export const MAX_SHARED_ATTACHMENT_BYTES = 75 * 1024 * 1024;
 export const SHARE_INTAKE_MAX_AGE_MS = 30 * 60 * 1000;
-export const MAX_MEDIA_DIMENSION = 100_000;
+const MAX_MEDIA_DIMENSION = 100_000;
 
 export type AttachmentPreviewKind = "image" | "audio" | "video";
 

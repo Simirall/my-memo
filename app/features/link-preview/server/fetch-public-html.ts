@@ -5,7 +5,7 @@ import {
 
 export const PUBLIC_HTML_MAX_BYTES = 1024 * 1024;
 export const PUBLIC_HTML_FETCH_TIMEOUT_MS = 8_000;
-export const PUBLIC_HTML_MAX_REDIRECTS = 5;
+const PUBLIC_HTML_MAX_REDIRECTS = 5;
 
 export type PublicHtmlFetchErrorCode =
   | "invalid_url"

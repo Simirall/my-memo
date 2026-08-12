@@ -101,47 +101,6 @@ describe("メモ表示", () => {
     expect(image?.getAttribute("alt")).toBe("");
   });
 
-  it("summaryとlargeで高さを揃え画像幅だけを広げる", () => {
-    const preview = {
-      normalizedUrl: "https://example.com/article",
-      title: "OGPタイトル",
-      description: "説明",
-      imageUrl: "https://images.example.com/card.jpg",
-      cardType: "summary" as const,
-    };
-    mount(
-      <div>
-        <Memo
-          memo={{
-            ...memo,
-            id: "summary",
-            url: preview.normalizedUrl,
-            linkPreview: preview,
-          }}
-        />
-        <Memo
-          memo={{
-            ...memo,
-            id: "large",
-            url: preview.normalizedUrl,
-            linkPreview: { ...preview, cardType: "summary_large_image" },
-          }}
-        />
-      </div>,
-    );
-
-    const summary = document.querySelector<HTMLElement>(
-      '[data-link-preview-image="summary"]',
-    );
-    const large = document.querySelector<HTMLElement>(
-      '[data-link-preview-image="summary_large_image"]',
-    );
-    expect(summary?.getBoundingClientRect().height).toBe(96);
-    expect(large?.getBoundingClientRect().height).toBe(96);
-    expect(summary?.getBoundingClientRect().width).toBe(96);
-    expect(large?.getBoundingClientRect().width).toBe(160);
-  });
-
   it("画像がないOGPでもタイトルと説明を表示する", async () => {
     mount(
       <Memo

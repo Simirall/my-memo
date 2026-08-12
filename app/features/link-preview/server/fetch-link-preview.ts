@@ -7,15 +7,13 @@ import {
   fetchPublicHtml,
   PUBLIC_HTML_FETCH_TIMEOUT_MS,
   PUBLIC_HTML_MAX_BYTES,
-  PUBLIC_HTML_MAX_REDIRECTS,
   PublicHtmlFetchError,
 } from "./fetch-public-html";
 
 export const LINK_PREVIEW_HTML_MAX_BYTES = PUBLIC_HTML_MAX_BYTES;
 export const LINK_PREVIEW_FETCH_TIMEOUT_MS = PUBLIC_HTML_FETCH_TIMEOUT_MS;
-export const LINK_PREVIEW_MAX_REDIRECTS = PUBLIC_HTML_MAX_REDIRECTS;
 
-export class LinkPreviewFetchError extends Error {
+class LinkPreviewFetchError extends Error {
   constructor(
     message: string,
     readonly code:

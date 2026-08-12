@@ -1,4 +1,4 @@
-export const normalizeMemoUrl = (value: string): string | null => {
+const normalizeMemoUrl = (value: string): string | null => {
   try {
     const url = new URL(value);
     if (
