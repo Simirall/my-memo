@@ -37,6 +37,7 @@ export default createRoute(async (c) => {
 
   return c.render(
     <div className="mx-auto max-w-6xl space-y-6">
+      <title>ユーザー管理 | My Memo</title>
       <div>
         <h1 className="font-bold text-2xl">ユーザー管理</h1>
         <p className="text-base-content/70">

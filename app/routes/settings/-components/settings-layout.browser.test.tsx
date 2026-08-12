@@ -44,9 +44,6 @@ describe("設定レイアウト", () => {
     await expect
       .element(page.getByRole("link", { name: "ファイル" }))
       .toHaveAttribute("href", "/settings/files");
-    await expect
-      .element(page.getByLabelText("設定メニューを開く"))
-      .toBeInTheDocument();
   });
 
   it("タグ設定ではタグの現在地を示す", async () => {

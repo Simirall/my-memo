@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "hono/jsx";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { afterDialogCloseAnimation } from "@/components/dialog-close";
 
 type FileToDelete = {
   id: string;
@@ -57,6 +58,18 @@ export default function FileListController() {
     }, 4_000);
     return () => window.clearTimeout(timeoutId);
   }, [error, status]);
+
+  useEffect(() => {
+    const categoryFilter = document.querySelector<HTMLElement>(
+      "[data-file-category-filter]",
+    );
+    if (!categoryFilter) return;
+
+    const submitFilter = () =>
+      categoryFilter.closest<HTMLFormElement>("form")?.requestSubmit();
+    categoryFilter.addEventListener("change", submitFilter);
+    return () => categoryFilter.removeEventListener("change", submitFilter);
+  }, []);
 
   useEffect(() => {
     const grid = document.querySelector<HTMLElement>("[data-file-grid]");
@@ -281,9 +294,11 @@ export default function FileListController() {
     };
 
     const onClose = () => {
-      clearMedia();
-      opener?.focus();
-      opener = null;
+      afterDialogCloseAnimation(dialog, () => {
+        clearMedia();
+        opener?.focus();
+        opener = null;
+      });
     };
 
     grid.addEventListener("click", onGridClick);

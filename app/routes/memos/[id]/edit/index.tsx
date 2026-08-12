@@ -37,7 +37,10 @@ export default createRoute(async (c) => {
   if (!memo) {
     c.status(404);
     return c.render(
-      <div className="p-4 text-center">メモが見つかりません。</div>,
+      <div className="p-4 text-center">
+        <title>メモが見つかりません | My Memo</title>
+        メモが見つかりません。
+      </div>,
     );
   }
 
@@ -51,6 +54,7 @@ export default createRoute(async (c) => {
 
   return c.render(
     <div className="flex justify-center p-4 sm:p-8">
+      <title>{memo.title}を編集 | My Memo</title>
       <div className="card w-full max-w-2xl bg-base-100 shadow-sm">
         <div className="card-body [&>honox-island]:block [&>honox-island]:w-full">
           <h1 className="font-bold text-2xl">メモを編集</h1>

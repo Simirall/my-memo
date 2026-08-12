@@ -19,7 +19,7 @@ const mount = (onConfirm = vi.fn()) => {
         </button>
         <ConfirmDialog
           confirmLabel="削除"
-          description="「テスト」を削除しますか？"
+          description={open ? "「テスト」を削除しますか？" : ""}
           destructive
           onCancel={() => setOpen(false)}
           onConfirm={() => {
@@ -68,7 +68,10 @@ describe("共通確認モーダル", () => {
     expect(document.querySelector<HTMLDialogElement>("dialog")?.open).toBe(
       false,
     );
-    expect(document.activeElement).toBe(opener.element());
+    expect(document.querySelector("dialog p")?.textContent).toContain(
+      "「テスト」を削除しますか？",
+    );
+    await expect.poll(() => document.activeElement).toBe(opener.element());
   });
 
   it("確定時だけコールバックを実行する", async () => {

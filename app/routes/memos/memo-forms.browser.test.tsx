@@ -70,7 +70,7 @@ describe("メモ作成フォーム", () => {
       .mockResolvedValue(Response.json({ message: "確認用" }, { status: 500 }));
     mount(<CreateMemoForm categories={[]} />);
 
-    const content = page.getByLabelText("本文（任意）");
+    const content = page.getByLabelText("本文");
     await expect.element(content).not.toBeRequired();
     await page.getByLabelText("タイトル").fill("タイトルだけのメモ");
     await page.getByRole("button", { name: "メモを作成" }).click();
@@ -288,7 +288,7 @@ describe("メモ作成フォーム", () => {
       .element(page.getByLabelText("本文"))
       .toHaveValue("共有本文\nhttps://example.com/article");
     await expect
-      .element(page.getByLabelText("関連URL（任意）"))
+      .element(page.getByLabelText("関連URL"))
       .toHaveValue("https://example.com/article");
     expect(window.sessionStorage.getItem(SHARE_STORAGE_KEY)).toBeNull();
   });
@@ -311,7 +311,7 @@ describe("メモ作成フォーム", () => {
       .toHaveValue("ページタイトル");
     await expect.element(page.getByLabelText("本文")).toHaveValue("");
     await expect
-      .element(page.getByLabelText("関連URL（任意）"))
+      .element(page.getByLabelText("関連URL"))
       .toHaveValue("https://example.com/article");
     expect(window.sessionStorage.getItem(SHARE_STORAGE_KEY)).toBeNull();
   });

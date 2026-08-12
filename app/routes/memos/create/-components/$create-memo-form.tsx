@@ -667,6 +667,9 @@ export default function CreateMemoForm({
       <fieldset className="fieldset">
         <label className="fieldset-legend" htmlFor="memo-title">
           タイトル
+          <span aria-hidden="true" className="text-error">
+            *
+          </span>
         </label>
         <input
           className="input w-full!"
@@ -676,7 +679,7 @@ export default function CreateMemoForm({
           onInput={(event) =>
             setTitle((event.currentTarget as HTMLInputElement).value)
           }
-          placeholder="例：週末に買うもの"
+          placeholder="メモのタイトルを入力"
           required
           type="text"
           value={title}
@@ -684,7 +687,7 @@ export default function CreateMemoForm({
       </fieldset>
       <fieldset className="fieldset">
         <label className="fieldset-legend" htmlFor="memo-content">
-          本文（任意）
+          本文
         </label>
         <textarea
           aria-describedby="memo-content-help"
@@ -705,7 +708,7 @@ export default function CreateMemoForm({
       </fieldset>
       <fieldset className="fieldset">
         <label className="fieldset-legend" htmlFor="memo-url">
-          関連URL（任意）
+          関連URL
         </label>
         <input
           className="input w-full!"
@@ -743,7 +746,6 @@ export default function CreateMemoForm({
           タグ
         </label>
         <TagInput availableTags={tags} inputId="memo-tags" />
-        <p className="label">入力後にEnterキーで追加できます。</p>
       </fieldset>
       {!shareIntake && (
         <section className="space-y-3">

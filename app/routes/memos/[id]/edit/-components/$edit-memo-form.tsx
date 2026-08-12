@@ -390,9 +390,7 @@ export default function EditMemoForm({
       onSubmit={submit}
       ref={formRef}
     >
-      {memo.isAiSummary === 1 && (
-        <div className="badge badge-soft badge-info">✨ AI要約</div>
-      )}
+      {memo.isAiSummary === 1 && <div className="badge">✨ AI要約</div>}
       {error && (
         <div aria-live="polite" className="alert alert-error" role="alert">
           {error}
@@ -410,6 +408,9 @@ export default function EditMemoForm({
       <fieldset className="fieldset">
         <label className="fieldset-legend" htmlFor="edit-memo-title">
           タイトル
+          <span aria-hidden="true" className="text-error">
+            *
+          </span>
         </label>
         <input
           className="input w-full!"
@@ -418,7 +419,7 @@ export default function EditMemoForm({
           onInput={(event) =>
             setTitle((event.currentTarget as HTMLInputElement).value)
           }
-          placeholder="例：週末に買うもの"
+          placeholder="メモのタイトルを入力"
           required
           type="text"
           value={title}
@@ -426,7 +427,7 @@ export default function EditMemoForm({
       </fieldset>
       <fieldset className="fieldset">
         <label className="fieldset-legend" htmlFor="edit-memo-content">
-          本文（任意）
+          本文
         </label>
         <textarea
           aria-describedby="edit-memo-content-help"
@@ -448,7 +449,7 @@ export default function EditMemoForm({
       </fieldset>
       <fieldset className="fieldset">
         <label className="fieldset-legend" htmlFor="edit-memo-url">
-          関連URL（任意）
+          関連URL
         </label>
         <input
           className="input w-full!"
@@ -492,7 +493,6 @@ export default function EditMemoForm({
           inputId="edit-memo-tags"
           onTagsChange={setTags}
         />
-        <p className="label">入力後にEnterキーで追加できます。</p>
       </fieldset>
       <section className="space-y-3">
         <h2 className="font-semibold">添付ファイル</h2>

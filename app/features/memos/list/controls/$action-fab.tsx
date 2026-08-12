@@ -56,7 +56,7 @@ export const ActionFab = () => (
     <FabAction href="/memos/create" label="メモを作成" svg={notePencilIcon} />
     <FabAction
       href="/memos/url-summary"
-      label="Webページを要約"
+      label="WebページをAI要約"
       svg={globeIcon}
     />
   </aside>

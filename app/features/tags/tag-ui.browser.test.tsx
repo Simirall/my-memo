@@ -143,6 +143,42 @@ describe("タグUI", () => {
       .not.toBeInTheDocument();
   });
 
+  it("閉じるアニメーション中は編集中のメモ名を保持する", async () => {
+    mount(
+      <div>
+        <Memo
+          memo={{
+            id: "memo-close",
+            userId: "user-1",
+            title: "hoge",
+            content: "本文",
+            url: null,
+            categoryId: null,
+            isAiSummary: 0,
+            createdAt: "2026-08-03 00:00:00",
+            updatedAt: "2026-08-03 00:00:00",
+            tags: [],
+          }}
+        />
+        <MemoTagEditor availableTags={[]} />
+      </div>,
+    );
+
+    await page.getByRole("button", { name: "タグを編集: hoge" }).click();
+    const modalBox = document
+      .querySelector("#memo-tags-title")
+      ?.closest<HTMLElement>(".modal-box");
+    if (modalBox) modalBox.style.transition = "opacity 500ms";
+    await page.getByRole("button", { name: "キャンセル" }).click();
+
+    expect(document.querySelector("#memo-tags-title + p")?.textContent).toBe(
+      "「hoge」のタグを設定します。",
+    );
+    await expect
+      .poll(() => document.querySelector("#memo-tags-title + p")?.textContent)
+      .toBe("「」のタグを設定します。");
+  });
+
   it("タグ0件のモーダルでも入力値をチップ化して保存できる", async () => {
     const fetchMock = vi
       .spyOn(window, "fetch")

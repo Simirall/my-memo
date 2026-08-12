@@ -22,6 +22,7 @@ export default createRoute(async (c) => {
 
   return c.render(
     <SettingsLayout activeSection="plan">
+      <title>プラン | My Memo</title>
       <div className="space-y-6">
         <div>
           <h1 className="font-bold text-2xl">プラン</h1>
@@ -30,9 +31,6 @@ export default createRoute(async (c) => {
         <div className="card bg-base-100 shadow">
           <div className="card-body">
             <h2 className="card-title">{usage.planName}</h2>
-            <p className="text-base-content/70">
-              プランコード: {usage.planCode}
-            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-box bg-base-200 p-4">
                 <p className="font-semibold">保存メモ</p>

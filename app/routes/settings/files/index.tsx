@@ -56,6 +56,7 @@ export default createRoute(async (c) => {
 
   return c.render(
     <SettingsLayout activeSection="files">
+      <title>ファイル | My Memo</title>
       <div className="space-y-6">
         <div>
           <h1 className="font-bold text-2xl">ファイル</h1>
@@ -76,6 +77,7 @@ export default createRoute(async (c) => {
             カテゴリー
             <select
               className="select w-full"
+              data-file-category-filter
               id="file-category-filter"
               name="category"
             >
@@ -99,9 +101,6 @@ export default createRoute(async (c) => {
               ))}
             </select>
           </label>
-          <button className="btn" type="submit">
-            絞り込む
-          </button>
         </form>
 
         {result.items.length === 0 ? (

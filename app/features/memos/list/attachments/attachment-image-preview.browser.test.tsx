@@ -116,12 +116,24 @@ describe("メモ一覧の画像拡大プレビュー", () => {
     expect(
       document.querySelector("[data-attachment-preview-image]"),
     ).toHaveAttribute("src", "/api/attachments/image-1?preview=1");
+    const modalBox = getDialog()?.querySelector<HTMLElement>(".modal-box");
+    if (modalBox) modalBox.style.transition = "opacity 500ms";
 
     await page
       .getByRole("button", { name: "画像プレビューを閉じる" })
       .first()
       .click();
     expect(getDialog()?.open).toBe(false);
+    expect(
+      document.querySelector("[data-attachment-preview-image]"),
+    ).toHaveAttribute("src", "/api/attachments/image-1?preview=1");
+    await expect
+      .poll(() =>
+        document
+          .querySelector("[data-attachment-preview-image]")
+          ?.hasAttribute("src"),
+      )
+      .toBe(false);
     expect(document.activeElement).toBe(opener.element());
   });
 
@@ -132,6 +144,9 @@ describe("メモ一覧の画像拡大プレビュー", () => {
       .click();
     const dialog = getDialog();
     dialog?.close();
+    await expect
+      .poll(() => document.activeElement?.getAttribute("aria-label"))
+      .toBe("画像「first.png」を拡大表示");
 
     const sourcesAtOpen: Array<string | null> = [];
     const originalShowModal = dialog?.showModal.bind(dialog);

@@ -120,6 +120,9 @@ export default function UrlSummaryForm({
       <fieldset className="fieldset">
         <label className="fieldset-legend" htmlFor="summary-url">
           要約するページのURL
+          <span aria-hidden="true" className="text-error">
+            *
+          </span>
         </label>
         <input
           className="input w-full!"
@@ -158,7 +161,6 @@ export default function UrlSummaryForm({
           タグ
         </label>
         <TagInput availableTags={tags} inputId="summary-tags" />
-        <p className="label">入力後にEnterキーで追加できます。</p>
       </fieldset>
       <button className="btn" disabled={isLoading} type="submit">
         {isLoading ? (

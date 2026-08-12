@@ -20,11 +20,11 @@ export const CategoryTabs = ({
   return (
     <nav
       aria-label="メモのカテゴリー"
-      className="tabs tabs-box sticky top-20 z-10 w-full overflow-x-auto bg-secondary/30 text-secondary-content shadow backdrop-blur-sm"
+      className="tabs tabs-box sticky top-20 z-10 w-full overflow-x-auto bg-base-300/70 shadow backdrop-blur-sm"
     >
       <a
         aria-current={activeCategoryId === null ? "page" : undefined}
-        className={`tab whitespace-nowrap ${activeCategoryId === null ? "tab-active !bg-secondary-content !text-secondary" : "!text-secondary-content"}`}
+        className={`tab whitespace-nowrap`}
         href={buildMemoListUrl("/", { ...query, page: 1 })}
       >
         すべて
@@ -35,7 +35,7 @@ export const CategoryTabs = ({
         return (
           <a
             aria-current={isActive ? "page" : undefined}
-            className={`tab inline-flex items-center gap-1 whitespace-nowrap ${isActive ? "tab-active !bg-secondary-content !text-secondary" : "!text-secondary-content"}`}
+            className={`tab inline-flex items-center gap-1 whitespace-nowrap`}
             href={buildMemoListUrl(`/categories/${category.id}`, {
               ...query,
               page: 1,

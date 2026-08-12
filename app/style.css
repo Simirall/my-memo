@@ -15,6 +15,10 @@
   --spacing-xl: 2rem;
 }
 
+:where(body, body *) {
+  font-feature-settings: "palt";
+}
+
 @utility memo-card-grid {
   display: grid;
   grid-template-rows: auto auto;

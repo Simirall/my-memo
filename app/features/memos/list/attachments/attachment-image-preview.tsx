@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "hono/jsx";
+import { afterDialogCloseAnimation } from "@/components/dialog-close";
 import type { memoAttachmentsTable } from "@/schema";
 import {
   clampPreviewScale,
@@ -128,8 +129,10 @@ export default function AttachmentImagePreview({
     if (!dialog) return;
 
     const handleClose = () => {
-      resetView();
-      onClosed();
+      afterDialogCloseAnimation(dialog, () => {
+        resetView();
+        onClosed();
+      });
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "ArrowLeft") {

@@ -24,7 +24,8 @@ describe("HTMLレスポンスのセキュリティヘッダー", () => {
     expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
     const csp = response.headers.get("Content-Security-Policy");
     expect(csp).toContain("script-src 'self' 'report-sample'");
-    expect(csp).toContain("img-src 'self' https: data:");
+    expect(csp).toContain("img-src 'self' https: data: blob:");
+    expect(csp).toContain("media-src 'self' blob:");
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'none'");
     expect(csp).toContain("frame-ancestors 'none'");

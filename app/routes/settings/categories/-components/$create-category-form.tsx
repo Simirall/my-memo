@@ -15,7 +15,12 @@ export const CreateCategoryForm = () => {
       <fieldset className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <legend className="sr-only">カテゴリーを追加</legend>
         <label className="flex flex-1 flex-col gap-1" htmlFor="category-name">
-          カテゴリー名
+          <span>
+            カテゴリー名
+            <span aria-hidden="true" className="text-error">
+              *
+            </span>
+          </span>
           <input
             aria-describedby="category-name-help"
             className="input w-full"

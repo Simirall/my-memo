@@ -10,6 +10,19 @@ const mount = (previewKind: "image" | "audio" | "video" = "image") => {
   document.body.appendChild(container);
   render(
     <>
+      <form action="/settings/files" method="get">
+        <label htmlFor="file-category-filter">
+          カテゴリー
+          <select
+            data-file-category-filter
+            id="file-category-filter"
+            name="category"
+          >
+            <option value="">すべて</option>
+            <option value="category-1">仕事</option>
+          </select>
+        </label>
+      </form>
       <ul data-file-grid>
         <li data-file-card="file-1">
           <article>
@@ -60,7 +73,23 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-describe("ファイル一覧モーダル", () => {
+describe("ファイル一覧", () => {
+  it("カテゴリーを選択した時点で絞り込みを送信する", async () => {
+    mount();
+    const form = document.querySelector<HTMLFormElement>(
+      'form[action="/settings/files"]',
+    );
+    form?.addEventListener("submit", (event) => event.preventDefault());
+    const requestSubmitSpy = vi.spyOn(form as HTMLFormElement, "requestSubmit");
+
+    await page.getByLabelText("カテゴリー").selectOptions("category-1");
+
+    expect(requestSubmitSpy).toHaveBeenCalledOnce();
+    await expect
+      .element(page.getByRole("button", { name: "絞り込む" }))
+      .not.toBeInTheDocument();
+  });
+
   it("画像を表示し、メモ情報をモーダルへ反映する", async () => {
     mount("image");
 

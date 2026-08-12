@@ -23,7 +23,7 @@ describe("操作メニュー", () => {
       .element(page.getByRole("link", { name: "メモを作成" }))
       .toHaveAttribute("href", "/memos/create");
     await expect
-      .element(page.getByRole("link", { name: "Webページを要約" }))
+      .element(page.getByRole("link", { name: "WebページをAI要約" }))
       .toHaveAttribute("href", "/memos/url-summary");
     await expect
       .element(page.getByRole("link", { name: "Categories" }))

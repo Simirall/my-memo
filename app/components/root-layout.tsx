@@ -16,7 +16,15 @@ export const RootLayout = ({ children }: { children: Child }) => {
     <>
       <Header />
       {user && !isSettingsPage && <InstallPrompt mode="banner" />}
-      <main className="min-h-[calc(100svh-4rem)] p-4">{children}</main>
+      <main
+        className={
+          isSettingsPage
+            ? "h-[calc(100dvh-4rem)] overflow-y-auto p-4"
+            : "min-h-[calc(100svh-4rem)] p-4"
+        }
+      >
+        {children}
+      </main>
       {isTopPage ? (
         <ScrollToTopButton />
       ) : !isLoginPage ? (

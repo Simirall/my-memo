@@ -44,14 +44,13 @@ export default function MemoListControls({
       onToggle={persistOpenState}
       open={initialOpen}
     >
-      <summary className="collapse-title font-semibold">
+      <summary className="collapse-title py-2 font-semibold">
         並べ替え・絞り込み
       </summary>
       <div className="collapse-content">
         <form action={action} className="w-full" method="get">
           <fieldset className="fieldset">
-            <legend className="fieldset-legend">条件</legend>
-            <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <label className="fieldset min-w-36 flex-1" htmlFor="memo-sort">
                 <span className="fieldset-legend">作成時間</span>
                 <select
@@ -138,7 +137,7 @@ export default function MemoListControls({
                 </select>
               </label>
               <div>
-                <a className="btn btn-ghost" href={action}>
+                <a className="btn btn-soft btn-warning" href={action}>
                   すべて解除
                 </a>
               </div>

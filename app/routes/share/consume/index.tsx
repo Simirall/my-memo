@@ -15,6 +15,7 @@ export default createRoute(async (c) => {
 
   return c.render(
     <div className="w-full [&>honox-island]:block [&>honox-island]:w-full">
+      <title>共有内容を確認 | My Memo</title>
       <ShareConsumer
         quota={
           usage

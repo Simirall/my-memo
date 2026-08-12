@@ -18,6 +18,7 @@ export default createRoute((c) => {
 
   return c.render(
     <SettingsLayout activeSection="account">
+      <title>アカウント | My Memo</title>
       <div className="space-y-6">
         <div>
           <h1 className="font-bold text-2xl">アカウント</h1>

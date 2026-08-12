@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "hono/jsx";
+import { afterDialogCloseAnimation } from "@/components/dialog-close";
 import {
   type MemoListQuery,
   replaceMemoListTag,
@@ -159,9 +160,14 @@ export default function MemoTagEditor({
     <dialog
       aria-labelledby="memo-tags-title"
       className="modal"
-      onClose={() => {
-        setTarget(null);
-        triggerRef.current?.focus();
+      onClose={(event: Event) => {
+        afterDialogCloseAnimation(
+          event.currentTarget as HTMLDialogElement,
+          () => {
+            setTarget(null);
+            triggerRef.current?.focus();
+          },
+        );
       }}
       ref={dialogRef}
     >

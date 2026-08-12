@@ -18,6 +18,7 @@ export default createRoute(async (c) => {
 
   return c.render(
     <SettingsLayout activeSection="categories">
+      <title>カテゴリー | My Memo</title>
       <div className="space-y-6">
         <div>
           <h1 className="font-bold text-2xl">カテゴリー</h1>

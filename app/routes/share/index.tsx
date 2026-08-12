@@ -119,6 +119,7 @@ export const POST = createRoute(async (c) => {
 
   return c.render(
     <div className="w-full [&>honox-island]:block [&>honox-island]:w-full">
+      <title>共有内容を受信 | My Memo</title>
       <ShareReceiver share={pendingShare} />
     </div>,
   );
@@ -127,6 +128,7 @@ export const POST = createRoute(async (c) => {
 export default createRoute((c) =>
   c.render(
     <div className="flex min-h-[50svh] items-center justify-center p-8">
+      <title>共有 | My Memo</title>
       <div className="alert alert-info max-w-md" role="status">
         このページは、端末の共有メニューからコンテンツを受け取るために使用します。
       </div>
@@ -136,6 +138,7 @@ export default createRoute((c) =>
 
 const ShareError = ({ message }: { message: string }) => (
   <div className="flex min-h-[50svh] items-center justify-center p-8">
+    <title>共有エラー | My Memo</title>
     <div className="card w-full max-w-[28rem] bg-base-100 shadow-sm">
       <div className="card-body gap-4 text-center">
         <div aria-live="polite" className="alert alert-error" role="alert">

@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "hono/jsx";
+import { useEffect, useRef, useState } from "hono/jsx";
+import { afterDialogCloseAnimation } from "./dialog-close";
 
 export type ConfirmDialogProps = {
   open: boolean;
@@ -22,6 +23,10 @@ export const ConfirmDialog = ({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+  const contentRef = useRef({ title, description, confirmLabel });
+  const [, renderContent] = useState(0);
+  if (open) contentRef.current = { title, description, confirmLabel };
+  const content = contentRef.current;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -66,7 +71,7 @@ export const ConfirmDialog = ({
 
   return (
     <dialog
-      aria-label={title}
+      aria-label={content.title}
       className="modal modal-middle"
       closedby="any"
       onCancel={(event: Event) => {
@@ -75,14 +80,21 @@ export const ConfirmDialog = ({
       }}
       onClose={() => {
         if (open) onCancel();
-        restoreFocus();
+        const dialog = dialogRef.current;
+        if (dialog) {
+          afterDialogCloseAnimation(dialog, () => {
+            contentRef.current = { title, description, confirmLabel };
+            renderContent((value) => value + 1);
+            restoreFocus();
+          });
+        }
       }}
       ref={dialogRef}
     >
       <div className="modal-box">
-        <h2 className="font-bold text-lg">{title}</h2>
+        <h2 className="font-bold text-lg">{content.title}</h2>
         <p className="mt-3 whitespace-pre-wrap text-base-content/80">
-          {description}
+          {content.description}
         </p>
         <div className="modal-action">
           <button
@@ -98,12 +110,12 @@ export const ConfirmDialog = ({
             onClick={onConfirm}
             type="button"
           >
-            {confirmLabel}
+            {content.confirmLabel}
           </button>
         </div>
       </div>
       <button
-        aria-label={`${title}をキャンセル`}
+        aria-label={`${content.title}をキャンセル`}
         className="modal-backdrop"
         onClick={onCancel}
         type="button"

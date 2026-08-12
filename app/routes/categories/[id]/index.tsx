@@ -54,7 +54,10 @@ export default createRoute(async (c) => {
   if (!result) {
     c.status(404);
     return c.render(
-      <div className="p-4 text-center">カテゴリーが見つかりません。</div>,
+      <div className="p-4 text-center">
+        <title>カテゴリーが見つかりません | My Memo</title>
+        カテゴリーが見つかりません。
+      </div>,
     );
   }
   const query = parseMemoListQuery(
@@ -81,6 +84,7 @@ export default createRoute(async (c) => {
 
   return c.render(
     <div>
+      <title>{result.name} | My Memo</title>
       <h1 className="sr-only">{result.name}</h1>
       <CategoryTabs
         activeCategoryId={result.id}

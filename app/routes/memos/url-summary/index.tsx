@@ -23,12 +23,13 @@ export default createRoute(async (c) => {
 
   return c.render(
     <div className="flex justify-center p-4 sm:p-8">
+      <title>WebページをAI要約 | My Memo</title>
       <div className="card w-full max-w-2xl bg-base-100 shadow-sm">
         <div className="card-body">
           <div>
-            <h1 className="font-bold text-2xl">Webページを要約</h1>
+            <h1 className="font-bold text-2xl">WebページをAI要約</h1>
             <p className="text-base-content/70">
-              URLを入力すると、ページの内容を要約してメモに保存します。
+              URLを入力すると、ページの内容をAIが要約してメモに保存します。
             </p>
           </div>
           <UrlSummaryForm categories={categories} tags={tags} />

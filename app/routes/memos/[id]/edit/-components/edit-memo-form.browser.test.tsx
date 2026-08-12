@@ -109,7 +109,7 @@ describe("メモ編集フォーム", () => {
       );
     mount(null);
 
-    const content = page.getByLabelText("本文（任意）");
+    const content = page.getByLabelText("本文");
     await expect.element(content).toHaveValue("");
     await expect.element(content).not.toBeRequired();
     await page.getByLabelText("タイトル").fill("更新タイトル");
@@ -198,7 +198,7 @@ describe("メモ編集フォーム", () => {
       .toHaveValue("AIタイトル");
     await expect.element(page.getByLabelText("本文")).toHaveValue("AI本文");
     await expect
-      .element(page.getByLabelText("関連URL（任意）"))
+      .element(page.getByLabelText("関連URL"))
       .toHaveValue("https://example.com");
     await expect
       .element(page.getByLabelText("カテゴリー"))
