@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "hono/jsx";
 import type z from "zod";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
+import { getCreatedMemoListPath } from "@/features/memos/input/memo-create-navigation";
 import { useFormSubmitShortcut } from "@/features/memos/input/use-form-submit-shortcut";
 import {
   clearPendingShare,
@@ -12,10 +13,12 @@ import { TagInput } from "@/features/tags/input/tag-input";
 
 export default function UrlSummaryForm({
   categories,
+  initialCategoryId,
   tags = [],
   initialUrl,
 }: {
   categories: ReadonlyArray<z.infer<typeof categorySchema.read>>;
+  initialCategoryId?: string;
   tags?: ReadonlyArray<Tag>;
   initialUrl?: string;
 }) {
@@ -24,6 +27,7 @@ export default function UrlSummaryForm({
   const [progress, setProgress] = useState<string>();
   const [summary, setSummary] = useState("");
   const [url, setUrl] = useState(initialUrl ?? "");
+  const [categoryId, setCategoryId] = useState(initialCategoryId ?? "");
   const formRef = useRef<HTMLFormElement>(null);
 
   useFormSubmitShortcut(formRef, isLoading);
@@ -44,6 +48,9 @@ export default function UrlSummaryForm({
   const submit = async (event: Event) => {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
+    const submittedCategoryId = String(
+      new FormData(form).get("category") ?? "",
+    );
     setError(undefined);
     setProgress("ページを取得しています…");
     setSummary("");
@@ -70,7 +77,11 @@ export default function UrlSummaryForm({
           setProgress("要約を生成しています…");
           setSummary((current) => current + payload.text);
         } else if (event === "complete") {
-          window.location.assign(payload.redirect ?? "/");
+          window.location.assign(
+            submittedCategoryId
+              ? getCreatedMemoListPath(submittedCategoryId)
+              : (payload.redirect ?? "/"),
+          );
         } else if (event === "error") {
           throw new Error(payload.message ?? "AI要約を作成できませんでした。");
         }
@@ -146,6 +157,10 @@ export default function UrlSummaryForm({
             className="select category-select w-full!"
             id="summary-category"
             name="category"
+            onChange={(event) =>
+              setCategoryId((event.currentTarget as HTMLSelectElement).value)
+            }
+            value={categoryId}
           >
             <option value="">カテゴリーなし</option>
             {categories.map((category) => (

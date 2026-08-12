@@ -20,6 +20,12 @@ export default createRoute(async (c) => {
       .where(eq(tagsTable.userId, user.id))
       .orderBy(asc(tagsTable.name)),
   ]);
+  const requestedCategoryId = c.req.query("category");
+  const initialCategoryId = categories.some(
+    (category) => category.id === requestedCategoryId,
+  )
+    ? requestedCategoryId
+    : undefined;
 
   return c.render(
     <div className="flex justify-center p-4 sm:p-8">
@@ -32,7 +38,11 @@ export default createRoute(async (c) => {
               URLを入力すると、ページの内容をAIが要約してメモに保存します。
             </p>
           </div>
-          <UrlSummaryForm categories={categories} tags={tags} />
+          <UrlSummaryForm
+            categories={categories}
+            initialCategoryId={initialCategoryId}
+            tags={tags}
+          />
         </div>
       </div>
     </div>,

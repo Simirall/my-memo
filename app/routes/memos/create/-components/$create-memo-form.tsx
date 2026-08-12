@@ -23,6 +23,7 @@ import {
   MAX_ATTACHMENTS_PER_MEMO,
 } from "@/features/attachments/model/attachment-constants";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
+import { getCreatedMemoListPath } from "@/features/memos/input/memo-create-navigation";
 import { useFormSubmitShortcut } from "@/features/memos/input/use-form-submit-shortcut";
 import {
   clearPendingShare,
@@ -53,12 +54,14 @@ export default function CreateMemoForm({
   categories,
   tags = [],
   error: initialError,
+  initialCategoryId,
   initialValues,
   shareIntake,
 }: {
   categories: ReadonlyArray<z.infer<typeof categorySchema.read>>;
   tags?: ReadonlyArray<Tag>;
   error?: string;
+  initialCategoryId?: string;
   initialValues?: SharedMemoPrefill;
   shareIntake?: ShareIntake;
 }) {
@@ -67,6 +70,7 @@ export default function CreateMemoForm({
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [content, setContent] = useState(initialValues?.content ?? "");
   const [url, setUrl] = useState(initialValues?.url ?? "");
+  const [categoryId, setCategoryId] = useState(initialCategoryId ?? "");
   const [shareWarning, setShareWarning] = useState(() =>
     getShareWarning(initialValues),
   );
@@ -75,6 +79,7 @@ export default function CreateMemoForm({
   const [attachmentError, setAttachmentError] = useState<string>();
   const [attachmentStatus, setAttachmentStatus] = useState<string>();
   const [createdMemoId, setCreatedMemoId] = useState<string>();
+  const [createdMemoCategoryId, setCreatedMemoCategoryId] = useState("");
   const [isCheckingAttachments, setIsCheckingAttachments] = useState(false);
   const [sharedFiles, setSharedFiles] = useState(shareIntake?.files ?? []);
   const [sharedMediaDimensions, setSharedMediaDimensions] = useState<
@@ -498,7 +503,7 @@ export default function CreateMemoForm({
       );
       return;
     }
-    window.location.assign("/");
+    window.location.assign(getCreatedMemoListPath(createdMemoCategoryId));
   };
 
   const submit = async (event: Event) => {
@@ -506,6 +511,9 @@ export default function CreateMemoForm({
     if (createdMemoId || isCheckingAttachments || isCheckingSharedMedia) return;
     if (attachmentError) return;
     const form = event.currentTarget as HTMLFormElement;
+    const createdCategoryId = String(
+      new FormData(form).get("categoryId") ?? "",
+    );
     setError(undefined);
     setIsLoading(true);
 
@@ -557,13 +565,14 @@ export default function CreateMemoForm({
         const payload = (await response.json()) as { memoId?: string };
         if (!payload.memoId) throw new Error("メモIDを取得できませんでした。");
         if (files.length === 0) {
-          window.location.assign("/");
+          window.location.assign(getCreatedMemoListPath(createdCategoryId));
           return;
         }
 
         const result = await uploadAttachments(payload.memoId, files);
         if (result.failed.length > 0) {
           setCreatedMemoId(payload.memoId);
+          setCreatedMemoCategoryId(createdCategoryId);
           setAttachmentError(
             "メモは保存されましたが、一部の添付を保存できませんでした。",
           );
@@ -574,7 +583,7 @@ export default function CreateMemoForm({
           );
           return;
         }
-        window.location.assign("/");
+        window.location.assign(getCreatedMemoListPath(createdCategoryId));
         return;
       }
       const payload = (await response.json()) as { message?: string };
@@ -731,6 +740,10 @@ export default function CreateMemoForm({
             className="select category-select w-full!"
             id="memo-category"
             name="categoryId"
+            onChange={(event) =>
+              setCategoryId((event.currentTarget as HTMLSelectElement).value)
+            }
+            value={categoryId}
           >
             <option value="">カテゴリーなし</option>
             {categories.map((category) => (

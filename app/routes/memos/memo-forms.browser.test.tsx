@@ -7,6 +7,23 @@ import { SHARE_STORAGE_KEY } from "@/features/sharing/model/share";
 import CreateMemoForm from "@/routes/memos/create/-components/$create-memo-form";
 import UrlSummaryForm from "@/routes/memos/url-summary/-components/$url-summary-form";
 
+const categories = [
+  {
+    id: "category-1",
+    userId: "user-1",
+    name: "カテゴリー1",
+    createdAt: "2026-08-13 00:00:00",
+    updatedAt: "2026-08-13 00:00:00",
+  },
+  {
+    id: "category-2",
+    userId: "user-1",
+    name: "カテゴリー2",
+    createdAt: "2026-08-13 00:00:00",
+    updatedAt: "2026-08-13 00:00:00",
+  },
+] as const;
+
 function mount(node: Parameters<typeof render>[0]) {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -49,6 +66,24 @@ afterEach(() => {
 });
 
 describe("メモ作成フォーム", () => {
+  it("カテゴリーを初期選択し、変更した保存先を送信する", async () => {
+    const fetchSpy = vi
+      .spyOn(window, "fetch")
+      .mockResolvedValue(Response.json({ message: "確認用" }, { status: 500 }));
+    mount(
+      <CreateMemoForm categories={categories} initialCategoryId="category-1" />,
+    );
+
+    const category = page.getByLabelText("カテゴリー");
+    await expect.element(category).toHaveValue("category-1");
+    await category.selectOptions("category-2");
+    await page.getByLabelText("タイトル").fill("保存先を変更");
+    await page.getByRole("button", { name: "メモを作成" }).click();
+
+    const body = fetchSpy.mock.calls[0]?.[1]?.body as FormData;
+    expect(body.get("categoryId")).toBe("category-2");
+  });
+
   it("フォーム外にフォーカスがあってもCtrl+Enterで送信する", async () => {
     const outsideButton = document.createElement("button");
     document.body.appendChild(outsideButton);
@@ -443,6 +478,28 @@ describe("メモ作成フォーム", () => {
       .element(page.getByRole("alert"))
       .toHaveTextContent("AI要約の今月の上限です。");
     await expect.element(url).toHaveValue("https://example.com/article");
+  });
+
+  it("AI要約でもカテゴリーを初期選択し、変更した保存先を送信する", async () => {
+    const fetchSpy = vi
+      .spyOn(window, "fetch")
+      .mockResolvedValue(
+        Response.json({ message: "AI要約の確認用" }, { status: 500 }),
+      );
+    mount(
+      <UrlSummaryForm categories={categories} initialCategoryId="category-1" />,
+    );
+
+    const category = page.getByLabelText("カテゴリー");
+    await expect.element(category).toHaveValue("category-1");
+    await category.selectOptions("category-2");
+    await page
+      .getByLabelText("要約するページのURL")
+      .fill("https://example.com/article");
+    await page.getByRole("button", { name: "要約して保存" }).click();
+
+    const body = fetchSpy.mock.calls[0]?.[1]?.body as FormData;
+    expect(body.get("category")).toBe("category-2");
   });
 
   it("入力欄にフォーカス中でもCtrl+EnterでAI要約を送信する", async () => {

@@ -30,34 +30,44 @@ const FabAction = ({
   </div>
 );
 
-export const ActionFab = () => (
-  <aside aria-label="メモの作成メニュー" className="fab">
-    <button
-      aria-label="作成メニューを開く"
-      className="btn btn-primary btn-lg btn-circle"
-      tabIndex={0}
-      type="button"
-    >
-      <FabIcon svg={plusIcon} />
-    </button>
-    <div className="fab-close">
-      <span className={fabLabelClassName}>閉じる</span>
+export const ActionFab = ({ categoryId }: { categoryId?: string }) => {
+  const categoryQuery = categoryId
+    ? `?category=${encodeURIComponent(categoryId)}`
+    : "";
+
+  return (
+    <aside aria-label="メモの作成メニュー" className="fab">
       <button
-        aria-label="作成メニューを閉じる"
-        className="btn btn-error btn-lg btn-circle"
-        onClick={() => {
-          (document.activeElement as HTMLElement | null)?.blur();
-        }}
+        aria-label="作成メニューを開く"
+        className="btn btn-primary btn-lg btn-circle"
+        tabIndex={0}
         type="button"
       >
-        <FabIcon svg={xIcon} />
+        <FabIcon svg={plusIcon} />
       </button>
-    </div>
-    <FabAction href="/memos/create" label="メモを作成" svg={notePencilIcon} />
-    <FabAction
-      href="/memos/url-summary"
-      label="WebページをAI要約"
-      svg={globeIcon}
-    />
-  </aside>
-);
+      <div className="fab-close">
+        <span className={fabLabelClassName}>閉じる</span>
+        <button
+          aria-label="作成メニューを閉じる"
+          className="btn btn-error btn-lg btn-circle"
+          onClick={() => {
+            (document.activeElement as HTMLElement | null)?.blur();
+          }}
+          type="button"
+        >
+          <FabIcon svg={xIcon} />
+        </button>
+      </div>
+      <FabAction
+        href={`/memos/create${categoryQuery}`}
+        label="メモを作成"
+        svg={notePencilIcon}
+      />
+      <FabAction
+        href={`/memos/url-summary${categoryQuery}`}
+        label="WebページをAI要約"
+        svg={globeIcon}
+      />
+    </aside>
+  );
+};

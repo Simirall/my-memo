@@ -32,6 +32,12 @@ export default createRoute(async (c) => {
         encodeURIComponent("共有内容が見つからないか、期限切れです。"),
     );
   }
+  const requestedCategoryId = c.req.query("category");
+  const initialCategoryId = categories.some(
+    (category) => category.id === requestedCategoryId,
+  )
+    ? requestedCategoryId
+    : undefined;
 
   return c.render(
     <div className="flex justify-center p-4 sm:p-8">
@@ -42,6 +48,7 @@ export default createRoute(async (c) => {
           <CreateMemoForm
             categories={categories}
             error={c.req.query("error")}
+            initialCategoryId={initialCategoryId}
             initialValues={shareIntake?.prefill}
             shareIntake={shareIntake}
             tags={tags}

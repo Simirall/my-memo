@@ -133,7 +133,7 @@ export default createRoute(async (c) => {
         listPath={c.req.path}
         query={query}
       />
-      <ActionFab />
+      <ActionFab categoryId={result.id} />
     </div>,
   );
 });
