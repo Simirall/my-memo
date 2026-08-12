@@ -348,6 +348,7 @@ describe("メモ作成フォーム", () => {
         files: [
           {
             id: "share-file-1",
+            reservationId: "reservation-1",
             fileName: "写真.png",
             contentType: "image/png",
             sizeBytes: 3,
@@ -356,6 +357,7 @@ describe("メモ作成フォーム", () => {
           },
           {
             id: "share-file-2",
+            reservationId: "reservation-2",
             fileName: "音声.mp3",
             contentType: "audio/mpeg",
             sizeBytes: 4,
@@ -390,6 +392,7 @@ describe("メモ作成フォーム", () => {
           files: [
             {
               id: "share-file-1",
+              reservationId: "reservation-1",
               fileName: "写真.png",
               contentType: "image/png",
               sizeBytes: 3,
@@ -398,6 +401,7 @@ describe("メモ作成フォーム", () => {
             },
             {
               id: "share-file-2",
+              reservationId: "reservation-2",
               fileName: "音声.mp3",
               contentType: "audio/mpeg",
               sizeBytes: 4,

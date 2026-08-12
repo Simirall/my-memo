@@ -44,7 +44,10 @@
       "binding": "MY_MEMO_FILES",
       "bucket_name": "my-memo-r2"
     }
-  ]
+  ],
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  }
   // "vars": {
   //   "MY_VAR": "my-variable"
   // },

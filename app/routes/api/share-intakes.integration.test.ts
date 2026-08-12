@@ -9,6 +9,7 @@ import { normalizePendingShare } from "@/features/sharing/model/share";
 import shareIntakesRoute from "./share-intakes/index";
 
 const db = env.MY_MEMO_D1;
+const validAvifThumbnail = "\0\0\0\x18ftypavif";
 
 async function run(sql: string, ...values: unknown[]) {
   return db
@@ -61,6 +62,40 @@ beforeEach(async () => {
 });
 
 describe("共有メディア仮保存API", () => {
+  it("実行可能な共有ファイルを同一オリジン文書として表示しない", async () => {
+    await addUser("unsafe-share-owner");
+    const intake = await createShareIntake(
+      env,
+      "unsafe-share-owner",
+      normalizePendingShare({ title: "HTML", text: "", url: "" }),
+      [
+        new File(["<script>alert(1)</script>"], "attack.html", {
+          type: "text/html",
+        }),
+      ],
+    );
+    const file = await db
+      .prepare("SELECT id FROM share_intake_files WHERE share_intake_id = ?")
+      .bind(intake.id)
+      .first<{ id: string }>();
+
+    const response = await appForUser("unsafe-share-owner").fetch(
+      new Request(
+        `https://example.test/api/share-intakes/${intake.id}/files/${file?.id}`,
+      ),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe(
+      "application/octet-stream",
+    );
+    expect(response.headers.get("Content-Disposition")).toContain(
+      "attachment;",
+    );
+    expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+  });
+
   it("仮保存したファイルを個別除外し、残りをメモとして確定する", async () => {
     await addUser("share-owner");
     const file = new File(["abc"], "写真.png", { type: "image/png" });
@@ -102,7 +137,11 @@ describe("共有メディア仮保存API", () => {
       env,
     );
     expect(preview.status).toBe(200);
-    expect(preview.headers.get("Content-Disposition")).toBe("inline");
+    expect(preview.headers.get("Content-Disposition")).toContain("inline;");
+    expect(preview.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(preview.headers.get("Cross-Origin-Resource-Policy")).toBe(
+      "same-origin",
+    );
     expect(preview.headers.get("Accept-Ranges")).toBe("bytes");
 
     const rangePreview = await ownerApp.fetch(
@@ -154,7 +193,9 @@ describe("共有メディア仮保存API", () => {
     form.set("thumbnailFileIds", JSON.stringify([kept?.id]));
     form.append(
       "thumbnails",
-      new File(["thumb"], `${kept?.id}.avif`, { type: "image/avif" }),
+      new File([validAvifThumbnail], `${kept?.id}.avif`, {
+        type: "image/avif",
+      }),
     );
     const finalized = await ownerApp.fetch(
       new Request(

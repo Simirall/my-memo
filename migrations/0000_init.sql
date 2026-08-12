@@ -15,6 +15,27 @@ CREATE TABLE `account` (
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
+CREATE TABLE `attachment_upload_reservations` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`memo_id` text,
+	`share_intake_id` text,
+	`r2_key` text NOT NULL,
+	`thumbnail_r2_key` text,
+	`size_bytes` integer NOT NULL,
+	`status` text DEFAULT 'pending' NOT NULL,
+	`expires_at` text NOT NULL,
+	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "attachment_upload_reservations_size_positive" CHECK("attachment_upload_reservations"."size_bytes" > 0),
+	CONSTRAINT "attachment_upload_reservations_status" CHECK("attachment_upload_reservations"."status" IN ('pending', 'cleaning'))
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `attachment_upload_reservations_r2_key_unique` ON `attachment_upload_reservations` (`r2_key`);--> statement-breakpoint
+CREATE UNIQUE INDEX `attachment_upload_reservations_thumbnail_r2_key_unique` ON `attachment_upload_reservations` (`thumbnail_r2_key`);--> statement-breakpoint
+CREATE INDEX `attachment_upload_reservations_user_expires_idx` ON `attachment_upload_reservations` (`user_id`,`status`,`expires_at`);--> statement-breakpoint
+CREATE INDEX `attachment_upload_reservations_memo_idx` ON `attachment_upload_reservations` (`memo_id`);--> statement-breakpoint
+CREATE INDEX `attachment_upload_reservations_share_idx` ON `attachment_upload_reservations` (`share_intake_id`);--> statement-breakpoint
 CREATE TABLE `authorization_audit_logs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`actor_user_id` text,
@@ -154,6 +175,7 @@ CREATE TABLE `share_intake_files` (
 	`id` text PRIMARY KEY NOT NULL,
 	`share_intake_id` text NOT NULL,
 	`user_id` text NOT NULL,
+	`reservation_id` text NOT NULL,
 	`r2_key` text NOT NULL,
 	`file_name` text NOT NULL,
 	`content_type` text NOT NULL,
@@ -165,6 +187,7 @@ CREATE TABLE `share_intake_files` (
 	CONSTRAINT "share_intake_files_size_bytes_non_negative" CHECK("share_intake_files"."size_bytes" >= 0)
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `share_intake_files_reservation_id_unique` ON `share_intake_files` (`reservation_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `share_intake_files_r2_key_unique` ON `share_intake_files` (`r2_key`);--> statement-breakpoint
 CREATE INDEX `share_intake_files_share_intake_id_idx` ON `share_intake_files` (`share_intake_id`,`created_at`);--> statement-breakpoint
 CREATE INDEX `share_intake_files_user_id_idx` ON `share_intake_files` (`user_id`);--> statement-breakpoint
@@ -228,21 +251,25 @@ CREATE TABLE `verification` (
 	`expires_at` integer NOT NULL,
 	`created_at` integer,
 	`updated_at` integer
-);--> statement-breakpoint
+);
+--> statement-breakpoint
 INSERT INTO `plans` (`id`, `code`, `name`, `is_default`, `is_active`)
-VALUES ('free', 'free', 'Free', 1, 1);--> statement-breakpoint
+VALUES ('free', 'free', 'Free', 1, 1);
+--> statement-breakpoint
 INSERT INTO `plan_limits` (`plan_id`, `metric`, `limit_value`)
 VALUES
 	('free', 'memo.total', 100),
 	('free', 'ai_summary.monthly', 10),
-	('free', 'attachment.storage_bytes', 524288000);--> statement-breakpoint
+	('free', 'attachment.storage_bytes', 524288000);
+--> statement-breakpoint
 CREATE TRIGGER `prevent_referenced_plan_delete`
 BEFORE DELETE ON `plans`
 FOR EACH ROW
 WHEN EXISTS (SELECT 1 FROM `user` WHERE `plan_id` = OLD.`id`)
 BEGIN
 	SELECT RAISE(ABORT, 'cannot delete a plan assigned to a user');
-END;--> statement-breakpoint
+END;
+--> statement-breakpoint
 CREATE TRIGGER `prevent_last_admin_demotion`
 BEFORE UPDATE OF `role` ON `user`
 FOR EACH ROW

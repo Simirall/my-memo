@@ -1,5 +1,6 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import z from "zod";
+import { isSafeMemoUrl } from "@/features/memos/model/memo-url";
 import {
   normalizeTagNames,
   parseTagNamesField,
@@ -17,6 +18,10 @@ const memoContentField = z.preprocess(
   (value) => (typeof value === "string" && value.trim() === "" ? null : value),
   z.string().max(10000, "10,000文字以内で入力してください").nullable(),
 );
+const memoUrlField = z
+  .string()
+  .max(2048, "2048文字以内で入力してください")
+  .refine(isSafeMemoUrl, "httpまたはhttpsのURLを入力してください");
 const mediaDimensionsField = z.preprocess(
   (value) => {
     if (value === undefined || value === "") return [];
@@ -55,8 +60,7 @@ export const memoSchema = {
   create: createInsertSchema(memosTable, {
     userId: (schema) => schema.optional(),
     title: (schema) => schema.max(255, "255文字以内で入力してください"),
-    url: (schema) =>
-      schema.max(2048, "2048文字以内で入力してください").optional(),
+    url: () => memoUrlField.optional(),
     categoryId: (schema) =>
       schema.transform((val) => {
         if (val === "") return null;
@@ -70,8 +74,7 @@ export const memoSchema = {
   update: createInsertSchema(memosTable, {
     userId: (schema) => schema.optional(),
     title: (schema) => schema.max(255, "255文字以内で入力してください"),
-    url: (schema) =>
-      schema.max(2048, "2048文字以内で入力してください").nullable().optional(),
+    url: () => memoUrlField.nullable().optional(),
     categoryId: (schema) => schema.nullable().optional(),
     isAiSummary: (schema) => schema.optional(),
   })
@@ -83,6 +86,7 @@ export const memoSchema = {
       stagedAttachments: z
         .array(
           z.object({
+            reservationId: z.string().min(1),
             token: z.string().min(1),
             thumbnailToken: z.string().min(1).nullable(),
             thumbnailContentType: z
@@ -100,7 +104,7 @@ export const memoSchema = {
         .default([]),
     }),
   url: z.object({
-    url: z.url("有効なURLを入力してください"),
+    url: memoUrlField,
     category: z
       .string()
       .transform((val) => {

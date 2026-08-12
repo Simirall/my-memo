@@ -333,6 +333,41 @@ export const memoAttachmentsTable = sqliteTable(
   ],
 );
 
+export const attachmentUploadReservationsTable = sqliteTable(
+  "attachment_upload_reservations",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => userTable.id, { onDelete: "cascade" }),
+    memoId: text("memo_id"),
+    shareIntakeId: text("share_intake_id"),
+    r2Key: text("r2_key").notNull().unique(),
+    thumbnailR2Key: text("thumbnail_r2_key").unique(),
+    sizeBytes: integer("size_bytes").notNull(),
+    status: text("status").notNull().default("pending"),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("attachment_upload_reservations_user_expires_idx").on(
+      table.userId,
+      table.status,
+      table.expiresAt,
+    ),
+    index("attachment_upload_reservations_memo_idx").on(table.memoId),
+    index("attachment_upload_reservations_share_idx").on(table.shareIntakeId),
+    check(
+      "attachment_upload_reservations_size_positive",
+      sql`${table.sizeBytes} > 0`,
+    ),
+    check(
+      "attachment_upload_reservations_status",
+      sql`${table.status} IN ('pending', 'cleaning')`,
+    ),
+  ],
+);
+
 export const shareIntakesTable = sqliteTable(
   "share_intakes",
   {
@@ -371,6 +406,7 @@ export const shareIntakeFilesTable = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => userTable.id, { onDelete: "cascade" }),
+    reservationId: text("reservation_id").notNull().unique(),
     r2Key: text("r2_key").notNull().unique(),
     fileName: text("file_name").notNull(),
     contentType: text("content_type").notNull(),

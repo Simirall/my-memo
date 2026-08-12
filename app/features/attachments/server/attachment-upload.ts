@@ -38,6 +38,23 @@ export const buildAttachmentUploadForm = (
   return form;
 };
 
+export const isValidThumbnailFile = async (file: File): Promise<boolean> => {
+  if (
+    file.size <= 0 ||
+    file.size > MAX_THUMBNAIL_BYTES ||
+    !isThumbnailContentType(file.type)
+  ) {
+    return false;
+  }
+  const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const ascii = (start: number, length: number) =>
+    String.fromCharCode(...bytes.slice(start, start + length));
+  if (file.type === "image/webp") {
+    return ascii(0, 4) === "RIFF" && ascii(8, 4) === "WEBP";
+  }
+  return ascii(4, 4) === "ftyp" && ["avif", "avis"].includes(ascii(8, 4));
+};
+
 export const parseAttachmentUploadForm = async (
   request: Request,
 ): Promise<ParsedAttachmentUpload> => {
@@ -60,10 +77,7 @@ export const parseAttachmentUploadForm = async (
     if (!thumbnail || thumbnail.size === 0) {
       throw new Error("画像のサムネイルがありません。");
     }
-    if (
-      thumbnail.size > MAX_THUMBNAIL_BYTES ||
-      !isThumbnailContentType(thumbnail.type)
-    ) {
+    if (!(await isValidThumbnailFile(thumbnail))) {
       throw new Error("画像のサムネイルが不正です。");
     }
   } else if (thumbnail) {

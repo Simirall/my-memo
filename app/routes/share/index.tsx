@@ -11,8 +11,19 @@ import ShareReceiver from "./-components/$share-receiver";
 
 const getString = (value: unknown) => (typeof value === "string" ? value : "");
 const MAX_SHARED_REQUEST_BYTES = MAX_SHARED_ATTACHMENT_BYTES + 5 * 1024 * 1024;
+export const MAX_ANONYMOUS_SHARE_BYTES = 64 * 1024;
 
-export const parseBoundedBody = async (request: Request) => {
+export const parseBoundedBody = async (
+  request: Request,
+  maxBytes = MAX_SHARED_REQUEST_BYTES,
+) => {
+  const declaredLength = Number(request.headers.get("Content-Length"));
+  if (Number.isSafeInteger(declaredLength) && declaredLength > maxBytes) {
+    throw new ShareIntakeError(
+      "共有ファイルの合計が75 MiBを超えています。",
+      413,
+    );
+  }
   if (!request.body) return parseBody(request, { all: true });
 
   const reader = request.body.getReader();
@@ -25,7 +36,7 @@ export const parseBoundedBody = async (request: Request) => {
         return;
       }
       receivedBytes += chunk.value.byteLength;
-      if (receivedBytes > MAX_SHARED_REQUEST_BYTES) {
+      if (receivedBytes > maxBytes) {
         await reader.cancel();
         controller.error(
           new ShareIntakeError(
@@ -56,11 +67,11 @@ export const parseBoundedBody = async (request: Request) => {
 };
 
 export const POST = createRoute(async (c) => {
+  const user = c.get("user");
+  const maxBytes = user ? MAX_SHARED_REQUEST_BYTES : MAX_ANONYMOUS_SHARE_BYTES;
   const contentLength = Number(c.req.header("Content-Length"));
-  if (
-    Number.isSafeInteger(contentLength) &&
-    contentLength > MAX_SHARED_REQUEST_BYTES
-  ) {
+  if (Number.isSafeInteger(contentLength) && contentLength > maxBytes) {
+    if (!user) return c.redirect("/login?callbackURL=%2Fshare%2Fconsume");
     return c.render(
       <ShareError message="共有ファイルの合計が75 MiBを超えています。" />,
     );
@@ -68,9 +79,10 @@ export const POST = createRoute(async (c) => {
 
   let body: Record<string, string | File | (string | File)[]>;
   try {
-    body = await parseBoundedBody(c.req.raw);
+    body = await parseBoundedBody(c.req.raw, maxBytes);
   } catch (error) {
     if (error instanceof ShareIntakeError) {
+      if (!user) return c.redirect("/login?callbackURL=%2Fshare%2Fconsume");
       return c.render(<ShareError message={error.message} />);
     }
     throw error;
@@ -83,7 +95,6 @@ export const POST = createRoute(async (c) => {
   const files = getSharedFiles(body.files);
 
   if (files.length > 0) {
-    const user = c.get("user");
     if (!user) return c.redirect("/login?callbackURL=%2F");
 
     try {

@@ -2,6 +2,10 @@ import { zValidator } from "@hono/zod-validator";
 import { and, eq } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import { getAppDb } from "@/features/access-control/authorization";
+import {
+  attachmentContentDisposition,
+  getAttachmentPreviewKind,
+} from "@/features/attachments/model/attachment-constants";
 import { parseAttachmentRange } from "@/features/attachments/server/attachments";
 import { memoSchema } from "@/features/memos/schema/memo-schema";
 import {
@@ -86,10 +90,12 @@ shareIntakesRoute.get("/:id/files/:fileId", async (c: ShareIntakesContext) => {
   if (!object || !("body" in object)) {
     return c.json({ message: "共有ファイルを取得できませんでした。" }, 404);
   }
+  const inline = getAttachmentPreviewKind(file.contentType) !== null;
   const headers = new Headers({
-    "Content-Type": file.contentType,
-    "Content-Disposition": "inline",
+    "Content-Type": inline ? file.contentType : "application/octet-stream",
+    "Content-Disposition": attachmentContentDisposition(file.fileName, inline),
     "X-Content-Type-Options": "nosniff",
+    "Cross-Origin-Resource-Policy": "same-origin",
     ETag: object.httpEtag,
     "Accept-Ranges": "bytes",
   });

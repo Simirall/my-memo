@@ -11,8 +11,8 @@ import {
   PLAN_METRICS,
 } from "@/features/access-control/authorization";
 import {
-  insertAttachmentWithinQuota,
   insertMemoWithinQuota,
+  insertReservedAttachment,
   releaseAiSummaryQuota,
   reserveAiSummaryQuota,
 } from "@/features/access-control/quota";
@@ -25,8 +25,15 @@ import {
 import { parseAttachmentUploadForm } from "@/features/attachments/server/attachment-upload";
 import { getAttachmentQuota } from "@/features/attachments/server/attachments";
 import { putR2ObjectWithKnownLength } from "@/features/attachments/server/r2-upload";
+import {
+  releaseAttachmentReservation,
+  releaseReservationsByKeys,
+  reserveAttachmentUpload,
+} from "@/features/attachments/server/upload-reservations";
 import { normalizeLinkPreviewUrl } from "@/features/link-preview/model/link-preview";
 import { scheduleBackgroundTask } from "@/features/link-preview/server/background-task";
+import { decodeLinkPreviewHtml } from "@/features/link-preview/server/decode-html";
+import { fetchPublicHtml } from "@/features/link-preview/server/fetch-public-html";
 import { refreshLinkPreviewCache } from "@/features/link-preview/server/link-preview-cache";
 import {
   memoSchema,
@@ -45,7 +52,6 @@ import {
   tagsTable,
 } from "@/schema";
 import { decodeHtmlEntities } from "./-lib/decode-html-entities";
-import { decodeHtmlWithCorrectEncoding } from "./-lib/decode-html-with-correct-encoding";
 
 const memosRoute = new Hono<{ Bindings: CloudflareBindings }>();
 type MemosContext = Context<{ Bindings: CloudflareBindings }>;
@@ -305,6 +311,19 @@ memosRoute
     }
     const token = `${getEditAttachmentPrefix(user.id, memoId)}${editId}/${crypto.randomUUID()}`;
     const thumbnailToken = upload.thumbnail ? `${token}.thumbnail` : null;
+    const reservation = await reserveAttachmentUpload(c.env.MY_MEMO_D1, {
+      userId: user.id,
+      memoId,
+      r2Key: token,
+      thumbnailR2Key: thumbnailToken,
+      sizeBytes: upload.original.size,
+    });
+    if (!reservation) {
+      return c.json(
+        { message: "添付容量またはファイル数の上限に達しました。" },
+        409,
+      );
+    }
     try {
       const object = await putR2ObjectWithKnownLength(
         c.env.MY_MEMO_FILES,
@@ -339,6 +358,11 @@ memosRoute
             memoId,
           },
         );
+        await releaseAttachmentReservation(
+          c.env.MY_MEMO_D1,
+          user.id,
+          reservation.id,
+        );
         return c.json(
           { message: "ファイルサイズを確認できませんでした。" },
           400,
@@ -346,6 +370,7 @@ memosRoute
       }
       return c.json({
         attachment: {
+          reservationId: reservation.id,
           token,
           thumbnailToken,
           thumbnailContentType: upload.thumbnail?.type ?? null,
@@ -366,6 +391,11 @@ memosRoute
           event: "memo_edit_attachment_upload_cleanup_failed",
           memoId,
         },
+      );
+      await releaseAttachmentReservation(
+        c.env.MY_MEMO_D1,
+        user.id,
+        reservation.id,
       );
       console.error(
         JSON.stringify({
@@ -399,6 +429,7 @@ memosRoute
       event: "memo_edit_attachment_cleanup_failed",
       memoId,
     });
+    await releaseReservationsByKeys(c.env.MY_MEMO_D1, user.id, allowed);
     return c.json({ ok: true });
   })
   .patch("/:id", async (c) => {
@@ -442,6 +473,16 @@ memosRoute
         ? [attachment.token, attachment.thumbnailToken]
         : [attachment.token];
     });
+    if (
+      new Set(staged.map((attachment) => attachment.reservationId)).size !==
+      staged.length
+    ) {
+      await cleanupR2Keys(c.env.MY_MEMO_FILES, stagedKeys, {
+        event: "memo_edit_attachment_cleanup_failed",
+        memoId,
+      });
+      return c.json({ message: "添付ファイルの予約が重複しています。" }, 400);
+    }
     const cleanupStaged = () =>
       cleanupR2Keys(c.env.MY_MEMO_FILES, stagedKeys, {
         event: "memo_edit_attachment_cleanup_failed",
@@ -648,7 +689,12 @@ memosRoute
         c.env.MY_MEMO_D1.prepare(
           `INSERT INTO memo_attachments
              (id, memo_id, user_id, r2_key, thumbnail_r2_key, thumbnail_content_type, thumbnail_size_bytes, file_name, content_type, size_bytes, media_width, media_height, etag)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+             FROM attachment_upload_reservations AS r
+             WHERE r.id = ? AND r.user_id = ? AND r.memo_id = ?
+               AND r.r2_key = ?
+               AND COALESCE(r.thumbnail_r2_key, '') = COALESCE(?, '')
+               AND r.size_bytes = ? AND r.status = 'pending' AND r.expires_at > ?`,
         ).bind(
           crypto.randomUUID(),
           memoId,
@@ -663,13 +709,35 @@ memosRoute
           attachment.mediaWidth,
           attachment.mediaHeight,
           attachment.etag,
+          attachment.reservationId,
+          user.id,
+          memoId,
+          attachment.token,
+          attachment.thumbnailToken,
+          attachment.sizeBytes,
+          new Date().toISOString(),
         ),
+      );
+    }
+    for (const attachment of staged) {
+      statements.push(
+        c.env.MY_MEMO_D1.prepare(
+          `DELETE FROM attachment_upload_reservations
+           WHERE id = ? AND user_id = ?
+             AND EXISTS (SELECT 1 FROM memo_attachments WHERE r2_key = ?)`,
+        ).bind(attachment.reservationId, user.id, attachment.token),
       );
     }
 
     try {
       const results = await c.env.MY_MEMO_D1.batch(statements);
-      if (results[0]?.meta.changes !== 1) {
+      const reservationResults = staged.length
+        ? results.slice(-staged.length)
+        : [];
+      if (
+        results[0]?.meta.changes !== 1 ||
+        reservationResults.some((result) => result.meta.changes !== 1)
+      ) {
         await cleanupStaged();
         return c.json({ message: "メモを更新できませんでした。" }, 409);
       }
@@ -767,6 +835,19 @@ memosRoute
 
     const r2Key = `users/${user.id}/memos/${memoId}/${crypto.randomUUID()}`;
     const thumbnailR2Key = upload.thumbnail ? `${r2Key}.thumbnail` : null;
+    const reservation = await reserveAttachmentUpload(c.env.MY_MEMO_D1, {
+      userId: user.id,
+      memoId,
+      r2Key,
+      thumbnailR2Key,
+      sizeBytes: declaredSize,
+    });
+    if (!reservation) {
+      return c.json(
+        { message: "添付容量またはファイル数の上限に達しました。" },
+        409,
+      );
+    }
     const cleanup = async () => {
       await cleanupR2Keys(
         c.env.MY_MEMO_FILES,
@@ -775,6 +856,11 @@ memosRoute
           event: "memo_attachment_cleanup_failed",
           memoId,
         },
+      );
+      await releaseAttachmentReservation(
+        c.env.MY_MEMO_D1,
+        user.id,
+        reservation.id,
       );
     };
 
@@ -835,21 +921,25 @@ memosRoute
 
     let insertedAttachment = false;
     try {
-      insertedAttachment = await insertAttachmentWithinQuota(c.env.MY_MEMO_D1, {
-        id: crypto.randomUUID(),
-        memoId,
-        userId: user.id,
-        r2Key,
-        thumbnailR2Key,
-        thumbnailContentType: upload.thumbnail?.type ?? null,
-        thumbnailSizeBytes: upload.thumbnail?.size ?? null,
-        fileName: upload.fileName,
-        contentType: upload.contentType,
-        sizeBytes: object.size,
-        mediaWidth: upload.mediaDimensions?.width ?? null,
-        mediaHeight: upload.mediaDimensions?.height ?? null,
-        etag: object.etag,
-      });
+      insertedAttachment = await insertReservedAttachment(
+        c.env.MY_MEMO_D1,
+        {
+          id: crypto.randomUUID(),
+          memoId,
+          userId: user.id,
+          r2Key,
+          thumbnailR2Key,
+          thumbnailContentType: upload.thumbnail?.type ?? null,
+          thumbnailSizeBytes: upload.thumbnail?.size ?? null,
+          fileName: upload.fileName,
+          contentType: upload.contentType,
+          sizeBytes: object.size,
+          mediaWidth: upload.mediaDimensions?.width ?? null,
+          mediaHeight: upload.mediaDimensions?.height ?? null,
+          etag: object.etag,
+        },
+        reservation.id,
+      );
     } catch (error) {
       await cleanup();
       console.error(
@@ -1031,10 +1121,11 @@ memosRoute
         }
 
         const processUrlSummary = async (): Promise<UrlSummaryResult> => {
-          const response = await fetch(url);
-
-          // HTMLを正しいエンコーディングでデコード
-          const htmlText = await decodeHtmlWithCorrectEncoding(response);
+          const fetchedHtml = await fetchPublicHtml(url);
+          const htmlText = decodeLinkPreviewHtml(
+            fetchedHtml.bytes,
+            fetchedHtml.headers,
+          );
 
           // UTF-8のBlobとして再生成してAIに渡す
           const utf8Blob = new Blob([htmlText], {

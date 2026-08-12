@@ -4,16 +4,19 @@ import { insertMemoAndAttachmentsWithinQuota } from "@/features/access-control/q
 import {
   decodeAttachmentFileName,
   getAttachmentPreviewKind,
-  isThumbnailContentType,
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS_PER_MEMO,
   MAX_SHARED_ATTACHMENT_BYTES,
-  MAX_THUMBNAIL_BYTES,
   parseMediaDimensions,
   SHARE_INTAKE_MAX_AGE_MS,
 } from "@/features/attachments/model/attachment-constants";
+import { isValidThumbnailFile } from "@/features/attachments/server/attachment-upload";
 import { getAttachmentQuota } from "@/features/attachments/server/attachments";
 import { putR2ObjectWithKnownLength } from "@/features/attachments/server/r2-upload";
+import {
+  releaseAttachmentReservation,
+  reserveAttachmentUpload,
+} from "@/features/attachments/server/upload-reservations";
 import {
   createMediaSharePrefill,
   type MediaShareFile,
@@ -31,6 +34,7 @@ export type ShareIntakeFile = {
   sizeBytes: number;
   etag: string;
   r2Key: string;
+  reservationId: string;
 };
 
 export type ShareIntake = {
@@ -174,9 +178,20 @@ export const createShareIntake = async (
   });
 
   const uploadedKeys: string[] = [];
+  const reservationIds: string[] = [];
   try {
     for (const file of normalized) {
       const r2Key = getShareStagingKey(shareId);
+      const reservation = await reserveAttachmentUpload(env.MY_MEMO_D1, {
+        userId,
+        shareIntakeId: shareId,
+        r2Key,
+        sizeBytes: file.sizeBytes,
+      });
+      if (!reservation) {
+        throw new ShareIntakeError("添付容量の残りが足りません。", 409);
+      }
+      reservationIds.push(reservation.id);
       const object = await putR2ObjectWithKnownLength(
         env.MY_MEMO_FILES,
         r2Key,
@@ -195,6 +210,7 @@ export const createShareIntake = async (
         id: crypto.randomUUID(),
         shareIntakeId: shareId,
         userId,
+        reservationId: reservation.id,
         r2Key,
         fileName: file.fileName,
         contentType: file.contentType,
@@ -210,6 +226,11 @@ export const createShareIntake = async (
       cleanupError = cause;
     }
     await deleteShareRows(env, shareId);
+    await Promise.all(
+      reservationIds.map((id) =>
+        releaseAttachmentReservation(env.MY_MEMO_D1, userId, id),
+      ),
+    );
     if (cleanupError) {
       console.error(
         JSON.stringify({
@@ -246,6 +267,7 @@ const mapShareIntake = (
     sizeBytes: file.sizeBytes,
     etag: file.etag,
     r2Key: file.r2Key,
+    reservationId: file.reservationId,
   })),
   prefill: createMediaSharePrefill(
     { title: intake.title, text: intake.text, url: intake.url ?? "" },
@@ -283,6 +305,19 @@ export const getShareIntake = async (
       env.MY_MEMO_FILES,
       files.map((file) => file.r2Key),
     );
+    const expiredFiles = await db
+      .select({ reservationId: shareIntakeFilesTable.reservationId })
+      .from(shareIntakeFilesTable)
+      .where(eq(shareIntakeFilesTable.shareIntakeId, shareId));
+    await Promise.all(
+      expiredFiles.map((file) =>
+        releaseAttachmentReservation(
+          env.MY_MEMO_D1,
+          userId,
+          file.reservationId,
+        ),
+      ),
+    );
     await deleteShareRows(env, shareId);
     return undefined;
   }
@@ -316,6 +351,11 @@ export const removeShareIntakeFile = async (
 
   try {
     await env.MY_MEMO_FILES.delete(file.r2Key);
+    await releaseAttachmentReservation(
+      env.MY_MEMO_D1,
+      userId,
+      file.reservationId,
+    );
     const deleted = await env.MY_MEMO_D1.prepare(
       `DELETE FROM share_intake_files
        WHERE id = ? AND share_intake_id = ? AND user_id = ?`,
@@ -381,6 +421,15 @@ export const removeShareIntake = async (
     await deleteKeys(
       env.MY_MEMO_FILES,
       intake.files.map((file) => file.r2Key),
+    );
+    await Promise.all(
+      intake.files.map((file) =>
+        releaseAttachmentReservation(
+          env.MY_MEMO_D1,
+          userId,
+          file.reservationId,
+        ),
+      ),
     );
     await env.MY_MEMO_D1.prepare(
       `DELETE FROM share_intakes
@@ -455,12 +504,7 @@ export const finalizeShareIntake = async (
   for (const file of intake.files) {
     const thumbnail = thumbnailsByFileId.get(file.id);
     if (getAttachmentPreviewKind(file.contentType) === "image") {
-      if (
-        !thumbnail ||
-        thumbnail.size <= 0 ||
-        thumbnail.size > MAX_THUMBNAIL_BYTES ||
-        !isThumbnailContentType(thumbnail.type)
-      ) {
+      if (!thumbnail || !(await isValidThumbnailFile(thumbnail))) {
         throw new ShareIntakeError("共有画像のサムネイルが不正です。", 400);
       }
     } else if (thumbnail) {
@@ -561,6 +605,26 @@ export const finalizeShareIntake = async (
       finalKeys.push(r2Key);
       let thumbnailObject: R2Object | null = null;
       if (thumbnail && thumbnailR2Key) {
+        const linkedThumbnail = await env.MY_MEMO_D1.prepare(
+          `UPDATE attachment_upload_reservations
+           SET thumbnail_r2_key = ?
+           WHERE id = ? AND user_id = ? AND share_intake_id = ?
+             AND status = 'pending' AND expires_at > ?`,
+        )
+          .bind(
+            thumbnailR2Key,
+            staged.reservationId,
+            userId,
+            shareId,
+            new Date().toISOString(),
+          )
+          .run();
+        if (linkedThumbnail.meta.changes !== 1) {
+          throw new ShareIntakeError(
+            "共有画像のサムネイル予約を確認できませんでした。",
+            409,
+          );
+        }
         thumbnailObject = await putR2ObjectWithKnownLength(
           env.MY_MEMO_FILES,
           thumbnailR2Key,
@@ -599,6 +663,13 @@ export const finalizeShareIntake = async (
       },
       finalAttachments.map((attachment) => ({ ...attachment, memoId, userId })),
       [
+        ...intake.files.map((file) =>
+          env.MY_MEMO_D1.prepare(
+            `DELETE FROM attachment_upload_reservations
+             WHERE id = ? AND user_id = ? AND share_intake_id = ?
+               AND status = 'pending' AND expires_at > ?`,
+          ).bind(file.reservationId, userId, shareId, new Date().toISOString()),
+        ),
         env.MY_MEMO_D1.prepare(
           `UPDATE share_intakes
              SET status = 'finalized', updated_at = CURRENT_TIMESTAMP

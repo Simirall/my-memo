@@ -35,7 +35,7 @@ const buildMemoStatements = (
   db: D1Database,
   memo: MemoInsert,
   attachmentCount = 0,
-  attachmentBytes = 0,
+  _attachmentBytes = 0,
 ) => {
   const attachmentQuotaCondition =
     attachmentCount > 0
@@ -54,7 +54,11 @@ const buildMemoStatements = (
                      SELECT COALESCE(SUM(size_bytes), 0)
                      FROM memo_attachments
                      WHERE user_id = ?
-                   ) + ? <= attachment_limits.limit_value
+                   ) + (
+                     SELECT COALESCE(SUM(size_bytes), 0)
+                     FROM attachment_upload_reservations
+                     WHERE user_id = ? AND status = 'pending' AND expires_at > ?
+                   ) <= attachment_limits.limit_value
                  )
              )`
       : "";
@@ -88,7 +92,13 @@ const buildMemoStatements = (
         memo.userId,
         memo.userId,
         ...(attachmentCount > 0
-          ? [memo.userId, attachmentCount, memo.userId, attachmentBytes]
+          ? [
+              memo.userId,
+              attachmentCount,
+              memo.userId,
+              memo.userId,
+              new Date().toISOString(),
+            ]
           : []),
       ),
   ];
@@ -188,8 +198,11 @@ export async function insertMemoAndAttachmentsWithinQuota(
     attachments.every(
       (_, index) => results[attachmentStart + index]?.meta.changes === 1,
     ) &&
-    (trailingStatements.length === 0 ||
-      results[attachmentStart + attachments.length]?.meta.changes === 1)
+    trailingStatements.every(
+      (_, index) =>
+        results[attachmentStart + attachments.length + index]?.meta.changes ===
+        1,
+    )
   );
 }
 
@@ -297,4 +310,58 @@ export async function insertAttachmentWithinQuota(
     .run();
 
   return result.meta.changes === 1;
+}
+
+export async function insertReservedAttachment(
+  db: D1Database,
+  attachment: MemoAttachmentInsert,
+  reservationId: string,
+): Promise<boolean> {
+  const results = await db.batch([
+    db
+      .prepare(
+        `INSERT INTO memo_attachments
+          (id, memo_id, user_id, r2_key, thumbnail_r2_key, thumbnail_content_type, thumbnail_size_bytes, file_name, content_type, size_bytes, media_width, media_height, etag)
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+         FROM attachment_upload_reservations AS r
+         WHERE r.id = ?
+           AND r.user_id = ?
+           AND r.memo_id = ?
+           AND r.r2_key = ?
+           AND COALESCE(r.thumbnail_r2_key, '') = COALESCE(?, '')
+           AND r.size_bytes = ?
+           AND r.status = 'pending'
+           AND r.expires_at > ?`,
+      )
+      .bind(
+        attachment.id,
+        attachment.memoId,
+        attachment.userId,
+        attachment.r2Key,
+        attachment.thumbnailR2Key ?? null,
+        attachment.thumbnailContentType ?? null,
+        attachment.thumbnailSizeBytes ?? null,
+        attachment.fileName,
+        attachment.contentType,
+        attachment.sizeBytes,
+        attachment.mediaWidth ?? null,
+        attachment.mediaHeight ?? null,
+        attachment.etag,
+        reservationId,
+        attachment.userId,
+        attachment.memoId,
+        attachment.r2Key,
+        attachment.thumbnailR2Key ?? null,
+        attachment.sizeBytes,
+        new Date().toISOString(),
+      ),
+    db
+      .prepare(
+        `DELETE FROM attachment_upload_reservations
+         WHERE id = ? AND user_id = ?
+           AND EXISTS (SELECT 1 FROM memo_attachments WHERE r2_key = ?)`,
+      )
+      .bind(reservationId, attachment.userId, attachment.r2Key),
+  ]);
+  return results[0]?.meta.changes === 1 && results[1]?.meta.changes === 1;
 }

@@ -36,6 +36,34 @@ afterEach(() => {
 });
 
 describe("メモ表示", () => {
+  it("既存の危険なURLをリンクとして表示しない", async () => {
+    mount(
+      <Memo
+        memo={{
+          ...memo,
+          url: "javascript:alert(document.cookie)",
+          linkPreview: {
+            normalizedUrl: "javascript:alert(document.cookie)",
+            title: "危険なプレビュー",
+            description: null,
+            imageUrl: null,
+            cardType: "summary",
+          },
+        }}
+      />,
+    );
+
+    await expect
+      .element(page.getByRole("heading", { name: "テストメモ" }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("link", { name: "テストメモ" }))
+      .not.toBeInTheDocument();
+    await expect
+      .element(page.getByText("危険なプレビュー"))
+      .not.toBeInTheDocument();
+  });
+
   it("メモタイトルを残してOGP全体を外部リンクとして表示する", async () => {
     mount(
       <Memo

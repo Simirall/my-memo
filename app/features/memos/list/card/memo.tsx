@@ -8,6 +8,7 @@ import type { Tag } from "@/features/tags/data/tags";
 import { MemoTagList } from "@/features/tags/list/memo-tag-list";
 import { DeleteButton } from "@/islands/$delete-button";
 import type { memoAttachmentsTable } from "@/schema";
+import { isSafeMemoUrl } from "../../model/memo-url";
 import type { memoSchema } from "../../schema/memo-schema";
 import AttachmentManager from "../attachments/$attachment-manager";
 import type { MemoListQuery } from "../query/memo-list-query";
@@ -51,7 +52,7 @@ export const Memo = ({
     >
       <div className="grid content-start gap-4">
         <div className="grid content-start gap-2">
-          {memo.url ? (
+          {memo.url && isSafeMemoUrl(memo.url) ? (
             <a
               className="card-title break-all text-info text-xl hover:underline"
               href={memo.url}
@@ -63,7 +64,7 @@ export const Memo = ({
           ) : (
             <h2 className="card-title text-xl">{memo.title}</h2>
           )}
-          {memo.url && memo.linkPreview && (
+          {memo.url && isSafeMemoUrl(memo.url) && memo.linkPreview && (
             <LinkPreviewCard preview={memo.linkPreview} url={memo.url} />
           )}
           {((showCategory && memo.category) || memo.isAiSummary === 1) && (

@@ -39,6 +39,7 @@ type EditableMemo = {
 };
 
 type StagedAttachment = {
+  reservationId: string;
   token: string;
   thumbnailToken: string | null;
   thumbnailContentType: "image/avif" | "image/webp" | null;

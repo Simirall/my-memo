@@ -1,6 +1,6 @@
 import type { MiddlewareHandler } from "hono";
 
-export const CONTENT_SECURITY_POLICY_REPORT_ONLY = [
+export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self' 'report-sample'",
   "style-src 'self' 'unsafe-inline'",
@@ -20,8 +20,5 @@ export const htmlSecurityHeaders: MiddlewareHandler = async (c, next) => {
   if (!contentType.toLowerCase().startsWith("text/html")) return;
 
   c.header("X-Content-Type-Options", "nosniff");
-  c.header(
-    "Content-Security-Policy-Report-Only",
-    CONTENT_SECURITY_POLICY_REPORT_ONLY,
-  );
+  c.header("Content-Security-Policy", CONTENT_SECURITY_POLICY);
 };

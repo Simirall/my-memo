@@ -11,7 +11,9 @@ import {
   MAX_ATTACHMENTS_PER_MEMO,
 } from "@/features/attachments/model/attachment-constants";
 import { getAttachmentQuota, parseAttachmentRange } from "./attachments";
+import { cleanupExpiredUploads } from "./expired-upload-cleanup";
 import { putR2ObjectWithKnownLength } from "./r2-upload";
+import { reserveAttachmentUpload } from "./upload-reservations";
 
 const db = env.MY_MEMO_D1;
 const bucket = env.MY_MEMO_FILES;
@@ -69,6 +71,7 @@ async function addAttachment(
 
 beforeEach(async () => {
   await db.batch([
+    db.prepare("DELETE FROM attachment_upload_reservations"),
     db.prepare("DELETE FROM memo_attachments"),
     db.prepare("DELETE FROM memos"),
     db.prepare("DELETE FROM user"),
@@ -191,5 +194,78 @@ describe("添付ファイル容量とR2実体の整合性", () => {
     expect(MAX_ATTACHMENTS_PER_MEMO).toBe(5);
 
     await Promise.all(keys.map((key) => bucket.delete(key)));
+  });
+
+  it("仮アップロードを並行予約しても原本容量上限を超えない", async () => {
+    await run(
+      "INSERT INTO plans (id, code, name, is_default, is_active) VALUES ('reservation-tiny', 'reservation-tiny', 'reservation-tiny', 0, 1)",
+    );
+    await run(
+      "INSERT INTO plan_limits (plan_id, metric, limit_value) VALUES ('reservation-tiny', 'attachment.storage_bytes', 10)",
+    );
+    await addUser("reservation-user", "reservation-tiny");
+    await addMemo("reservation-memo", "reservation-user");
+
+    // 条件付きINSERTが直列化され、同時要求でも片方だけが容量を確保する。
+    const reservations = await Promise.all(
+      ["a", "b"].map((suffix) =>
+        reserveAttachmentUpload(db, {
+          userId: "reservation-user",
+          memoId: "reservation-memo",
+          r2Key: `tests/reservation-${suffix}`,
+          sizeBytes: 6,
+        }),
+      ),
+    );
+
+    expect(reservations.filter(Boolean)).toHaveLength(1);
+  });
+
+  it("サムネイル容量を利用量へ加算しない", async () => {
+    await addUser("thumbnail-user");
+    await addMemo("thumbnail-memo", "thumbnail-user");
+    await run(
+      `INSERT INTO memo_attachments
+        (id, memo_id, user_id, r2_key, thumbnail_r2_key, thumbnail_content_type, thumbnail_size_bytes, file_name, content_type, size_bytes, etag)
+       VALUES ('thumbnail-attachment', 'thumbnail-memo', 'thumbnail-user', 'tests/original', 'tests/thumbnail', 'image/avif', 1000000, 'image.png', 'image/png', 7, 'etag')`,
+    );
+
+    expect(
+      await getUsage(
+        getAppDb(env),
+        "thumbnail-user",
+        PLAN_METRICS.attachmentStorageBytes,
+      ),
+    ).toBe(7);
+  });
+
+  it("期限切れ予約の原本とサムネイルを回収する", async () => {
+    await addUser("expired-user");
+    await addMemo("expired-memo", "expired-user");
+    const originalKey = "tests/expired-original";
+    const thumbnailKey = "tests/expired-thumbnail";
+    await Promise.all([
+      bucket.put(originalKey, "original"),
+      bucket.put(thumbnailKey, "thumbnail"),
+    ]);
+    await run(
+      `INSERT INTO attachment_upload_reservations
+        (id, user_id, memo_id, r2_key, thumbnail_r2_key, size_bytes, status, expires_at)
+       VALUES ('expired-reservation', 'expired-user', 'expired-memo', ?, ?, 8, 'pending', ?)`,
+      originalKey,
+      thumbnailKey,
+      new Date(Date.now() - 1_000).toISOString(),
+    );
+
+    await cleanupExpiredUploads(env);
+
+    expect(await bucket.head(originalKey)).toBeNull();
+    expect(await bucket.head(thumbnailKey)).toBeNull();
+    expect(
+      await db
+        .prepare("SELECT id FROM attachment_upload_reservations WHERE id = ?")
+        .bind("expired-reservation")
+        .first(),
+    ).toBeNull();
   });
 });

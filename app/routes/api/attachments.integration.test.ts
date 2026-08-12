@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import attachmentsRoute from "./attachments/index";
 import memosRoute from "./memos/index";
 
+const validAvifThumbnail = "\0\0\0\x18ftypavif";
+
 const db = env.MY_MEMO_D1;
 
 async function run(sql: string, ...values: unknown[]) {
@@ -61,7 +63,9 @@ function attachmentForm(
   if (type.startsWith("image/")) {
     form.set(
       "thumbnail",
-      new File(["thumb"], `${name}.thumbnail.avif`, { type: "image/avif" }),
+      new File([validAvifThumbnail], `${name}.thumbnail.avif`, {
+        type: "image/avif",
+      }),
     );
   }
   if (dimensions) {
@@ -368,7 +372,7 @@ describe("添付ファイルAPI", () => {
       "private, max-age=31536000, immutable",
     );
     expect(new TextDecoder().decode(await thumbnail.arrayBuffer())).toBe(
-      "thumb",
+      validAvifThumbnail,
     );
 
     const notModified = await ownerApp.fetch(

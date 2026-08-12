@@ -37,3 +37,24 @@ describe("メモ本文の入力上限", () => {
     ).toBe(false);
   });
 });
+
+describe("メモURLの入力制限", () => {
+  it.each(["https://example.com/path", "http://example.com/"])(
+    "HTTP(S) URL %s を受け付ける",
+    (url) => {
+      expect(memoSchema.create.shape.url.safeParse(url).success).toBe(true);
+      expect(memoSchema.update.shape.url.safeParse(url).success).toBe(true);
+      expect(memoSchema.url.shape.url.safeParse(url).success).toBe(true);
+    },
+  );
+
+  it.each([
+    "javascript:alert(1)",
+    "data:text/html,<script>alert(1)</script>",
+    "https://user:password@example.com/",
+  ])("危険なURL %s を全保存経路で拒否する", (url) => {
+    expect(memoSchema.create.shape.url.safeParse(url).success).toBe(false);
+    expect(memoSchema.update.shape.url.safeParse(url).success).toBe(false);
+    expect(memoSchema.url.shape.url.safeParse(url).success).toBe(false);
+  });
+});

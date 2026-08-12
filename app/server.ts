@@ -2,6 +2,7 @@ import { showRoutes } from "hono/dev";
 import { trimTrailingSlash } from "hono/trailing-slash";
 import { createHono } from "honox/factory";
 import { createApp } from "honox/server";
+import { cleanupExpiredUploads } from "@/features/attachments/server/expired-upload-cleanup";
 import { htmlSecurityHeaders } from "@/security/security-headers";
 import { getAuth } from "./auth";
 
@@ -73,4 +74,13 @@ const app = createApp({ app: baseApp });
 
 showRoutes(app);
 
-export default app;
+export default {
+  fetch: app.fetch.bind(app),
+  scheduled(
+    _controller: ScheduledController,
+    env: CloudflareBindings,
+    ctx: ExecutionContext,
+  ) {
+    ctx.waitUntil(cleanupExpiredUploads(env));
+  },
+};
