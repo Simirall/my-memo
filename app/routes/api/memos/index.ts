@@ -126,7 +126,9 @@ type SummaryStreamEventWriter = (
   payload: SummaryStreamPayload,
 ) => Promise<void>;
 
-type WorkersAiChatStreamPayload = {
+type WorkersAiStreamPayload = {
+  type?: unknown;
+  delta?: unknown;
   response?: unknown;
   choices?: Array<{
     delta?: { content?: unknown };
@@ -134,10 +136,17 @@ type WorkersAiChatStreamPayload = {
   }>;
 };
 
-const getWorkersAiChatText = (payload: unknown) => {
+const getWorkersAiText = (payload: unknown) => {
   if (!payload || typeof payload !== "object") return "";
 
-  const typedPayload = payload as WorkersAiChatStreamPayload;
+  const typedPayload = payload as WorkersAiStreamPayload;
+  if (
+    typedPayload.type === "response.output_text.delta" &&
+    typeof typedPayload.delta === "string"
+  ) {
+    return typedPayload.delta;
+  }
+
   if (typeof typedPayload.response === "string") {
     return typedPayload.response;
   }
@@ -150,7 +159,7 @@ const getWorkersAiChatText = (payload: unknown) => {
   return typeof messageContent === "string" ? messageContent : "";
 };
 
-const readWorkersAiChatStream = async (
+const readWorkersAiTextStream = async (
   aiStream: ReadableStream,
   onText: (text: string) => Promise<void>,
 ) => {
@@ -170,7 +179,7 @@ const readWorkersAiChatStream = async (
       return;
     }
 
-    const text = getWorkersAiChatText(payload);
+    const text = getWorkersAiText(payload);
     if (!text) return;
 
     summary += text;
@@ -201,7 +210,7 @@ const readWorkersAiChatStream = async (
         continue;
       }
 
-      const text = getWorkersAiChatText(value);
+      const text = getWorkersAiText(value);
       if (text) {
         summary += text;
         await onText(text);
@@ -1145,16 +1154,18 @@ memosRoute
               {
                 role: "user" as const,
                 content:
-                  "以下の内容を、日本語で100文字以下の概要と2~5個の箇条書きで、markdown形式にまとめてください。出力のボリュームは内容に応じて変えてください。出力形式は概要と箇条書きのみとすること。\n\n" +
+                  "以下の内容を、日本語で100文字以下の概要と2~5個の箇条書きで、markdown形式にまとめてください。出力のボリュームは内容に応じて変えてください。出力形式は概要と箇条書きのみとすること。「概要」「要約」などのセクション項目名自体は含めないこと。\n\n" +
                   markdown.data,
               },
             ];
 
             await writeEvent("status", { message: "要約を生成しています…" });
 
-            const summary = await readWorkersAiChatStream(
-              await c.env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
+            const summary = await readWorkersAiTextStream(
+              await c.env.AI.run("@cf/openai/gpt-oss-20b", {
                 messages,
+                reasoning_effort: "low",
+                max_completion_tokens: 1024,
                 stream: true,
               }),
               async (text) => writeEvent("chunk", { text }),
