@@ -1,13 +1,11 @@
 日本語で回答してください。
 
-以下の資料を参照してください。
+着手前に次の資料を確認してください。
 
-- [プロジェクトについて](../docs/project.md)
-- [アーキテクチャについて](../docs/architecture.md)
+- [開発手順と文書索引](../README.md)
+- [製品判断](../docs/product-decisions.md)
+- [運用とデータ変更](../docs/operations.md)
+- [Route配置規約](../app/routes/-README.md)
 
-一部のライブラリ、インフラについては AI 向けドキュメント(llms.txt)が提供されています。
-必要に応じて確認し、リンクが記載されていれば fetch を用いて確認して下さい。
-
-- [hono](../docs/lib/hono-llms.txt)
-- [cloudflare](../docs/lib/cloudflare-llms.txt)
-- [daisyui](../docs/lib/daisyui-llms.txt)
+ライブラリやCloudflareの仕様はリポジトリ内へ複製せず、必要な範囲を公式の最新資料で確認してください。
+daisyUIを変更するときは、`.agents/skills/daisyui/`の規約も確認してください。
