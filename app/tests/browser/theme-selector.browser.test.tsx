@@ -1,6 +1,6 @@
 /** @jsxImportSource hono/jsx/dom */
 import { render } from "hono/jsx/dom";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { ThemeSelector } from "@/islands/$theme-selector";
 
@@ -17,11 +17,17 @@ beforeEach(() => {
   meta.name = "color-scheme";
   meta.content = "light dark";
   document.head.appendChild(meta);
+  const themeColor = document.createElement("meta");
+  themeColor.name = "theme-color";
+  themeColor.content = "#20252e";
+  document.head.appendChild(themeColor);
 });
 
 afterEach(() => {
   document.body.replaceChildren();
   document.querySelector('meta[name="color-scheme"]')?.remove();
+  document.querySelector('meta[name="theme-color"]')?.remove();
+  vi.restoreAllMocks();
 });
 
 describe("テーマ切り替え", () => {
@@ -49,6 +55,16 @@ describe("テーマ切り替え", () => {
       "content",
       "dark",
     );
+    expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
+      "content",
+      "#20252e",
+    );
+
+    await userEvent.click(page.getByRole("radio", { name: "ライト" }));
+    expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
+      "content",
+      "#f7f3ed",
+    );
 
     await userEvent.click(page.getByRole("radio", { name: "システム" }));
     expect(document.documentElement).not.toHaveAttribute("data-theme");
@@ -56,6 +72,12 @@ describe("テーマ切り替え", () => {
     expect(document.querySelector('meta[name="color-scheme"]')).toHaveAttribute(
       "content",
       "light dark",
+    );
+    expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
+      "content",
+      matchMedia("(prefers-color-scheme: dark)").matches
+        ? "#20252e"
+        : "#f7f3ed",
     );
   });
 
@@ -66,5 +88,34 @@ describe("テーマ切り替え", () => {
     await expect
       .element(page.getByRole("radio", { name: "ライト" }))
       .toBeChecked();
+  });
+
+  it("システム選択時だけOSの配色変更へ追随する", async () => {
+    const darkMode = new EventTarget() as EventTarget & { matches: boolean };
+    darkMode.matches = false;
+    vi.spyOn(window, "matchMedia").mockReturnValue(
+      darkMode as unknown as MediaQueryList,
+    );
+    renderThemeSelector();
+
+    await expect
+      .element(page.getByRole("radio", { name: "システム" }))
+      .toBeChecked();
+    darkMode.dispatchEvent(
+      Object.assign(new Event("change"), { matches: true }),
+    );
+    expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
+      "content",
+      "#20252e",
+    );
+
+    await userEvent.click(page.getByRole("radio", { name: "ライト" }));
+    darkMode.dispatchEvent(
+      Object.assign(new Event("change"), { matches: true }),
+    );
+    expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
+      "content",
+      "#f7f3ed",
+    );
   });
 });

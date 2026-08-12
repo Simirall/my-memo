@@ -45,7 +45,6 @@ baseApp.use("*", async (c, next) => {
     "/login",
     "/login/callback",
     "/api/auth",
-    "/favicon.ico",
     "/manifest.webmanifest",
     "/robots.txt",
     "/service-worker.js",

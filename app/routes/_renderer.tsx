@@ -28,10 +28,9 @@ export default jsxRenderer(({ children }) => {
         <meta charset="utf-8" />
         <meta content="width=device-width, initial-scale=1.0" name="viewport" />
         <meta content="light dark" name="color-scheme" />
-        <meta content="#f7f3ed" name="theme-color" />
+        <meta content="#20252e" name="theme-color" />
         <link href="/manifest.webmanifest" rel="manifest" />
-        <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
-        <link href="/favicon.ico" rel="alternate icon" />
+        <link href="/icon.svg" rel="icon" type="image/svg+xml" />
         <link href="/icons/apple-touch-icon.png" rel="apple-touch-icon" />
         <script src="/theme-init.js" />
         <Link href="/app/style.css" rel="stylesheet" />

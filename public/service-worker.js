@@ -1,10 +1,8 @@
-const CACHE_NAME = "my-memo-shell-v2";
+const CACHE_NAME = "my-memo-shell-v3";
 const PRECACHE_URLS = [
   "/offline.html",
   "/manifest.webmanifest",
-  "/favicon.svg",
-  "/icons/icon-192.svg",
-  "/icons/icon-512.svg",
+  "/icon.svg",
   "/icons/icon-maskable.svg",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

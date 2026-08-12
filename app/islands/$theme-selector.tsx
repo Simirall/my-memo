@@ -5,6 +5,8 @@ import { useEffect, useState } from "hono/jsx";
 import { PhosphorIcon } from "../components/phosphor-icon";
 
 const THEME_STORAGE_KEY = "my-memo.theme";
+const DARK_THEME_COLOR = "#20252e";
+const LIGHT_THEME_COLOR = "#f7f3ed";
 
 type ThemePreference = "system" | "light" | "dark";
 
@@ -16,16 +18,28 @@ const applyTheme = (preference: ThemePreference) => {
   const colorScheme = document.querySelector<HTMLMetaElement>(
     'meta[name="color-scheme"]',
   );
+  const themeColor = document.querySelector<HTMLMetaElement>(
+    'meta[name="theme-color"]',
+  );
+  const setThemeColor = (isDark: boolean) => {
+    themeColor?.setAttribute(
+      "content",
+      isDark ? DARK_THEME_COLOR : LIGHT_THEME_COLOR,
+    );
+  };
 
   if (preference === "light") {
     root.dataset.theme = "autumn";
     colorScheme?.setAttribute("content", "light");
+    setThemeColor(false);
   } else if (preference === "dark") {
     root.dataset.theme = "dim";
     colorScheme?.setAttribute("content", "dark");
+    setThemeColor(true);
   } else {
     root.removeAttribute("data-theme");
     colorScheme?.setAttribute("content", "light dark");
+    setThemeColor(matchMedia("(prefers-color-scheme: dark)").matches);
   }
 };
 
@@ -48,6 +62,22 @@ export const ThemeSelector = () => {
       isThemePreference(savedPreference) ? savedPreference : "system",
     );
   }, []);
+
+  useEffect(() => {
+    const darkMode = matchMedia("(prefers-color-scheme: dark)");
+    const syncSystemThemeColor = (event: MediaQueryListEvent) => {
+      if (preference === "system") {
+        document
+          .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+          ?.setAttribute(
+            "content",
+            event.matches ? DARK_THEME_COLOR : LIGHT_THEME_COLOR,
+          );
+      }
+    };
+    darkMode.addEventListener("change", syncSystemThemeColor);
+    return () => darkMode.removeEventListener("change", syncSystemThemeColor);
+  }, [preference]);
 
   const selectTheme = (nextPreference: ThemePreference) => {
     setPreference(nextPreference);

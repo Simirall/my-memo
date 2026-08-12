@@ -47,6 +47,11 @@ describe("JavaScript必須の共通レンダラー", () => {
     const script = '<script src="/theme-init.js"></script>';
 
     expect(html).toContain('<meta content="light dark" name="color-scheme"/>');
+    expect(html).toContain('<meta content="#20252e" name="theme-color"/>');
+    expect(html).toContain(
+      '<link href="/icon.svg" rel="icon" type="image/svg+xml"/>',
+    );
+    expect(html).not.toContain("favicon.ico");
     expect(html).toContain(script);
     expect(html.indexOf(script)).toBeLessThan(
       html.indexOf('href="/app/style.css"'),
