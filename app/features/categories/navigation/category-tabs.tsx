@@ -6,7 +6,7 @@ import {
   type MemoListQuery,
 } from "@/features/memos/list/query/memo-list-query";
 
-type Category = z.infer<typeof categorySchema.read>;
+type Category = Pick<z.infer<typeof categorySchema.read>, "id" | "name">;
 
 export const CategoryTabs = ({
   categories,

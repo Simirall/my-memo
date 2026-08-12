@@ -1,8 +1,9 @@
 import { asc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
+import { getUserCategories } from "@/features/categories/data/categories";
 import { getShareIntake } from "@/features/sharing/intake/share-intake";
-import { categoriesTable, tagsTable } from "@/schema";
+import { tagsTable } from "@/schema";
 import CreateMemoForm from "./-components/$create-memo-form";
 
 export default createRoute(async (c) => {
@@ -11,10 +12,7 @@ export default createRoute(async (c) => {
   const db = drizzle(c.env.MY_MEMO_D1);
 
   const [categories, tags] = await Promise.all([
-    db
-      .select()
-      .from(categoriesTable)
-      .where(eq(categoriesTable.userId, user.id)),
+    getUserCategories(c.env.MY_MEMO_D1, user.id),
     db
       .select({ id: tagsTable.id, name: tagsTable.name })
       .from(tagsTable)

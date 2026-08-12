@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
+import { getUserCategories } from "@/features/categories/data/categories";
 import { getSafeMemoListReturnTo } from "@/features/memos/list/query/memo-list-query";
 import * as schema from "@/schema";
 import EditMemoForm from "./-components/$edit-memo-form";
@@ -12,11 +13,7 @@ export default createRoute(async (c) => {
   const memoId = c.req.param("id") ?? "";
   const db = drizzle(c.env.MY_MEMO_D1, { schema });
   const [categories, availableTags, memo] = await Promise.all([
-    db
-      .select()
-      .from(schema.categoriesTable)
-      .where(eq(schema.categoriesTable.userId, user.id))
-      .orderBy(asc(schema.categoriesTable.name)),
+    getUserCategories(c.env.MY_MEMO_D1, user.id),
     db
       .select({ id: schema.tagsTable.id, name: schema.tagsTable.name })
       .from(schema.tagsTable)

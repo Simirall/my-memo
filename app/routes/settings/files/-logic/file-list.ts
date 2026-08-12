@@ -121,7 +121,11 @@ export const getFileCategories = async (db: FileListDb, userId: string) =>
     })
     .from(schema.categoriesTable)
     .where(eq(schema.categoriesTable.userId, userId))
-    .orderBy(asc(schema.categoriesTable.name));
+    .orderBy(
+      asc(schema.categoriesTable.sortOrder),
+      asc(schema.categoriesTable.name),
+      asc(schema.categoriesTable.id),
+    );
 
 export const getMemoExcerpt = (content: string | null, maxLength = 160) => {
   if (content === null) return "";

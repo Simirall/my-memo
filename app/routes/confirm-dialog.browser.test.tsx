@@ -60,15 +60,14 @@ describe("共通確認モーダル", () => {
     mount();
     const opener = page.getByRole("button", { name: "開く" });
     await opener.click();
-    await page
-      .getByRole("dialog", { name: "削除の確認" })
+    const dialog = page.getByRole("dialog", { name: "削除の確認" });
+    const dialogElement = dialog.element() as HTMLDialogElement;
+    await dialog
       .getByRole("button", { name: "キャンセル", exact: true })
       .click();
 
-    expect(document.querySelector<HTMLDialogElement>("dialog")?.open).toBe(
-      false,
-    );
-    expect(document.querySelector("dialog p")?.textContent).toContain(
+    expect(dialogElement.open).toBe(false);
+    expect(dialogElement.querySelector("p")?.textContent).toContain(
       "「テスト」を削除しますか？",
     );
     await expect.poll(() => document.activeElement).toBe(opener.element());
@@ -78,36 +77,35 @@ describe("共通確認モーダル", () => {
     const onConfirm = vi.fn();
     mount(onConfirm);
     await page.getByRole("button", { name: "開く" }).click();
-    await page
-      .getByRole("dialog", { name: "削除の確認" })
-      .getByRole("button", { name: "削除", exact: true })
-      .click();
+    const dialog = page.getByRole("dialog", { name: "削除の確認" });
+    const dialogElement = dialog.element() as HTMLDialogElement;
+    await dialog.getByRole("button", { name: "削除", exact: true }).click();
 
     expect(onConfirm).toHaveBeenCalledOnce();
-    expect(document.querySelector<HTMLDialogElement>("dialog")?.open).toBe(
-      false,
-    );
+    expect(dialogElement.open).toBe(false);
   });
 
   it("Escキーをキャンセルとして扱う", async () => {
     mount();
     await page.getByRole("button", { name: "開く" }).click();
+    const dialogElement = page
+      .getByRole("dialog", { name: "削除の確認" })
+      .element() as HTMLDialogElement;
     await userEvent.keyboard("{Escape}");
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
-    expect(document.querySelector<HTMLDialogElement>("dialog")?.open).toBe(
-      false,
-    );
+    expect(dialogElement.open).toBe(false);
   });
 
   it("背景クリックをキャンセルとして扱う", async () => {
     mount();
     await page.getByRole("button", { name: "開く" }).click();
+    const dialogElement = page
+      .getByRole("dialog", { name: "削除の確認" })
+      .element() as HTMLDialogElement;
     await page.getByRole("button", { name: "削除の確認をキャンセル" }).click();
 
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    expect(document.querySelector<HTMLDialogElement>("dialog")?.open).toBe(
-      false,
-    );
+    expect(dialogElement.open).toBe(false);
   });
 });

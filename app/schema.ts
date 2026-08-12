@@ -244,12 +244,18 @@ export const categoriesTable = sqliteTable(
       .notNull()
       .references(() => userTable.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
     createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
     updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   },
   (table) => [
     index("categories_user_id_idx").on(table.userId),
+    index("categories_user_id_sort_order_idx").on(
+      table.userId,
+      table.sortOrder,
+    ),
     uniqueIndex("categories_user_id_name_unique").on(table.userId, table.name),
+    check("categories_sort_order_non_negative", sql`${table.sortOrder} >= 0`),
   ],
 );
 

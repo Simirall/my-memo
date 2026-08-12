@@ -33,7 +33,7 @@ beforeEach(async () => {
   ]);
 });
 
-describe("初回マイグレーション", () => {
+describe("スキーママイグレーション", () => {
   it("Freeプランと必須の利用上限を初期データとして作成する", async () => {
     const plan = await db
       .prepare(
@@ -108,5 +108,27 @@ describe("初回マイグレーション", () => {
       .prepare("SELECT role FROM user WHERE id = 'first-admin'")
       .first<{ role: string }>();
     expect(user).toEqual({ role: "user" });
+  });
+
+  it("カテゴリー順位の列・インデックス・非負制約を追加する", async () => {
+    await addUser("category-owner");
+    const columns = await db
+      .prepare("PRAGMA table_info('categories')")
+      .all<{ name: string }>();
+    const indexes = await db
+      .prepare("PRAGMA index_list('categories')")
+      .all<{ name: string }>();
+
+    expect(columns.results.map((column) => column.name)).toContain(
+      "sort_order",
+    );
+    expect(indexes.results.map((index) => index.name)).toContain(
+      "categories_user_id_sort_order_idx",
+    );
+    await expect(
+      run(
+        "INSERT INTO categories (id, user_id, name, sort_order) VALUES ('invalid-order', 'category-owner', '不正', -1)",
+      ),
+    ).rejects.toThrow(/categories_sort_order_non_negative/);
   });
 });

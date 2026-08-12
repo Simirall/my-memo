@@ -17,7 +17,9 @@ export default function UrlSummaryForm({
   tags = [],
   initialUrl,
 }: {
-  categories: ReadonlyArray<z.infer<typeof categorySchema.read>>;
+  categories: ReadonlyArray<
+    Pick<z.infer<typeof categorySchema.read>, "id" | "name">
+  >;
   initialCategoryId?: string;
   tags?: ReadonlyArray<Tag>;
   initialUrl?: string;

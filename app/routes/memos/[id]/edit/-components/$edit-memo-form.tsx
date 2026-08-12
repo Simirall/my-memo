@@ -63,7 +63,9 @@ export default function EditMemoForm({
   returnTo,
 }: {
   memo: EditableMemo;
-  categories: ReadonlyArray<z.infer<typeof categorySchema.read>>;
+  categories: ReadonlyArray<
+    Pick<z.infer<typeof categorySchema.read>, "id" | "name">
+  >;
   availableTags: ReadonlyArray<Tag>;
   returnTo: string;
 }) {

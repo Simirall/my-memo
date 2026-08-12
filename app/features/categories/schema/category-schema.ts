@@ -1,4 +1,5 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { z } from "zod";
 import { categoriesTable } from "@/schema";
 
 export const categorySchema = {
@@ -6,5 +7,8 @@ export const categorySchema = {
   create: createInsertSchema(categoriesTable, {
     userId: (schema) => schema.optional(),
     name: (schema) => schema.max(50, "50文字以内で入力してください"),
+  }),
+  reorder: z.object({
+    categoryIds: z.array(z.string().min(1)),
   }),
 };

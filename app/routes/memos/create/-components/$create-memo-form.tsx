@@ -58,7 +58,9 @@ export default function CreateMemoForm({
   initialValues,
   shareIntake,
 }: {
-  categories: ReadonlyArray<z.infer<typeof categorySchema.read>>;
+  categories: ReadonlyArray<
+    Pick<z.infer<typeof categorySchema.read>, "id" | "name">
+  >;
   tags?: ReadonlyArray<Tag>;
   error?: string;
   initialCategoryId?: string;

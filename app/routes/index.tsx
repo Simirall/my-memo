@@ -1,6 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { getCookie } from "hono/cookie";
 import { createRoute } from "honox/factory";
+import { getUserCategories } from "@/features/categories/data/categories";
 import { CategoryTabs } from "@/features/categories/navigation/category-tabs";
 import { scheduleBackgroundTask } from "@/features/link-preview/server/background-task";
 import { maintainLinkPreviewCache } from "@/features/link-preview/server/link-preview-cache";
@@ -32,10 +33,7 @@ export default createRoute(async (c) => {
   const db = getMemoListDb(c.env);
 
   const [categories, tags, usedTags] = await Promise.all([
-    db
-      .select()
-      .from(schema.categoriesTable)
-      .where(eq(schema.categoriesTable.userId, user.id)),
+    getUserCategories(c.env.MY_MEMO_D1, user.id),
     db
       .select({ id: schema.tagsTable.id, name: schema.tagsTable.name })
       .from(schema.tagsTable)

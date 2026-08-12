@@ -1,8 +1,6 @@
-import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
-import { DeleteButton } from "@/islands/$delete-button";
-import { categoriesTable } from "@/schema";
+import { getUserCategories } from "@/features/categories/data/categories";
+import { SortableCategoryList } from "@/islands/$sortable-category-list";
 import { SettingsLayout } from "../-components/settings-layout";
 import { CreateCategoryForm } from "./-components/$create-category-form";
 
@@ -10,11 +8,7 @@ export default createRoute(async (c) => {
   const user = c.get("user");
   if (!user) return c.redirect("/login");
 
-  const db = drizzle(c.env.MY_MEMO_D1);
-  const result = await db
-    .select()
-    .from(categoriesTable)
-    .where(eq(categoriesTable.userId, user.id));
+  const result = await getUserCategories(c.env.MY_MEMO_D1, user.id);
 
   return c.render(
     <SettingsLayout activeSection="categories">
@@ -36,23 +30,7 @@ export default createRoute(async (c) => {
               カテゴリーはまだありません。
             </p>
           ) : (
-            <ul className="list rounded-box bg-base-200">
-              {result.map((category) => (
-                <li className="list-row items-center" key={category.id}>
-                  <a
-                    className="list-col-grow font-semibold hover:underline"
-                    href={`/categories/${category.id}`}
-                  >
-                    {category.name}
-                  </a>
-                  <DeleteButton
-                    action={`/api/categories/delete/${category.id}`}
-                    confirmMessage={`「${category.name}」を削除しますか？`}
-                    label={`カテゴリー「${category.name}」を削除`}
-                  />
-                </li>
-              ))}
-            </ul>
+            <SortableCategoryList initialCategories={result} />
           )}
         </section>
       </div>

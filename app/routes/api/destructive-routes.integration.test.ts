@@ -52,6 +52,20 @@ const post = (app: ReturnType<typeof appForUser>, path: string) =>
     env,
   );
 
+const postJson = (
+  app: ReturnType<typeof appForUser>,
+  path: string,
+  body: unknown,
+) =>
+  app.fetch(
+    new Request(`https://example.test${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+    env,
+  );
+
 beforeEach(async () => {
   await db.batch([
     db.prepare("DELETE FROM memo_tags"),
@@ -166,5 +180,91 @@ describe("破壊操作の所有者分離", () => {
     expect(
       await first("SELECT memo_id FROM memo_tags WHERE memo_id = 'other-memo'"),
     ).not.toBeNull();
+  });
+});
+
+describe("カテゴリーの並べ替え", () => {
+  beforeEach(async () => {
+    await run(
+      "INSERT INTO categories (id, user_id, name, sort_order) VALUES ('first', 'owner', '先頭', 0), ('second', 'owner', '末尾', 1), ('other-category', 'other', '他人', 0)",
+    );
+  });
+
+  it("所有する全カテゴリーを受信順で保存する", async () => {
+    const response = await postJson(
+      appForUser("owner"),
+      "/api/categories/reorder",
+      {
+        categoryIds: ["second", "first"],
+      },
+    );
+
+    expect(response.status).toBe(200);
+    const result = await db
+      .prepare(
+        "SELECT id, sort_order FROM categories WHERE user_id = 'owner' ORDER BY sort_order",
+      )
+      .all();
+    expect(result.results).toEqual([
+      { id: "second", sort_order: 0 },
+      { id: "first", sort_order: 1 },
+    ]);
+  });
+
+  it("新しいカテゴリーを現在の並びの末尾へ追加する", async () => {
+    const response = await appForUser("owner").fetch(
+      new Request("https://example.test/api/categories/create", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ name: "追加" }),
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(302);
+    expect(
+      await first<{ sort_order: number }>(
+        "SELECT sort_order FROM categories WHERE user_id = 'owner' AND name = '追加'",
+      ),
+    ).toEqual({ sort_order: 2 });
+  });
+
+  it("未認証では並び順を更新しない", async () => {
+    const response = await postJson(
+      appForUser(null),
+      "/api/categories/reorder",
+      {
+        categoryIds: ["second", "first"],
+      },
+    );
+
+    expect(response.status).toBe(401);
+    expect(
+      await first<{ sort_order: number }>(
+        "SELECT sort_order FROM categories WHERE id = 'first'",
+      ),
+    ).toEqual({ sort_order: 0 });
+  });
+
+  it.each([
+    ["重複", ["first", "first"]],
+    ["欠落", ["first"]],
+    ["余分", ["first", "second", "missing"]],
+    ["別所有者", ["first", "other-category"]],
+  ])("%sを含むID一覧を拒否する", async (_label, categoryIds) => {
+    const response = await postJson(
+      appForUser("owner"),
+      "/api/categories/reorder",
+      {
+        categoryIds,
+      },
+    );
+
+    expect(response.status).toBe(400);
+    expect(
+      await first<{ sort_order: number }>(
+        "SELECT sort_order FROM categories WHERE id = 'first'",
+      ),
+    ).toEqual({ sort_order: 0 });
   });
 });
