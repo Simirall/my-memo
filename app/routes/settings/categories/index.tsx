@@ -20,6 +20,7 @@ export default createRoute(async (c) => {
         </div>
 
         <CreateCategoryForm
+          created={c.req.query("created") === "1"}
           error={
             c.req.query("error") === "duplicate"
               ? "同じ名前のカテゴリーがすでに登録されています。"

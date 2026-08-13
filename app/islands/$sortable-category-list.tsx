@@ -158,18 +158,38 @@ export const SortableCategoryList = ({
           </li>
         ))}
       </ul>
-      <p
-        aria-live="polite"
-        className={
-          status === "error"
-            ? "text-error text-sm"
-            : "text-base-content/70 text-sm"
-        }
-      >
-        {isSaving && "保存しています…"}
-        {status === "saved" && "保存しました。"}
-        {status === "error" && "保存できませんでした。元の並び順に戻しました。"}
-      </p>
+      <div className="toast toast-end toast-bottom pointer-events-none z-50">
+        {isSaving && (
+          <div
+            aria-atomic="true"
+            aria-live="polite"
+            className="alert alert-soft alert-info pointer-events-auto w-[min(24rem,calc(100vw-2rem))] shadow-lg"
+            role="status"
+          >
+            保存しています…
+          </div>
+        )}
+        {status === "saved" && (
+          <div
+            aria-atomic="true"
+            aria-live="polite"
+            className="alert alert-soft alert-success pointer-events-auto w-[min(24rem,calc(100vw-2rem))] shadow-lg"
+            role="status"
+          >
+            保存しました。
+          </div>
+        )}
+        {status === "error" && (
+          <div
+            aria-atomic="true"
+            aria-live="polite"
+            className="alert alert-soft alert-error pointer-events-auto w-[min(24rem,calc(100vw-2rem))] shadow-lg"
+            role="alert"
+          >
+            保存できませんでした。元の並び順に戻しました。
+          </div>
+        )}
+      </div>
     </div>
   );
 };

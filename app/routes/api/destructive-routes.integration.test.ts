@@ -222,6 +222,9 @@ describe("カテゴリーの並べ替え", () => {
     );
 
     expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(
+      "/settings/categories?created=1",
+    );
     expect(
       await first<{ sort_order: number }>(
         "SELECT sort_order FROM categories WHERE user_id = 'owner' AND name = '追加'",

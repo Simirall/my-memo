@@ -45,7 +45,7 @@ categoriesRoute
       throw error;
     }
 
-    return c.redirect("/settings/categories");
+    return c.redirect("/settings/categories?created=1");
   })
   .post("/reorder", async (c) => {
     const user = c.get("user");
