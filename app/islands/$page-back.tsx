@@ -9,7 +9,11 @@ export default function PageBackButton() {
       href="/"
       onClick={(event) => {
         event.preventDefault();
-        history.back();
+        if (window.history.length <= 1) {
+          location.replace("/");
+        } else {
+          history.back();
+        }
       }}
     >
       <PhosphorIcon
