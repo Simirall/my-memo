@@ -268,3 +268,30 @@ describe("カテゴリーの並べ替え", () => {
     ).toEqual({ sort_order: 0 });
   });
 });
+
+describe("カテゴリーの作成", () => {
+  it("同じ名前のカテゴリーを登録せず、重複通知へ戻す", async () => {
+    await run(
+      "INSERT INTO categories (id, user_id, name, sort_order) VALUES ('existing', 'owner', '仕事', 0)",
+    );
+
+    const response = await appForUser("owner").fetch(
+      new Request("https://example.test/api/categories/create", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ name: "仕事" }),
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(
+      "/settings/categories?error=duplicate",
+    );
+    expect(
+      await first<{ count: number }>(
+        "SELECT COUNT(*) AS count FROM categories WHERE user_id = 'owner' AND name = '仕事'",
+      ),
+    ).toEqual({ count: 1 });
+  });
+});

@@ -19,7 +19,13 @@ export default createRoute(async (c) => {
           <p className="text-base-content/70">カテゴリーを作成・管理します。</p>
         </div>
 
-        <CreateCategoryForm />
+        <CreateCategoryForm
+          error={
+            c.req.query("error") === "duplicate"
+              ? "同じ名前のカテゴリーがすでに登録されています。"
+              : undefined
+          }
+        />
 
         <section aria-labelledby="category-list-heading" className="space-y-3">
           <h2 className="font-bold text-lg" id="category-list-heading">

@@ -1,6 +1,6 @@
 import { useState } from "hono/jsx";
 
-export const CreateCategoryForm = () => {
+export const CreateCategoryForm = ({ error }: { error?: string }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   return (
@@ -12,6 +12,16 @@ export const CreateCategoryForm = () => {
         setIsLoading(true);
       }}
     >
+      {error && (
+        <div
+          aria-live="polite"
+          className="alert alert-error mb-3"
+          id="category-name-error"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
       <fieldset className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <legend className="sr-only">カテゴリーを追加</legend>
         <label className="flex flex-1 flex-col gap-1" htmlFor="category-name">
@@ -22,7 +32,11 @@ export const CreateCategoryForm = () => {
             </span>
           </span>
           <input
-            aria-describedby="category-name-help"
+            aria-describedby={
+              error
+                ? "category-name-help category-name-error"
+                : "category-name-help"
+            }
             className="input w-full"
             id="category-name"
             maxLength={50}

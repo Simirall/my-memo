@@ -7,6 +7,19 @@ import { categoriesTable } from "@/schema";
 
 const categoriesRoute = new Hono<{ Bindings: CloudflareBindings }>();
 
+const isCategoryNameUniqueConstraintError = (error: unknown) => {
+  const cause =
+    error instanceof Error && "cause" in error ? error.cause : undefined;
+  const message = [
+    error instanceof Error ? error.message : "",
+    cause instanceof Error ? cause.message : "",
+  ].join("\n");
+
+  return /unique constraint failed: categories\.user_id, categories\.name/i.test(
+    message,
+  );
+};
+
 categoriesRoute
   .post("/create", zValidator("form", categorySchema.create), async (c) => {
     const user = c.get("user");
@@ -19,11 +32,18 @@ categoriesRoute
       .from(categoriesTable)
       .where(eq(categoriesTable.userId, user.id))
       .get();
-    await db.insert(categoriesTable).values({
-      ...validated,
-      userId: user.id,
-      sortOrder: (currentLast?.sortOrder ?? -1) + 1,
-    });
+    try {
+      await db.insert(categoriesTable).values({
+        ...validated,
+        userId: user.id,
+        sortOrder: (currentLast?.sortOrder ?? -1) + 1,
+      });
+    } catch (error) {
+      if (isCategoryNameUniqueConstraintError(error)) {
+        return c.redirect("/settings/categories?error=duplicate");
+      }
+      throw error;
+    }
 
     return c.redirect("/settings/categories");
   })
