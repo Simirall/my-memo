@@ -2,7 +2,6 @@ import { and, asc, eq } from "drizzle-orm";
 import { getCookie } from "hono/cookie";
 import { createRoute } from "honox/factory";
 import { getUserCategories } from "@/features/categories/data/categories";
-import { CategoryTabs } from "@/features/categories/navigation/category-tabs";
 import { scheduleBackgroundTask } from "@/features/link-preview/server/background-task";
 import { maintainLinkPreviewCache } from "@/features/link-preview/server/link-preview-cache";
 import { Memo } from "@/features/memos/list/card/memo";
@@ -22,6 +21,7 @@ import {
   getEmptyMemoListRedirectUrl,
   parseMemoListQuery,
 } from "@/features/memos/list/query/memo-list-query";
+import CategoryTabs from "@/islands/$category-tabs";
 import * as schema from "@/schema";
 
 export default createRoute(async (c) => {
@@ -84,11 +84,13 @@ export default createRoute(async (c) => {
     <div>
       <title>{result.name} | My Memo</title>
       <h1 className="sr-only">{result.name}</h1>
-      <CategoryTabs
-        activeCategoryId={result.id}
-        categories={categories}
-        query={query}
-      />
+      <div className="w-full [&>honox-island]:block [&>honox-island]:w-full">
+        <CategoryTabs
+          activeCategoryId={result.id}
+          categories={categories}
+          query={query}
+        />
+      </div>
       <div className="mt-4 [&>honox-island]:block [&>honox-island]:w-full">
         <MemoListControls
           action={c.req.path}
