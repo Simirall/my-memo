@@ -74,4 +74,30 @@ describe("JavaScript必須の共通レンダラー", () => {
     expect(html).toContain('aria-label="設定メニューを開く"');
     expect(html).toContain('for="settings-drawer"');
   });
+
+  it.each(["/terms", "/privacy"])(
+    "認証済みでも%sでは再同意ダイアログを重ねない",
+    async (path) => {
+      const app = new Hono();
+      app.use("*", async (c, next) => {
+        c.set("user", {
+          id: "user-1",
+          image: null,
+          name: "テスト利用者",
+        } as never);
+        c.set("session", {} as never);
+        await next();
+      });
+      app.use("*", renderer);
+      app.get(path, (c) => c.render(<p>法的文書</p>));
+
+      const response = await app.request(`https://example.test${path}`);
+      const html = await response.text();
+
+      expect(html).toContain("法的文書");
+      expect(html).not.toContain(
+        "利用規約・プライバシーポリシーが改訂されました",
+      );
+    },
+  );
 });

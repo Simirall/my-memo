@@ -1,6 +1,7 @@
 import type { Child } from "hono/jsx";
 import { useRequestContext } from "hono/jsx-renderer";
 import InstallPrompt from "../islands/$install-prompt";
+import LegalConsentDialog from "../islands/$legal-consent-dialog";
 import PageBackButton from "../islands/$page-back";
 import ScrollToTopButton from "../islands/$scroll-to-top";
 import { Header } from "./header";
@@ -11,6 +12,7 @@ export const RootLayout = ({ children }: { children: Child }) => {
   const isSettingsPage = c.req.path.startsWith("/settings");
   const isTopPage = c.req.path === "/";
   const isLoginPage = c.req.path === "/login";
+  const isLegalPage = c.req.path === "/terms" || c.req.path === "/privacy";
 
   return (
     <>
@@ -30,6 +32,7 @@ export const RootLayout = ({ children }: { children: Child }) => {
       ) : !isLoginPage ? (
         <PageBackButton />
       ) : null}
+      {user && !isLegalPage && <LegalConsentDialog />}
     </>
   );
 };

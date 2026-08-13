@@ -9,7 +9,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ["hono/jsx/dom/jsx-dev-runtime"],
+    include: ["better-auth/client", "hono/jsx/dom/jsx-dev-runtime"],
   },
   test: {
     include: ["app/**/*.browser.test.tsx"],

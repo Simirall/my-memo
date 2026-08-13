@@ -88,7 +88,8 @@ describe("R2削除ジョブ", () => {
 
     expect(
       await processR2DeletionJobs(env, {
-        now: new Date("2026-08-12T00:00:00.000Z"),
+        // 登録直後のジョブがDB既定時刻との秒境界で未来扱いにならないようにする。
+        now: new Date(Date.now() + 1000),
         deleteObject,
       }),
     ).toEqual({ deleted: 2, failed: 0 });

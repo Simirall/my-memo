@@ -5,7 +5,7 @@ export default createRoute((c) => {
   const callbackURL = c.req.query("callbackURL");
 
   return c.render(
-    <div className="space-y-8 text-center">
+    <div className="space-y-8 text-center [&>honox-island]:mx-auto [&>honox-island]:block [&>honox-island]:w-fit">
       <title>ログイン | My Memo</title>
       <h1 className="font-bold text-5xl">My Memo</h1>
       <LoginButton callbackURL={callbackURL} />

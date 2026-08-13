@@ -94,6 +94,7 @@ describe("メモ作成フォーム", () => {
 
     await page.getByLabelText("タイトル").fill("ショートカット送信");
     outsideButton.focus();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     pressCtrlEnter(outsideButton);
 
     await expect.poll(() => fetchSpy.mock.calls.length).toBe(1);

@@ -4,6 +4,7 @@ import { createHono } from "honox/factory";
 import { createApp } from "honox/server";
 import { cleanupExpiredUploads } from "@/features/attachments/server/expired-upload-cleanup";
 import { processR2DeletionJobs } from "@/features/attachments/server/r2-deletion-jobs";
+import { isPublicPath } from "@/security/public-paths";
 import {
   htmlSecurityHeaders,
   sameOriginMutationProtection,
@@ -41,21 +42,7 @@ baseApp.use("*", async (c, next) => {
 baseApp.use("*", async (c, next) => {
   const user = c.get("user");
 
-  const publicPaths = [
-    "/login",
-    "/login/callback",
-    "/api/auth",
-    "/manifest.webmanifest",
-    "/robots.txt",
-    "/service-worker.js",
-    "/share",
-    "/.well-known",
-  ];
-  const isPublic = publicPaths.some(
-    (p) => c.req.path === p || c.req.path.startsWith(p),
-  );
-
-  if (isPublic || user) {
+  if (isPublicPath(c.req.path) || user) {
     await next();
     return;
   } else {

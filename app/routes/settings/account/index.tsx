@@ -56,6 +56,15 @@ export default createRoute((c) => {
           </div>
         </section>
 
+        <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-box bg-base-200 p-6">
+          <a className="link" href="/terms">
+            利用規約
+          </a>
+          <a className="link" href="/privacy">
+            プライバシーポリシー
+          </a>
+        </div>
+
         <InstallPrompt mode="settings" />
       </div>
     </SettingsLayout>,
