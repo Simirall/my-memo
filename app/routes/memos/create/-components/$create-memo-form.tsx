@@ -505,7 +505,9 @@ export default function CreateMemoForm({
       );
       return;
     }
-    window.location.assign(getCreatedMemoListPath(createdMemoCategoryId));
+    window.location.assign(
+      getCreatedMemoListPath(createdMemoCategoryId, initialCategoryId),
+    );
   };
 
   const submit = async (event: Event) => {
@@ -567,7 +569,9 @@ export default function CreateMemoForm({
         const payload = (await response.json()) as { memoId?: string };
         if (!payload.memoId) throw new Error("メモIDを取得できませんでした。");
         if (files.length === 0) {
-          window.location.assign(getCreatedMemoListPath(createdCategoryId));
+          window.location.assign(
+            getCreatedMemoListPath(createdCategoryId, initialCategoryId),
+          );
           return;
         }
 
@@ -585,7 +589,9 @@ export default function CreateMemoForm({
           );
           return;
         }
-        window.location.assign(getCreatedMemoListPath(createdCategoryId));
+        window.location.assign(
+          getCreatedMemoListPath(createdCategoryId, initialCategoryId),
+        );
         return;
       }
       const payload = (await response.json()) as { message?: string };

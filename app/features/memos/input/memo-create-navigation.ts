@@ -1,2 +1,7 @@
-export const getCreatedMemoListPath = (categoryId: string) =>
-  categoryId ? `/categories/${encodeURIComponent(categoryId)}` : "/";
+export const getCreatedMemoListPath = (
+  categoryId: string,
+  sourceCategoryId: string | undefined,
+) =>
+  sourceCategoryId && categoryId
+    ? `/categories/${encodeURIComponent(categoryId)}`
+    : "/";

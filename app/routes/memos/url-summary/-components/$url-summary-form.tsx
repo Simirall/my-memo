@@ -81,7 +81,7 @@ export default function UrlSummaryForm({
         } else if (event === "complete") {
           window.location.assign(
             submittedCategoryId
-              ? getCreatedMemoListPath(submittedCategoryId)
+              ? getCreatedMemoListPath(submittedCategoryId, initialCategoryId)
               : (payload.redirect ?? "/"),
           );
         } else if (event === "error") {
