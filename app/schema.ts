@@ -166,6 +166,33 @@ export const verificationTable = sqliteTable("verification", {
   updatedAt: integer("updated_at", { mode: "timestamp" }),
 });
 
+export const accountDeletionRequestsTable = sqliteTable(
+  "account_deletion_requests",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => userTable.id, { onDelete: "cascade" }),
+    receiptHash: text("receipt_hash").notNull(),
+    status: text("status").notNull().default("processing"),
+    lastFailure: text("last_failure"),
+    requestedAt: text("requested_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("account_deletion_requests_user_unique").on(table.userId),
+    uniqueIndex("account_deletion_requests_receipt_unique").on(
+      table.receiptHash,
+    ),
+    check(
+      "account_deletion_requests_status",
+      sql`${table.status} IN ('processing', 'failed')`,
+    ),
+  ],
+);
+
 // ============================================================
 // アプリケーションテーブル
 // ============================================================

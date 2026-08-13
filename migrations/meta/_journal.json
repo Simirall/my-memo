@@ -15,6 +15,13 @@
       "when": 1786554650106,
       "tag": "0001_outstanding_rhodey",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786598996622,
+      "tag": "0002_clean_mandroid",
+      "breakpoints": true
     }
   ]
 }

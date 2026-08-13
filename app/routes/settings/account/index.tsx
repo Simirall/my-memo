@@ -1,10 +1,25 @@
 import { createRoute } from "honox/factory";
+import { getAccountDeletionStatusForUser } from "@/features/account-deletion/server/account-deletion";
+import AccountDeletion from "@/islands/$account-deletion";
 import InstallPrompt from "@/islands/$install-prompt";
 import { SettingsLayout } from "../-components/settings-layout";
 
-export default createRoute((c) => {
+export default createRoute(async (c) => {
   const user = c.get("user");
   if (!user) return c.redirect("/login");
+
+  const deletion = await getAccountDeletionStatusForUser(
+    c.env.MY_MEMO_D1,
+    user.id,
+  );
+  if (deletion) {
+    return c.render(
+      <SettingsLayout activeSection="account">
+        <title>退会処理中 | My Memo</title>
+        <AccountDeletion initialStatus={deletion.status} />
+      </SettingsLayout>,
+    );
+  }
 
   const avatar = user.image ? (
     <img alt={`${user.name}のアバター`} src={user.image} />
@@ -66,6 +81,9 @@ export default createRoute((c) => {
         </div>
 
         <InstallPrompt mode="settings" />
+
+        <div className="divider" />
+        <AccountDeletion initialStatus={null} />
       </div>
     </SettingsLayout>,
   );

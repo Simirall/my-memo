@@ -8,7 +8,12 @@ const exactPublicPaths = new Set([
   "/service-worker.js",
 ]);
 
-const publicPathPrefixes = ["/api/auth", "/share", "/.well-known"];
+const publicPathPrefixes = [
+  "/api/account-deletion",
+  "/api/auth",
+  "/share",
+  "/.well-known",
+];
 
 export const isPublicPath = (path: string) =>
   exactPublicPaths.has(path) ||

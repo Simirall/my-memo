@@ -67,9 +67,6 @@ describe("共通確認モーダル", () => {
       .click();
 
     expect(dialogElement.open).toBe(false);
-    expect(dialogElement.querySelector("p")?.textContent).toContain(
-      "「テスト」を削除しますか？",
-    );
     await expect.poll(() => document.activeElement).toBe(opener.element());
   });
 

@@ -2,6 +2,7 @@ import { showRoutes } from "hono/dev";
 import { trimTrailingSlash } from "hono/trailing-slash";
 import { createHono } from "honox/factory";
 import { createApp } from "honox/server";
+import { finalizeAccountDeletions } from "@/features/account-deletion/server/account-deletion";
 import { cleanupExpiredUploads } from "@/features/attachments/server/expired-upload-cleanup";
 import { processR2DeletionJobs } from "@/features/attachments/server/r2-deletion-jobs";
 import { isPublicPath } from "@/security/public-paths";
@@ -36,6 +37,25 @@ baseApp.use("*", async (c, next) => {
   c.set("session", session.session);
 
   await next();
+});
+
+baseApp.use("*", async (c, next) => {
+  const user = c.get("user");
+  if (!user) return next();
+  if (
+    c.req.path === "/settings/account" ||
+    c.req.path.startsWith("/api/account-deletion") ||
+    c.req.path.startsWith("/api/auth")
+  ) {
+    return next();
+  }
+  const deletion = await c.env.MY_MEMO_D1.prepare(
+    "SELECT 1 FROM account_deletion_requests WHERE user_id = ?",
+  )
+    .bind(user.id)
+    .first();
+  if (deletion) return c.redirect("/settings/account");
+  return next();
 });
 
 // 未認証の場合はリダイレクトするミドルウェア
@@ -73,7 +93,13 @@ export default {
     ctx: ExecutionContext,
   ) {
     ctx.waitUntil(
-      Promise.all([cleanupExpiredUploads(env), processR2DeletionJobs(env)]),
+      Promise.all([
+        cleanupExpiredUploads(env),
+        (async () => {
+          await processR2DeletionJobs(env);
+          await finalizeAccountDeletions(env);
+        })(),
+      ]),
     );
   },
 };
