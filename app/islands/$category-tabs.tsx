@@ -30,7 +30,7 @@ export default function CategoryTabs({
   return (
     <nav
       aria-label="メモのカテゴリー"
-      className="tabs tabs-box sticky top-20 z-10 flex-nowrap overflow-x-auto bg-base-300/70 shadow backdrop-blur-sm"
+      className="tabs tabs-box flex-nowrap overflow-x-auto bg-base-300/70 shadow backdrop-blur-sm"
       ref={tabsRef}
     >
       <a
