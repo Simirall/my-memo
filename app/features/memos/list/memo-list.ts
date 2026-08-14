@@ -59,7 +59,7 @@ export const getMemoList = async (
     },
     where: and(...conditions),
     orderBy: [order(schema.memosTable.createdAt), order(schema.memosTable.id)],
-    limit: MEMO_LIST_PAGE_SIZE + 1,
+    limit: MEMO_LIST_PAGE_SIZE * 2 + 1,
     offset: (query.page - 1) * MEMO_LIST_PAGE_SIZE,
   });
 
@@ -80,6 +80,7 @@ export const getMemoList = async (
       };
     }),
     hasNextPage: rows.length > MEMO_LIST_PAGE_SIZE,
+    hasPageAfterNext: rows.length > MEMO_LIST_PAGE_SIZE * 2,
     linkPreviewUrlsToRefresh: linkPreviews.urlsToRefresh,
   };
 };

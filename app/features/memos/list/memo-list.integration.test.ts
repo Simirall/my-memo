@@ -191,9 +191,9 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
     ).toEqual(["link", "plain"]);
   });
 
-  it("20件境界で次ページの有無を判定しOFFSETで続きだけを返す", async () => {
+  it("20件と40件の境界で後続ページの有無を判定する", async () => {
     await addUser("owner");
-    for (let index = 1; index <= MEMO_LIST_PAGE_SIZE + 1; index += 1) {
+    for (let index = 1; index <= MEMO_LIST_PAGE_SIZE * 2 + 1; index += 1) {
       await addMemo(
         `memo-${String(index).padStart(2, "0")}`,
         "owner",
@@ -202,19 +202,30 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
     }
 
     const db = getMemoListDb(env);
-    const firstPage = await getMemoList(db, "owner", {
+    const query = {
       sort: "asc",
       page: 1,
-    });
-    const secondPage = await getMemoList(db, "owner", {
-      sort: "asc",
-      page: 2,
-    });
+    } as const;
+    const fortyOneItems = await getMemoList(db, "owner", query);
 
-    expect(firstPage.items).toHaveLength(MEMO_LIST_PAGE_SIZE);
-    expect(firstPage.hasNextPage).toBe(true);
-    expect(memoIds(secondPage)).toEqual(["memo-21"]);
-    expect(secondPage.hasNextPage).toBe(false);
+    expect(fortyOneItems.items).toHaveLength(MEMO_LIST_PAGE_SIZE);
+    expect(fortyOneItems.hasNextPage).toBe(true);
+    expect(fortyOneItems.hasPageAfterNext).toBe(true);
+
+    await run("DELETE FROM memos WHERE id = 'memo-41'");
+    const fortyItems = await getMemoList(db, "owner", query);
+    expect(fortyItems.hasNextPage).toBe(true);
+    expect(fortyItems.hasPageAfterNext).toBe(false);
+
+    await run("DELETE FROM memos WHERE id > 'memo-21'");
+    const twentyOneItems = await getMemoList(db, "owner", query);
+    expect(twentyOneItems.hasNextPage).toBe(true);
+    expect(twentyOneItems.hasPageAfterNext).toBe(false);
+
+    await run("DELETE FROM memos WHERE id = 'memo-21'");
+    const twentyItems = await getMemoList(db, "owner", query);
+    expect(twentyItems.hasNextPage).toBe(false);
+    expect(twentyItems.hasPageAfterNext).toBe(false);
   });
 
   it("一覧スコープで実際に使われている自分のタグだけを返す", async () => {

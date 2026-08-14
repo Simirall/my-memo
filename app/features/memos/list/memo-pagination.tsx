@@ -6,10 +6,12 @@ const pageUrl = (pathname: string, query: MemoListQuery, page: number) =>
 
 export const MemoPagination = ({
   hasNextPage,
+  hasPageAfterNext,
   pathname,
   query,
 }: {
   hasNextPage: boolean;
+  hasPageAfterNext: boolean;
   pathname: string;
   query: MemoListQuery;
 }) => {
@@ -78,6 +80,16 @@ export const MemoPagination = ({
           >
             {query.page + 1}
           </a>
+        )}
+        {hasPageAfterNext && (
+          <button
+            aria-label="さらに後続のページがあります"
+            className="btn join-item"
+            disabled
+            type="button"
+          >
+            …
+          </button>
         )}
         {hasNextPage ? (
           <a

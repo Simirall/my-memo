@@ -124,6 +124,7 @@ export default createRoute(async (c) => {
       )}
       <MemoPagination
         hasNextPage={memos.hasNextPage}
+        hasPageAfterNext={memos.hasPageAfterNext}
         pathname={c.req.path}
         query={query}
       />

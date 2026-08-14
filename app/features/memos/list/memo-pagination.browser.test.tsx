@@ -20,6 +20,7 @@ describe("メモ一覧ページング", () => {
     const container = renderPagination(
       <MemoPagination
         hasNextPage={false}
+        hasPageAfterNext={false}
         pathname="/"
         query={{ sort: "desc", page: 1 }}
       />,
@@ -28,10 +29,11 @@ describe("メモ一覧ページング", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("先頭ページでは次ページだけを表示して条件を維持する", async () => {
+  it("先頭ページでは次ページと後続の存在を表示して条件を維持する", async () => {
     renderPagination(
       <MemoPagination
         hasNextPage
+        hasPageAfterNext
         pathname="/"
         query={{ sort: "asc", page: 1, type: "ai" }}
       />,
@@ -46,12 +48,35 @@ describe("メモ一覧ページング", () => {
     await expect
       .element(page.getByRole("button", { name: "前へ" }))
       .toBeDisabled();
+    await expect
+      .element(
+        page.getByRole("button", { name: "さらに後続のページがあります" }),
+      )
+      .toBeDisabled();
+  });
+
+  it("次の次のページがない場合は後続ページの省略表示を出さない", async () => {
+    renderPagination(
+      <MemoPagination
+        hasNextPage
+        hasPageAfterNext={false}
+        pathname="/"
+        query={{ sort: "desc", page: 1 }}
+      />,
+    );
+
+    await expect
+      .element(
+        page.getByRole("button", { name: "さらに後続のページがあります" }),
+      )
+      .not.toBeInTheDocument();
   });
 
   it("深いページでは先頭・省略・過去2ページ・現在・次だけを表示する", async () => {
     renderPagination(
       <MemoPagination
         hasNextPage
+        hasPageAfterNext={false}
         pathname="/categories/category-1"
         query={{ sort: "desc", page: 6, tag: "tag-1" }}
       />,
@@ -78,6 +103,7 @@ describe("メモ一覧ページング", () => {
     renderPagination(
       <MemoPagination
         hasNextPage={false}
+        hasPageAfterNext={false}
         pathname="/"
         query={{ sort: "desc", page: 3 }}
       />,
