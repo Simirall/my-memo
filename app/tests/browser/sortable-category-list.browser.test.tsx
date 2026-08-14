@@ -123,3 +123,121 @@ describe("カテゴリー並べ替え", () => {
     expect(categoryOrder()).toEqual(["first", "second"]);
   });
 });
+
+describe("カテゴリー名の変更", () => {
+  it("削除ボタンの左に編集ボタンを置き、現在名を選択して開く", async () => {
+    mount();
+
+    const editButton = page.getByRole("button", {
+      name: "カテゴリー「先頭」を編集",
+    });
+    const editElement = await editButton.element();
+    expect(editElement.nextElementSibling?.tagName).toBe("FORM");
+
+    await userEvent.click(editButton);
+    await expect
+      .element(page.getByRole("dialog", { name: "カテゴリー名を変更" }))
+      .toBeVisible();
+    const input = page.getByRole("textbox", { name: "カテゴリー名" });
+    await expect.element(input).toHaveValue("先頭");
+    await expect.element(input).toHaveFocus();
+  });
+
+  it("キャンセル・Escape・背景クリックで閉じてフォーカスを戻す", async () => {
+    mount();
+    const editButton = page.getByRole("button", {
+      name: "カテゴリー「先頭」を編集",
+    });
+    const dialogIsOpen = () =>
+      document.querySelector<HTMLDialogElement>("dialog")?.open;
+
+    await userEvent.click(editButton);
+    await userEvent.click(
+      page.getByRole("button", { name: "キャンセル", exact: true }),
+    );
+    await expect.poll(dialogIsOpen).toBe(false);
+    await expect.element(editButton).toHaveFocus();
+
+    await userEvent.click(editButton);
+    await userEvent.keyboard("{Escape}");
+    await expect.poll(dialogIsOpen).toBe(false);
+    await expect.element(editButton).toHaveFocus();
+
+    await userEvent.click(editButton);
+    await userEvent.click(
+      page.getByRole("button", { name: "カテゴリー名の変更をキャンセル" }),
+    );
+    await expect.poll(dialogIsOpen).toBe(false);
+    await expect.element(editButton).toHaveFocus();
+  });
+
+  it("保存成功時は一覧を更新して完了を通知する", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, name: "更新後" }), {
+        status: 200,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    mount();
+
+    await userEvent.click(
+      page.getByRole("button", { name: "カテゴリー「先頭」を編集" }),
+    );
+    await page
+      .getByRole("textbox", { name: "カテゴリー名" })
+      .fill("  更新後  ");
+    await userEvent.click(page.getByRole("button", { name: "保存" }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/categories/rename/first",
+      expect.objectContaining({
+        body: JSON.stringify({ name: "  更新後  " }),
+      }),
+    );
+    await expect
+      .element(page.getByRole("link", { name: "更新後" }))
+      .toBeVisible();
+    await expect
+      .element(page.getByText("カテゴリー名を変更しました。"))
+      .toBeVisible();
+  });
+
+  it("保存失敗時はモーダルと入力値を保持して再送信できる", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            message: "同じ名前のカテゴリーがすでに登録されています。",
+          }),
+          { status: 409 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true, name: "別の名前" }), {
+          status: 200,
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    mount();
+
+    await userEvent.click(
+      page.getByRole("button", { name: "カテゴリー「先頭」を編集" }),
+    );
+    const input = page.getByRole("textbox", { name: "カテゴリー名" });
+    await input.fill("末尾");
+    await userEvent.click(page.getByRole("button", { name: "保存" }));
+
+    await expect
+      .element(page.getByRole("alert"))
+      .toHaveTextContent("同じ名前のカテゴリーがすでに登録されています。");
+    await expect.element(input).toHaveValue("末尾");
+
+    await input.fill("別の名前");
+    await userEvent.click(page.getByRole("button", { name: "保存" }));
+    await expect
+      .element(page.getByRole("link", { name: "別の名前" }))
+      .toBeVisible();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});

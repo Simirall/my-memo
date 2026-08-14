@@ -1,4 +1,5 @@
 import dotsSixVerticalIcon from "@phosphor-icons/core/assets/regular/dots-six-vertical.svg?raw";
+import pencilSimpleIcon from "@phosphor-icons/core/assets/regular/pencil-simple.svg?raw";
 import { useEffect, useRef, useState } from "hono/jsx";
 import type { z } from "zod";
 import { PhosphorIcon } from "@/components/phosphor-icon";
@@ -36,15 +37,47 @@ export const SortableCategoryList = ({
   const [draggingId, setDraggingId] = useState<string | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
+  const [editing, setEditing] = useState<Category | undefined>(undefined);
+  const [editingName, setEditingName] = useState("");
+  const [editError, setEditError] = useState<string | undefined>(undefined);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameSaved, setRenameSaved] = useState(false);
   const dragStartRef = useRef<Category[]>([]);
   const dragCurrentRef = useRef<Category[]>([]);
   const draggedIdRef = useRef<string | undefined>(undefined);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const editOpenerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (status !== "saved") return;
     const timeout = window.setTimeout(() => setStatus("idle"), 2000);
     return () => window.clearTimeout(timeout);
   }, [status]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (editing && !dialog.open) {
+      dialog.showModal();
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+    } else if (!editing && dialog.open) {
+      dialog.close();
+    }
+  }, [editing]);
+
+  useEffect(() => {
+    if (!renameSaved) return;
+    const timeout = window.setTimeout(() => setRenameSaved(false), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [renameSaved]);
+
+  const closeEditor = () => {
+    if (isRenaming) return;
+    setEditing(undefined);
+    setEditError(undefined);
+  };
 
   const save = async (next: Category[], previous: Category[]) => {
     setCategories(next);
@@ -150,6 +183,21 @@ export const SortableCategoryList = ({
             >
               {category.name}
             </a>
+            <button
+              aria-label={`カテゴリー「${category.name}」を編集`}
+              className="btn btn-soft"
+              disabled={isSaving}
+              onClick={(event) => {
+                editOpenerRef.current =
+                  event.currentTarget as HTMLButtonElement;
+                setEditing(category);
+                setEditingName(category.name);
+                setEditError(undefined);
+              }}
+              type="button"
+            >
+              <PhosphorIcon svg={pencilSimpleIcon} />
+            </button>
             <DeleteButton
               action={`/api/categories/delete/${category.id}`}
               confirmMessage={`「${category.name}」を削除しますか？`}
@@ -158,6 +206,121 @@ export const SortableCategoryList = ({
           </li>
         ))}
       </ul>
+      <dialog
+        aria-label="カテゴリー名を変更"
+        className="modal modal-middle"
+        closedby="any"
+        onCancel={(event: Event) => {
+          event.preventDefault();
+          closeEditor();
+        }}
+        onClose={() => {
+          if (editing) closeEditor();
+          editOpenerRef.current?.focus();
+          editOpenerRef.current = null;
+        }}
+        ref={dialogRef}
+      >
+        <div className="modal-box">
+          <h2 className="font-bold text-lg">カテゴリー名を変更</h2>
+          <form
+            className="mt-4 space-y-4"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (!editing || isRenaming) return;
+              setIsRenaming(true);
+              setEditError(undefined);
+              try {
+                const response = await fetch(
+                  `/api/categories/rename/${editing.id}`,
+                  {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ name: editingName }),
+                  },
+                );
+                const result = (await response.json().catch(() => ({}))) as {
+                  message?: string;
+                  name?: string;
+                };
+                if (!response.ok || !result.name) {
+                  throw new Error(result.message ?? "保存できませんでした。");
+                }
+                setCategories((current) =>
+                  current.map((category) =>
+                    category.id === editing.id
+                      ? { ...category, name: result.name as string }
+                      : category,
+                  ),
+                );
+                setEditing(undefined);
+                setRenameSaved(true);
+              } catch (error) {
+                setEditError(
+                  error instanceof Error
+                    ? error.message
+                    : "保存できませんでした。",
+                );
+              } finally {
+                setIsRenaming(false);
+              }
+            }}
+          >
+            {editError && (
+              <div className="alert alert-error" role="alert">
+                {editError}
+              </div>
+            )}
+            <label className="flex flex-col gap-1" htmlFor="edit-category-name">
+              <span>カテゴリー名</span>
+              <input
+                className="input w-full"
+                disabled={isRenaming}
+                id="edit-category-name"
+                maxLength={50}
+                onInput={(event) =>
+                  setEditingName(
+                    (event.currentTarget as HTMLInputElement).value,
+                  )
+                }
+                ref={editInputRef}
+                required
+                type="text"
+                value={editingName}
+              />
+            </label>
+            <p className="text-base-content/70 text-sm">
+              50文字以内で入力してください。
+            </p>
+            <div className="modal-action">
+              <button
+                className="btn"
+                disabled={isRenaming}
+                onClick={closeEditor}
+                type="button"
+              >
+                キャンセル
+              </button>
+              <button className="btn" disabled={isRenaming} type="submit">
+                {isRenaming ? (
+                  <span className="loading loading-spinner" />
+                ) : (
+                  "保存"
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+        <button
+          aria-label="カテゴリー名の変更をキャンセル"
+          className="modal-backdrop"
+          disabled={isRenaming}
+          onClick={closeEditor}
+          type="button"
+        >
+          キャンセル
+        </button>
+      </dialog>
       <div className="toast toast-end toast-bottom pointer-events-none z-50">
         {isSaving && (
           <div
@@ -187,6 +350,16 @@ export const SortableCategoryList = ({
             role="alert"
           >
             保存できませんでした。元の並び順に戻しました。
+          </div>
+        )}
+        {renameSaved && (
+          <div
+            aria-atomic="true"
+            aria-live="polite"
+            className="alert alert-soft alert-success pointer-events-auto w-[min(24rem,calc(100vw-2rem))] shadow-lg"
+            role="status"
+          >
+            カテゴリー名を変更しました。
           </div>
         )}
       </div>

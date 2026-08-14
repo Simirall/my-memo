@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, eq, max } from "drizzle-orm";
+import { and, eq, max, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { categorySchema } from "@/features/categories/schema/category-schema";
@@ -46,6 +46,58 @@ categoriesRoute
     }
 
     return c.redirect("/settings/categories?created=1");
+  })
+  .post("/rename/:id", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.json({ message: "認証が必要です。" }, 401);
+
+    const body = await c.req.json().catch(() => null);
+    const parsed = categorySchema.rename.safeParse(body);
+    if (!parsed.success) {
+      return c.json(
+        { message: parsed.error.issues[0]?.message ?? "入力が不正です。" },
+        400,
+      );
+    }
+
+    const db = drizzle(c.env.MY_MEMO_D1);
+    const id = c.req.param("id");
+    const category = await db
+      .select({ name: categoriesTable.name })
+      .from(categoriesTable)
+      .where(
+        and(eq(categoriesTable.id, id), eq(categoriesTable.userId, user.id)),
+      )
+      .get();
+
+    if (!category) {
+      return c.json({ message: "カテゴリーが見つかりません。" }, 404);
+    }
+    if (category.name === parsed.data.name) {
+      return c.json({ ok: true, name: category.name });
+    }
+
+    try {
+      await db
+        .update(categoriesTable)
+        .set({
+          name: parsed.data.name,
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        })
+        .where(
+          and(eq(categoriesTable.id, id), eq(categoriesTable.userId, user.id)),
+        );
+    } catch (error) {
+      if (isCategoryNameUniqueConstraintError(error)) {
+        return c.json(
+          { message: "同じ名前のカテゴリーがすでに登録されています。" },
+          409,
+        );
+      }
+      throw error;
+    }
+
+    return c.json({ ok: true, name: parsed.data.name });
   })
   .post("/reorder", async (c) => {
     const user = c.get("user");

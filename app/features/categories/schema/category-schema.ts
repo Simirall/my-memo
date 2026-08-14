@@ -6,7 +6,18 @@ export const categorySchema = {
   read: createSelectSchema(categoriesTable),
   create: createInsertSchema(categoriesTable, {
     userId: (schema) => schema.optional(),
-    name: (schema) => schema.max(50, "50文字以内で入力してください"),
+    name: (schema) =>
+      schema
+        .trim()
+        .min(1, "カテゴリー名を入力してください")
+        .max(50, "50文字以内で入力してください"),
+  }),
+  rename: z.object({
+    name: z
+      .string()
+      .trim()
+      .min(1, "カテゴリー名を入力してください")
+      .max(50, "50文字以内で入力してください"),
   }),
   reorder: z.object({
     categoryIds: z.array(z.string().min(1)),

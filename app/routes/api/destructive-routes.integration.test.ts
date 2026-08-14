@@ -273,6 +273,25 @@ describe("カテゴリーの並べ替え", () => {
 });
 
 describe("カテゴリーの作成", () => {
+  it("前後の空白を除いて登録し、空白だけの名前を拒否する", async () => {
+    const app = appForUser("owner");
+    const create = (name: string) =>
+      app.fetch(
+        new Request("https://example.test/api/categories/create", {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ name }),
+        }),
+        env,
+      );
+
+    expect((await create("  仕事  ")).status).toBe(302);
+    expect(
+      await first("SELECT id FROM categories WHERE name = '仕事'"),
+    ).not.toBeNull();
+    expect((await create("   ")).status).toBe(400);
+  });
+
   it("同じ名前のカテゴリーを登録せず、重複通知へ戻す", async () => {
     await run(
       "INSERT INTO categories (id, user_id, name, sort_order) VALUES ('existing', 'owner', '仕事', 0)",
@@ -296,5 +315,97 @@ describe("カテゴリーの作成", () => {
         "SELECT COUNT(*) AS count FROM categories WHERE user_id = 'owner' AND name = '仕事'",
       ),
     ).toEqual({ count: 1 });
+  });
+});
+
+describe("カテゴリー名の変更", () => {
+  beforeEach(async () => {
+    await run(
+      "INSERT INTO categories (id, user_id, name) VALUES ('own-category', 'owner', '仕事'), ('duplicate', 'owner', '個人'), ('other-category', 'other', '他人')",
+    );
+  });
+
+  it("所有するカテゴリー名の前後空白を除いて変更する", async () => {
+    const response = await postJson(
+      appForUser("owner"),
+      "/api/categories/rename/own-category",
+      { name: "  新しい仕事  " },
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, name: "新しい仕事" });
+    expect(
+      await first<{ name: string }>(
+        "SELECT name FROM categories WHERE id = 'own-category'",
+      ),
+    ).toEqual({ name: "新しい仕事" });
+  });
+
+  it("未認証・別所有者・存在しないカテゴリーを変更しない", async () => {
+    expect(
+      (
+        await postJson(
+          appForUser(null),
+          "/api/categories/rename/own-category",
+          { name: "変更" },
+        )
+      ).status,
+    ).toBe(401);
+    expect(
+      (
+        await postJson(
+          appForUser("owner"),
+          "/api/categories/rename/other-category",
+          { name: "変更" },
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await postJson(appForUser("owner"), "/api/categories/rename/missing", {
+          name: "変更",
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      await first<{ name: string }>(
+        "SELECT name FROM categories WHERE id = 'other-category'",
+      ),
+    ).toEqual({ name: "他人" });
+  });
+
+  it.each([
+    ["空白のみ", "   "],
+    ["50文字超過", "あ".repeat(51)],
+  ])("%sの名前を拒否する", async (_label, name) => {
+    const response = await postJson(
+      appForUser("owner"),
+      "/api/categories/rename/own-category",
+      { name },
+    );
+
+    expect(response.status).toBe(400);
+    expect(
+      await first<{ name: string }>(
+        "SELECT name FROM categories WHERE id = 'own-category'",
+      ),
+    ).toEqual({ name: "仕事" });
+  });
+
+  it("重複名を拒否し、同じ名前は成功として扱う", async () => {
+    const duplicate = await postJson(
+      appForUser("owner"),
+      "/api/categories/rename/own-category",
+      { name: "個人" },
+    );
+    expect(duplicate.status).toBe(409);
+
+    const unchanged = await postJson(
+      appForUser("owner"),
+      "/api/categories/rename/own-category",
+      { name: "仕事" },
+    );
+    expect(unchanged.status).toBe(200);
+    expect(await unchanged.json()).toEqual({ ok: true, name: "仕事" });
   });
 });
