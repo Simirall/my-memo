@@ -29,7 +29,10 @@ const attachment = {
   createdAt: "2026-08-02 00:00:00",
 };
 
-function mount(content: string | null = "AI本文") {
+function mount(
+  content: string | null = "AI本文",
+  url: string | null = "https://example.com",
+) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   render(
@@ -40,7 +43,7 @@ function mount(content: string | null = "AI本文") {
         id: "memo-1",
         title: "AIタイトル",
         content,
-        url: "https://example.com",
+        url,
         categoryId: category.id,
         isAiSummary: 1,
         tags: [{ id: "tag-1", name: "既存タグ" }],
@@ -204,6 +207,96 @@ describe("メモ編集フォーム", () => {
       .element(page.getByLabelText("カテゴリー"))
       .toHaveValue("category-1");
     await expect.element(page.getByText("資料.txt")).toBeVisible();
+  });
+
+  it("AI要約の再生成前に消費回数を確認しキャンセルできる", async () => {
+    const fetchMock = vi.spyOn(window, "fetch");
+    mount();
+
+    const regenerateButton = page.getByRole("button", { name: "再生成" });
+    await regenerateButton.click();
+
+    const dialog = page.getByRole("dialog", { name: "AI要約の再生成" });
+    await expect.element(dialog).toBeVisible();
+    await expect
+      .element(page.getByText("再要約しますか？AI要約回数を1消費します。"))
+      .toBeVisible();
+    await dialog
+      .getByRole("button", { name: "キャンセル", exact: true })
+      .click();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(regenerateButton.element());
+  });
+
+  it("保存済みURLがないAI要約では再生成を無効にする", async () => {
+    mount("AI本文", null);
+
+    await expect
+      .element(page.getByRole("button", { name: "再生成" }))
+      .toBeDisabled();
+    await expect
+      .element(page.getByText("再生成には保存済みの関連URLが必要です。"))
+      .toBeVisible();
+  });
+
+  it("再生成した本文だけを反映し他の未保存編集を保持する", async () => {
+    let resolveResponse: ((response: Response) => void) | undefined;
+    const response = new Promise<Response>((resolve) => {
+      resolveResponse = resolve;
+    });
+    const fetchMock = vi.spyOn(window, "fetch").mockReturnValue(response);
+    mount();
+    await page.getByLabelText("タイトル").fill("未保存タイトル");
+    await page.getByLabelText("関連URL").fill("https://draft.example.com");
+    await page.getByLabelText("本文").fill("未保存本文");
+
+    await page.getByRole("button", { name: "再生成" }).click();
+    await page.getByRole("button", { name: "再要約する" }).click();
+
+    const loadingButton = page.getByRole("button", {
+      name: "再要約しています…",
+    });
+    await expect.element(loadingButton).toBeDisabled();
+    await expect
+      .element(page.getByRole("button", { name: "更新" }))
+      .toBeDisabled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    resolveResponse?.(Response.json({ content: "新しいAI要約" }));
+
+    await expect
+      .element(page.getByLabelText("本文"))
+      .toHaveValue("新しいAI要約");
+    await expect
+      .element(page.getByLabelText("タイトル"))
+      .toHaveValue("未保存タイトル");
+    await expect
+      .element(page.getByLabelText("関連URL"))
+      .toHaveValue("https://draft.example.com");
+    await expect
+      .element(page.getByRole("status"))
+      .toHaveTextContent("AI要約を再生成しました。");
+  });
+
+  it("再生成失敗時は旧本文を保持して再操作できる", async () => {
+    vi.spyOn(window, "fetch").mockResolvedValue(
+      Response.json(
+        { message: "AI要約の今月の上限に達しています。" },
+        { status: 403 },
+      ),
+    );
+    mount();
+
+    await page.getByRole("button", { name: "再生成" }).click();
+    await page.getByRole("button", { name: "再要約する" }).click();
+
+    await expect.element(page.getByLabelText("本文")).toHaveValue("AI本文");
+    await expect
+      .element(page.getByRole("alert"))
+      .toHaveTextContent("AI要約の今月の上限に達しています。");
+    await expect
+      .element(page.getByRole("button", { name: "再生成" }))
+      .toBeEnabled();
   });
 
   it("タグと添付の変更を更新前の下書きとして保持する", async () => {

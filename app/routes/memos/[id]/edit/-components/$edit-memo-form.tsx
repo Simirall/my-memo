@@ -70,7 +70,8 @@ export default function EditMemoForm({
   returnTo: string;
 }) {
   const [title, setTitle] = useState(memo.title);
-  const [content, setContent] = useState(memo.content ?? "");
+  const [savedContent, setSavedContent] = useState(memo.content ?? "");
+  const [content, setContent] = useState(savedContent);
   const [url, setUrl] = useState(memo.url ?? "");
   const [categoryId, setCategoryId] = useState(memo.categoryId ?? "");
   const [tags, setTags] = useState<Tag[]>([...memo.tags]);
@@ -84,6 +85,8 @@ export default function EditMemoForm({
   const [status, setStatus] = useState<string>();
   const [isCheckingFiles, setIsCheckingFiles] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isRegenerateConfirmOpen, setIsRegenerateConfirmOpen] = useState(false);
   const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
   const isLeavingAfterSave = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -93,7 +96,7 @@ export default function EditMemoForm({
     ((event: ClipboardEvent) => Promise<void>) | undefined
   >(undefined);
 
-  useFormSubmitShortcut(formRef, isSaving || isCheckingFiles);
+  useFormSubmitShortcut(formRef, isSaving || isCheckingFiles || isRegenerating);
 
   const deletedBytes = attachments
     .filter((attachment) => deletedAttachmentIds.includes(attachment.id))
@@ -103,7 +106,7 @@ export default function EditMemoForm({
   );
   const isDirty =
     title !== memo.title ||
-    content !== (memo.content ?? "") ||
+    content !== savedContent ||
     url !== (memo.url ?? "") ||
     categoryId !== (memo.categoryId ?? "") ||
     JSON.stringify(toTagNames(tags)) !==
@@ -385,6 +388,35 @@ export default function EditMemoForm({
     setIsDiscardConfirmOpen(true);
   };
 
+  const regenerateSummary = async () => {
+    setIsRegenerateConfirmOpen(false);
+    if (isRegenerating || !memo.url) return;
+    setError(undefined);
+    setStatus(undefined);
+    setIsRegenerating(true);
+    try {
+      const response = await fetch(`/api/memos/${memo.id}/regenerate-summary`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        content?: string;
+        message?: string;
+      };
+      if (!response.ok || typeof payload.content !== "string") {
+        setError(payload.message ?? "AI要約を再生成できませんでした。");
+        return;
+      }
+      setContent(payload.content);
+      setSavedContent(payload.content);
+      setStatus("AI要約を再生成しました。");
+    } catch {
+      setError("通信に失敗しました。もう一度お試しください。");
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   return (
     <form
       className="flex flex-col gap-4"
@@ -392,7 +424,31 @@ export default function EditMemoForm({
       onSubmit={submit}
       ref={formRef}
     >
-      {memo.isAiSummary === 1 && <div className="badge">✨ AI要約</div>}
+      {memo.isAiSummary === 1 && (
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="badge">✨ AI要約</div>
+            <button
+              aria-describedby={memo.url ? undefined : "regenerate-url-help"}
+              className="btn btn-sm"
+              disabled={!memo.url || isRegenerating || isSaving}
+              onClick={() => setIsRegenerateConfirmOpen(true)}
+              type="button"
+            >
+              {isRegenerating && <span className="loading loading-spinner" />}
+              {isRegenerating ? "再要約しています…" : "再生成"}
+            </button>
+          </div>
+          {!memo.url && (
+            <p
+              className="mt-1 text-base-content/70 text-sm"
+              id="regenerate-url-help"
+            >
+              再生成には保存済みの関連URLが必要です。
+            </p>
+          )}
+        </div>
+      )}
       {error && (
         <div aria-live="polite" className="alert alert-error" role="alert">
           {error}
@@ -598,12 +654,20 @@ export default function EditMemoForm({
         </a>
         <button
           className="btn btn-primary flex-1"
-          disabled={isSaving || isCheckingFiles}
+          disabled={isSaving || isCheckingFiles || isRegenerating}
           type="submit"
         >
           {isSaving ? <span className="loading loading-spinner" /> : "更新"}
         </button>
       </div>
+      <ConfirmDialog
+        confirmLabel="再要約する"
+        description="再要約しますか？AI要約回数を1消費します。"
+        onCancel={() => setIsRegenerateConfirmOpen(false)}
+        onConfirm={() => void regenerateSummary()}
+        open={isRegenerateConfirmOpen}
+        title="AI要約の再生成"
+      />
       <ConfirmDialog
         confirmLabel="破棄"
         description="未保存の変更を破棄しますか？"

@@ -229,6 +229,59 @@ const readWorkersAiTextStream = async (
   return summary;
 };
 
+type GeneratedUrlSummary =
+  | {
+      ok: true;
+      summary: string;
+      title: string | undefined;
+      htmlText: string;
+      finalUrl: string;
+    }
+  | { ok: false; message: string };
+
+const generateUrlSummary = async (
+  env: CloudflareBindings,
+  url: string,
+  onText: (text: string) => Promise<void>,
+): Promise<GeneratedUrlSummary> => {
+  const fetchedHtml = await fetchPublicHtml(url);
+  const htmlText = decodeLinkPreviewHtml(
+    fetchedHtml.bytes,
+    fetchedHtml.headers,
+  );
+  const [markdown] = await env.AI.toMarkdown([
+    {
+      name: url,
+      blob: new Blob([htmlText], { type: "text/html; charset=utf-8" }),
+    },
+  ]);
+  if (markdown.format === "error") {
+    return { ok: false, message: "ページを要約できませんでした。" };
+  }
+
+  const title = markdown.data.match(/\s*title:\s*(?<title>.+?)\s*\n[\s\S]*?/m)
+    ?.groups?.title;
+  const summary = await readWorkersAiTextStream(
+    await env.AI.run("@cf/openai/gpt-oss-20b", {
+      messages: [
+        {
+          role: "user",
+          content:
+            "以下の内容を、日本語で100文字以下の概要と2~5個の箇条書きで、markdown形式にまとめてください。出力のボリュームは内容に応じて変えてください。出力形式は概要と箇条書きのみとすること。「概要」「要約」などのセクション項目名自体は含めないこと。\n\n" +
+            markdown.data,
+        },
+      ],
+      reasoning_effort: "low",
+      max_completion_tokens: 1024,
+      stream: true,
+    }),
+    onText,
+  );
+  return summary
+    ? { ok: true, summary, title, htmlText, finalUrl: fetchedHtml.finalUrl }
+    : { ok: false, message: "AI要約を作成できませんでした。" };
+};
+
 memosRoute
   .post("/create", zValidator("form", memoSchema.create), async (c) => {
     const user = c.get("user");
@@ -1038,6 +1091,81 @@ memosRoute
 
     return c.json({ tags });
   })
+  .post("/:id/regenerate-summary", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.json({ message: "認証が必要です。" }, 401);
+
+    const memoId = c.req.param("id");
+    const db = getAppDb(c.env);
+    const memo = await db
+      .select({
+        content: memosTable.content,
+        id: memosTable.id,
+        isAiSummary: memosTable.isAiSummary,
+        url: memosTable.url,
+      })
+      .from(memosTable)
+      .where(and(eq(memosTable.id, memoId), eq(memosTable.userId, user.id)))
+      .get();
+    if (!memo) return c.json({ message: "メモが見つかりません。" }, 404);
+    if (memo.isAiSummary !== 1 || !memo.url) {
+      return c.json({ message: "再要約できるAI要約メモではありません。" }, 409);
+    }
+
+    const reservationPeriodStart = currentUtcMonthStart();
+    const reserved = await reserveAiSummaryQuota(
+      c.env.MY_MEMO_D1,
+      user.id,
+      reservationPeriodStart,
+    );
+    if (!reserved) {
+      return c.json({ message: "AI要約の今月の上限に達しています。" }, 403);
+    }
+
+    let reservationConsumed = false;
+    try {
+      const generated = await generateUrlSummary(
+        c.env,
+        memo.url,
+        async () => undefined,
+      );
+      if (!generated.ok) {
+        return c.json({ message: generated.message }, 502);
+      }
+
+      const updated = await c.env.MY_MEMO_D1.prepare(
+        `UPDATE memos
+         SET content = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ? AND is_ai_summary = 1
+           AND url = ? AND content IS ?`,
+      )
+        .bind(generated.summary, memoId, user.id, memo.url, memo.content)
+        .run();
+      if (updated.meta.changes !== 1) {
+        return c.json({ message: "AI要約を更新できませんでした。" }, 409);
+      }
+
+      reservationConsumed = true;
+      return c.json({ content: generated.summary });
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: "memo_summary_regeneration_failed",
+          memoId,
+          errorType: error instanceof Error ? error.name : "UnknownError",
+        }),
+      );
+      return c.json({ message: "AI要約を再生成できませんでした。" }, 502);
+    } finally {
+      if (!reservationConsumed) {
+        await releaseAiSummaryQuota(
+          c.env.MY_MEMO_D1,
+          user.id,
+          reservationPeriodStart,
+        );
+      }
+    }
+  })
   .post("/url", zValidator("form", memoSchema.url), async (c) => {
     const user = c.get("user");
     if (!user) return c.redirect("/login");
@@ -1098,17 +1226,6 @@ memosRoute
         }
 
         const processUrlSummary = async (): Promise<UrlSummaryResult> => {
-          const fetchedHtml = await fetchPublicHtml(url);
-          const htmlText = decodeLinkPreviewHtml(
-            fetchedHtml.bytes,
-            fetchedHtml.headers,
-          );
-
-          // UTF-8のBlobとして再生成してAIに渡す
-          const utf8Blob = new Blob([htmlText], {
-            type: "text/html; charset=utf-8",
-          });
-
           const reservationPeriodStart = currentUtcMonthStart();
           const reserved = await reserveAiSummaryQuota(
             c.env.MY_MEMO_D1,
@@ -1126,60 +1243,18 @@ memosRoute
           }
           let reservationConsumed = false;
           try {
-            const linkPreviewPromise = refreshLinkPreviewCacheFromHtml(
-              c.env.MY_MEMO_D1,
-              url,
-              htmlText,
-              fetchedHtml.finalUrl,
-            );
-            const [markdown] = await c.env.AI.toMarkdown([
-              {
-                name: url,
-                blob: utf8Blob,
-              },
-            ]);
-
-            if (markdown.format === "error") {
-              return {
-                ok: false,
-                failure: {
-                  code: "AI_SUMMARY_ERROR",
-                  message: "ページを要約できませんでした。",
-                },
-              };
-            }
-
-            const m = markdown.data.match(
-              /\s*title:\s*(?<title>.+?)\s*\n[\s\S]*?/m,
-            );
-            const title = m?.groups?.title;
-            const messages = [
-              {
-                role: "user" as const,
-                content:
-                  "以下の内容を、日本語で100文字以下の概要と2~5個の箇条書きで、markdown形式にまとめてください。出力のボリュームは内容に応じて変えてください。出力形式は概要と箇条書きのみとすること。「概要」「要約」などのセクション項目名自体は含めないこと。\n\n" +
-                  markdown.data,
-              },
-            ];
-
             await writeEvent("status", { message: "要約を生成しています…" });
-
-            const summary = await readWorkersAiTextStream(
-              await c.env.AI.run("@cf/openai/gpt-oss-20b", {
-                messages,
-                reasoning_effort: "low",
-                max_completion_tokens: 1024,
-                stream: true,
-              }),
+            const generated = await generateUrlSummary(
+              c.env,
+              url,
               async (text) => writeEvent("chunk", { text }),
             );
-
-            if (!summary) {
+            if (!generated.ok) {
               return {
                 ok: false,
                 failure: {
                   code: "AI_SUMMARY_ERROR",
-                  message: "AI要約を作成できませんでした。",
+                  message: generated.message,
                 },
               };
             }
@@ -1188,8 +1263,8 @@ memosRoute
 
             const inserted = await insertMemoWithinQuota(c.env.MY_MEMO_D1, {
               id: crypto.randomUUID(),
-              title: decodeHtmlEntities(title || "No Title"),
-              content: summary,
+              title: decodeHtmlEntities(generated.title || "No Title"),
+              content: generated.summary,
               userId: user.id,
               isAiSummary: 1,
               url,
@@ -1207,7 +1282,12 @@ memosRoute
               };
             }
 
-            await linkPreviewPromise;
+            await refreshLinkPreviewCacheFromHtml(
+              c.env.MY_MEMO_D1,
+              url,
+              generated.htmlText,
+              generated.finalUrl,
+            );
 
             reservationConsumed = true;
             return { ok: true };

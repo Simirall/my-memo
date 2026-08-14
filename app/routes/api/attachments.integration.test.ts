@@ -52,6 +52,40 @@ function appForUser(userId: string) {
   return app;
 }
 
+function aiSummaryEnv(
+  summary = "再生成した本文",
+  markdownError = false,
+  onRun?: () => Promise<void>,
+) {
+  const encoder = new TextEncoder();
+  return {
+    MY_MEMO_D1: env.MY_MEMO_D1,
+    MY_MEMO_FILES: env.MY_MEMO_FILES,
+    AI: {
+      toMarkdown: vi
+        .fn()
+        .mockResolvedValue(
+          markdownError
+            ? [{ format: "error" }]
+            : [{ format: "markdown", data: "title: 記事\n本文" }],
+        ),
+      run: vi.fn().mockImplementation(async () => {
+        await onRun?.();
+        return new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ response: summary })}\n\n`,
+              ),
+            );
+            controller.close();
+          },
+        });
+      }),
+    },
+  } as unknown as CloudflareBindings;
+}
+
 function attachmentForm(
   name: string,
   type: string,
@@ -417,6 +451,235 @@ describe("JavaScript必須のメモAPI", () => {
           .bind("https://example.com/article")
           .first(),
       ).toEqual({ title, status });
+    },
+  );
+
+  it("AI要約を再生成して本文だけを更新し月次利用回数を1消費する", async () => {
+    await addUser("regenerate-owner");
+    await addMemo("regenerate-memo", "regenerate-owner");
+    await run(
+      `UPDATE memos
+       SET title = '元タイトル', content = '元本文', url = ?, is_ai_summary = 1
+       WHERE id = ?`,
+      "https://example.com/article",
+      "regenerate-memo",
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("<html><body>記事本文</body></html>", {
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+      ),
+    );
+
+    const response = await appForUser("regenerate-owner").fetch(
+      new Request(
+        "https://example.test/api/memos/regenerate-memo/regenerate-summary",
+        { method: "POST" },
+      ),
+      aiSummaryEnv(),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ content: "再生成した本文" });
+    expect(
+      await db
+        .prepare(
+          `SELECT title, content, url, is_ai_summary
+           FROM memos WHERE id = ?`,
+        )
+        .bind("regenerate-memo")
+        .first(),
+    ).toEqual({
+      title: "元タイトル",
+      content: "再生成した本文",
+      url: "https://example.com/article",
+      is_ai_summary: 1,
+    });
+    expect(
+      await db
+        .prepare(
+          `SELECT used FROM usage_counters
+           WHERE user_id = ? AND metric = 'ai_summary.monthly'`,
+        )
+        .bind("regenerate-owner")
+        .first(),
+    ).toEqual({ used: 1 });
+  });
+
+  it("AI要約の再生成は所有者と対象条件と月次上限を検証する", async () => {
+    await addUser("regenerate-guard-owner");
+    await addUser("regenerate-guard-other");
+    await addMemo("regenerate-guard-memo", "regenerate-guard-owner");
+    const url =
+      "https://example.test/api/memos/regenerate-guard-memo/regenerate-summary";
+    const ownerApp = appForUser("regenerate-guard-owner");
+
+    const unauthenticatedApp = new Hono<{ Bindings: CloudflareBindings }>();
+    unauthenticatedApp.route("/api/memos", memosRoute);
+    const unauthenticatedResponse = await unauthenticatedApp.fetch(
+      new Request(url, { method: "POST" }),
+      env,
+    );
+    expect(unauthenticatedResponse.status).toBe(401);
+
+    const otherResponse = await appForUser("regenerate-guard-other").fetch(
+      new Request(url, { method: "POST" }),
+      env,
+    );
+    expect(otherResponse.status).toBe(404);
+
+    const normalMemoResponse = await ownerApp.fetch(
+      new Request(url, { method: "POST" }),
+      env,
+    );
+    expect(normalMemoResponse.status).toBe(409);
+
+    await run(
+      "UPDATE memos SET is_ai_summary = 1 WHERE id = ?",
+      "regenerate-guard-memo",
+    );
+    const noUrlResponse = await ownerApp.fetch(
+      new Request(url, { method: "POST" }),
+      env,
+    );
+    expect(noUrlResponse.status).toBe(409);
+
+    await run(
+      "UPDATE memos SET url = ? WHERE id = ?",
+      "https://example.com/article",
+      "regenerate-guard-memo",
+    );
+    await run(
+      "UPDATE plan_limits SET limit_value = 0 WHERE plan_id = 'free' AND metric = 'ai_summary.monthly'",
+    );
+    const quotaResponse = await ownerApp.fetch(
+      new Request(url, { method: "POST" }),
+      env,
+    );
+    expect(quotaResponse.status).toBe(403);
+    expect(
+      await db
+        .prepare("SELECT content FROM memos WHERE id = ?")
+        .bind("regenerate-guard-memo")
+        .first(),
+    ).toEqual({ content: "regenerate-guard-memo" });
+  });
+
+  it("AI要約の生成中に本文が更新された場合は上書きせず月次利用回数を戻す", async () => {
+    await addUser("regenerate-conflict-owner");
+    await addMemo("regenerate-conflict-memo", "regenerate-conflict-owner");
+    await run(
+      "UPDATE memos SET content = '元本文', url = ?, is_ai_summary = 1 WHERE id = ?",
+      "https://example.com/article",
+      "regenerate-conflict-memo",
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("<html><body>記事本文</body></html>", {
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+      ),
+    );
+    const testEnv = aiSummaryEnv("再生成した本文", false, async () => {
+      await run(
+        "UPDATE memos SET content = '別タブの本文' WHERE id = ?",
+        "regenerate-conflict-memo",
+      );
+    });
+
+    const response = await appForUser("regenerate-conflict-owner").fetch(
+      new Request(
+        "https://example.test/api/memos/regenerate-conflict-memo/regenerate-summary",
+        { method: "POST" },
+      ),
+      testEnv,
+    );
+
+    expect(response.status).toBe(409);
+    expect(
+      await db
+        .prepare("SELECT content FROM memos WHERE id = ?")
+        .bind("regenerate-conflict-memo")
+        .first(),
+    ).toEqual({ content: "別タブの本文" });
+    expect(
+      await db
+        .prepare(
+          `SELECT used FROM usage_counters
+           WHERE user_id = ? AND metric = 'ai_summary.monthly'`,
+        )
+        .bind("regenerate-conflict-owner")
+        .first(),
+    ).toEqual({ used: 0 });
+  });
+
+  it.each(["URL取得", "AI変換", "空要約", "DB更新"])(
+    "%s失敗では旧本文を保持して予約した月次利用回数を戻す",
+    async (failure) => {
+      const userId = `regenerate-failure-${failure}`;
+      const memoId = `memo-${failure}`;
+      await addUser(userId);
+      await addMemo(memoId, userId);
+      await run(
+        "UPDATE memos SET content = '元本文', url = ?, is_ai_summary = 1 WHERE id = ?",
+        "https://example.com/article",
+        memoId,
+      );
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          failure === "URL取得"
+            ? new Response("error", { status: 500 })
+            : new Response("<html><body>記事本文</body></html>", {
+                headers: { "content-type": "text/html; charset=utf-8" },
+              }),
+        ),
+      );
+      const testEnv = aiSummaryEnv(
+        failure === "空要約" ? "" : "新本文",
+        failure === "AI変換",
+      );
+      if (failure === "DB更新") {
+        // 生成成功後のD1失敗を再現し、本文とクォータの補償を確認する。
+        await run(
+          `CREATE TRIGGER reject_regenerated_summary
+           BEFORE UPDATE OF content ON memos
+           BEGIN SELECT RAISE(ABORT, 'test update failure'); END`,
+        );
+      }
+
+      try {
+        const response = await appForUser(userId).fetch(
+          new Request(
+            `https://example.test/api/memos/${memoId}/regenerate-summary`,
+            { method: "POST" },
+          ),
+          testEnv,
+        );
+        expect(response.status).toBe(502);
+        expect(
+          await db
+            .prepare("SELECT content FROM memos WHERE id = ?")
+            .bind(memoId)
+            .first(),
+        ).toEqual({ content: "元本文" });
+        expect(
+          await db
+            .prepare(
+              `SELECT used FROM usage_counters
+               WHERE user_id = ? AND metric = 'ai_summary.monthly'`,
+            )
+            .bind(userId)
+            .first(),
+        ).toEqual({ used: 0 });
+      } finally {
+        if (failure === "DB更新") {
+          await run("DROP TRIGGER reject_regenerated_summary");
+        }
+      }
     },
   );
 });
