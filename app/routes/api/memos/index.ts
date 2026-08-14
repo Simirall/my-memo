@@ -38,7 +38,10 @@ import { normalizeLinkPreviewUrl } from "@/features/link-preview/model/link-prev
 import { scheduleBackgroundTask } from "@/features/link-preview/server/background-task";
 import { decodeLinkPreviewHtml } from "@/features/link-preview/server/decode-html";
 import { fetchPublicHtml } from "@/features/link-preview/server/fetch-public-html";
-import { refreshLinkPreviewCache } from "@/features/link-preview/server/link-preview-cache";
+import {
+  refreshLinkPreviewCache,
+  refreshLinkPreviewCacheFromHtml,
+} from "@/features/link-preview/server/link-preview-cache";
 import {
   memoSchema,
   tagUpdateSchema,
@@ -279,10 +282,7 @@ memosRoute
 
     const previewUrl = validated.url;
     if (previewUrl) {
-      scheduleBackgroundTask(
-        () => c.executionCtx,
-        () => refreshLinkPreviewCache(c.env.MY_MEMO_D1, previewUrl),
-      );
+      await refreshLinkPreviewCache(c.env.MY_MEMO_D1, previewUrl);
     }
 
     return c.json({ memoId });
@@ -779,10 +779,7 @@ memosRoute
       normalizeLinkPreviewUrl(previewUrl) !==
         (memo.url ? normalizeLinkPreviewUrl(memo.url) : null)
     ) {
-      scheduleBackgroundTask(
-        () => c.executionCtx,
-        () => refreshLinkPreviewCache(c.env.MY_MEMO_D1, previewUrl),
-      );
+      await refreshLinkPreviewCache(c.env.MY_MEMO_D1, previewUrl);
     }
     return c.json({ ok: true, redirect: "/" });
   })
@@ -1129,6 +1126,12 @@ memosRoute
           }
           let reservationConsumed = false;
           try {
+            const linkPreviewPromise = refreshLinkPreviewCacheFromHtml(
+              c.env.MY_MEMO_D1,
+              url,
+              htmlText,
+              fetchedHtml.finalUrl,
+            );
             const [markdown] = await c.env.AI.toMarkdown([
               {
                 name: url,
@@ -1204,10 +1207,7 @@ memosRoute
               };
             }
 
-            scheduleBackgroundTask(
-              () => c.executionCtx,
-              () => refreshLinkPreviewCache(c.env.MY_MEMO_D1, url),
-            );
+            await linkPreviewPromise;
 
             reservationConsumed = true;
             return { ok: true };

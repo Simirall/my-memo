@@ -4,6 +4,7 @@ import {
   getLinkPreviewRetryDelayMs,
   type LinkPreviewMetadata,
   normalizeLinkPreviewUrl,
+  parseLinkPreviewMetadata,
 } from "@/features/link-preview/model/link-preview";
 import * as schema from "@/schema";
 import { fetchLinkPreview } from "./fetch-link-preview";
@@ -112,15 +113,15 @@ const ensureCacheRow = async (
     });
 };
 
-export const refreshLinkPreviewCache = async (
+const updateLinkPreviewCache = async (
   database: D1Database,
   url: string,
-  options: { now?: Date; fetcher?: typeof fetch } = {},
+  loadMetadata: () => Promise<LinkPreviewMetadata>,
+  now = new Date(),
 ) => {
   const normalizedUrl = normalizeLinkPreviewUrl(url);
   if (!normalizedUrl) return false;
 
-  const now = options.now ?? new Date();
   const timestamp = toTimestamp(now);
   const leaseUntil = toTimestamp(new Date(now.getTime() + LEASE_MS));
   const db = getLinkPreviewDb(database);
@@ -153,10 +154,7 @@ export const refreshLinkPreviewCache = async (
   if (Number(claim.meta.changes ?? 0) !== 1) return false;
 
   try {
-    const metadata = await fetchLinkPreview(
-      normalizedUrl,
-      options.fetcher ?? fetch,
-    );
+    const metadata = await loadMetadata();
     await db
       .update(schema.linkPreviewCacheTable)
       .set({
@@ -212,6 +210,55 @@ export const refreshLinkPreviewCache = async (
     return false;
   }
 };
+
+const safelyUpdateLinkPreviewCache = async (
+  database: D1Database,
+  url: string,
+  loadMetadata: () => Promise<LinkPreviewMetadata>,
+  now?: Date,
+) => {
+  try {
+    return await updateLinkPreviewCache(database, url, loadMetadata, now);
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: "link_preview_cache_update_failed",
+        errorType: error instanceof Error ? error.name : "UnknownError",
+      }),
+    );
+    return false;
+  }
+};
+
+export const refreshLinkPreviewCache = (
+  database: D1Database,
+  url: string,
+  options: { now?: Date; fetcher?: typeof fetch } = {},
+) =>
+  safelyUpdateLinkPreviewCache(
+    database,
+    url,
+    () => fetchLinkPreview(url, options.fetcher ?? fetch),
+    options.now,
+  );
+
+export const refreshLinkPreviewCacheFromHtml = (
+  database: D1Database,
+  url: string,
+  html: string,
+  finalUrl: string,
+  options: { now?: Date } = {},
+) =>
+  safelyUpdateLinkPreviewCache(
+    database,
+    url,
+    async () => {
+      const metadata = parseLinkPreviewMetadata(html, finalUrl);
+      if (!metadata) throw new Error("OGPタイトルを取得できませんでした。");
+      return metadata;
+    },
+    options.now,
+  );
 
 export const cleanupUnreferencedLinkPreviewCache = async (
   database: D1Database,

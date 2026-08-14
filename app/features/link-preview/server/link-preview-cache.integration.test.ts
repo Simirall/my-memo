@@ -5,6 +5,7 @@ import {
   getLinkPreviewDb,
   getLinkPreviewsForList,
   refreshLinkPreviewCache,
+  refreshLinkPreviewCacheFromHtml,
 } from "./link-preview-cache";
 
 const d1 = env.MY_MEMO_D1;
@@ -111,6 +112,32 @@ describe("リンクプレビューキャッシュ", () => {
       title: "並行取得",
       card_type: "summary_large_image",
       failure_count: 0,
+    });
+  });
+
+  it("取得済みHTMLを再取得せず最終URL基準で保存する", async () => {
+    await expect(
+      refreshLinkPreviewCacheFromHtml(
+        d1,
+        "https://example.com/article",
+        `<meta property="og:title" content="取得済み">
+         <meta property="og:image" content="card.jpg">`,
+        "https://example.com/articles/final",
+        { now: new Date("2026-08-11T00:00:00.000Z") },
+      ),
+    ).resolves.toBe(true);
+
+    expect(
+      await d1
+        .prepare(
+          "SELECT title, image_url, status FROM link_preview_cache WHERE normalized_url = ?",
+        )
+        .bind("https://example.com/article")
+        .first(),
+    ).toEqual({
+      title: "取得済み",
+      image_url: "https://example.com/articles/card.jpg",
+      status: "ready",
     });
   });
 

@@ -79,6 +79,7 @@ beforeEach(async () => {
   await db.batch([
     db.prepare("DELETE FROM r2_deletion_jobs"),
     db.prepare("DELETE FROM memo_attachments"),
+    db.prepare("DELETE FROM link_preview_cache"),
     db.prepare("DELETE FROM memos"),
     db.prepare("DELETE FROM user"),
     db.prepare(
@@ -118,6 +119,62 @@ describe("JavaScript必須のメモAPI", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toContain("application/json");
     expect(await response.json()).toMatchObject({ memoId: expect.any(String) });
+  });
+
+  it("URL付きメモはOGPを保存してから成功し取得失敗でもメモを残す", async () => {
+    await addUser("create-ogp-user");
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response('<meta property="og:title" content="同期OGP">', {
+          headers: { "content-type": "text/html" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response("error", { status: 500 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const app = appForUser("create-ogp-user");
+
+    for (const [title, url] of [
+      ["取得成功", "https://example.com/success"],
+      ["取得失敗", "https://example.com/failure"],
+    ]) {
+      const response = await app.fetch(
+        new Request("https://example.test/api/memos/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ title, url, content: "", tags: "" }),
+        }),
+        env,
+      );
+      expect(response.status).toBe(200);
+    }
+
+    expect(
+      await db
+        .prepare(
+          "SELECT normalized_url, title, status FROM link_preview_cache ORDER BY normalized_url",
+        )
+        .all(),
+    ).toMatchObject({
+      results: [
+        {
+          normalized_url: "https://example.com/failure",
+          title: null,
+          status: "failed",
+        },
+        {
+          normalized_url: "https://example.com/success",
+          title: "同期OGP",
+          status: "ready",
+        },
+      ],
+    });
+    await expect(
+      db
+        .prepare("SELECT COUNT(*) AS count FROM memos WHERE user_id = ?")
+        .bind("create-ogp-user")
+        .first(),
+    ).resolves.toEqual({ count: 2 });
   });
 
   it("タイトルだけで作成し空白だけの本文をNULLとして更新する", async () => {
@@ -292,6 +349,76 @@ describe("JavaScript必須のメモAPI", () => {
         .first<{ used: number }>(),
     ).toEqual({ used: 0 });
   });
+
+  it.each([
+    [
+      "OGPあり",
+      '<meta property="og:title" content="再利用OGP"><body>本文</body>',
+      "ready",
+      "再利用OGP",
+    ],
+    ["OGPなし", "<html><body>本文</body></html>", "failed", null],
+  ])(
+    "AI要約は取得済みHTMLの%sを保存しOGP欠落でも完了する",
+    async (_case, html, status, title) => {
+      const userId = `url-${status}-user`;
+      await addUser(userId);
+      const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+        new Response(html, {
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+      const encoder = new TextEncoder();
+      const testEnv = {
+        MY_MEMO_D1: env.MY_MEMO_D1,
+        MY_MEMO_FILES: env.MY_MEMO_FILES,
+        AI: {
+          toMarkdown: vi
+            .fn()
+            .mockResolvedValue([
+              { format: "markdown", data: "title: 記事\n本文" },
+            ]),
+          run: vi.fn().mockResolvedValue(
+            new ReadableStream({
+              start(controller) {
+                controller.enqueue(
+                  encoder.encode('data: {"response":"要約本文"}\n\n'),
+                );
+                controller.close();
+              },
+            }),
+          ),
+        },
+      } as unknown as CloudflareBindings;
+
+      const response = await appForUser(userId).fetch(
+        new Request("https://example.test/api/memos/url", {
+          method: "POST",
+          headers: {
+            Accept: "text/event-stream",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            url: "https://example.com/article",
+            tags: "",
+          }),
+        }),
+        testEnv,
+      );
+
+      expect(await response.text()).toContain("event: complete");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(
+        await db
+          .prepare(
+            "SELECT title, status FROM link_preview_cache WHERE normalized_url = ?",
+          )
+          .bind("https://example.com/article")
+          .first(),
+      ).toEqual({ title, status });
+    },
+  );
 });
 
 describe("添付ファイルAPI", () => {
@@ -560,6 +687,14 @@ describe("添付ファイルAPI", () => {
     };
 
     await run("UPDATE memos SET is_ai_summary = 1 WHERE id = ?", "edit-memo");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response('<meta property="og:title" content="編集OGP">', {
+          headers: { "content-type": "text/html" },
+        }),
+      ),
+    );
     const updated = await ownerApp.fetch(
       new Request("https://example.test/api/memos/edit-memo", {
         method: "PATCH",
@@ -595,6 +730,14 @@ describe("添付ファイルAPI", () => {
       category_id: "edit-category",
       is_ai_summary: 1,
     });
+    await expect(
+      db
+        .prepare(
+          "SELECT title, status FROM link_preview_cache WHERE normalized_url = ?",
+        )
+        .bind("https://example.test/updated")
+        .first(),
+    ).resolves.toEqual({ title: "編集OGP", status: "ready" });
     expect(
       await db
         .prepare(
