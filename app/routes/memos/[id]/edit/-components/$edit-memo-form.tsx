@@ -22,7 +22,7 @@ import {
 import type { AttachmentQuota } from "@/features/attachments/server/attachments";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
 import { useFormSubmitShortcut } from "@/features/memos/input/use-form-submit-shortcut";
-import type { Tag } from "@/features/tags/data/tags";
+import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
 import { TagInput } from "@/features/tags/input/tag-input";
 import type { memoAttachmentsTable } from "@/schema";
 
@@ -59,6 +59,7 @@ const toTagNames = (tags: ReadonlyArray<Tag>) => tags.map((tag) => tag.name);
 export default function EditMemoForm({
   memo,
   categories,
+  tagSuggestions = { all: [], byCategory: {} },
   availableTags,
   returnTo,
 }: {
@@ -67,6 +68,7 @@ export default function EditMemoForm({
     Pick<z.infer<typeof categorySchema.read>, "id" | "name">
   >;
   availableTags: ReadonlyArray<Tag>;
+  tagSuggestions?: TagSuggestions;
   returnTo: string;
 }) {
   const [title, setTitle] = useState(memo.title);
@@ -550,6 +552,11 @@ export default function EditMemoForm({
           initialTags={tags}
           inputId="edit-memo-tags"
           onTagsChange={setTags}
+          suggestedTags={
+            categoryId
+              ? (tagSuggestions.byCategory[categoryId] ?? [])
+              : tagSuggestions.all
+          }
         />
       </fieldset>
       <section className="space-y-3">

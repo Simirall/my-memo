@@ -46,7 +46,11 @@ import {
   memoSchema,
   tagUpdateSchema,
 } from "@/features/memos/schema/memo-schema";
-import { normalizeTagNames, replaceMemoTags } from "@/features/tags/data/tags";
+import {
+  getTagSuggestions,
+  normalizeTagNames,
+  replaceMemoTags,
+} from "@/features/tags/data/tags";
 import {
   MAX_MEMO_UPDATE_JSON_BYTES,
   readLimitedJson,
@@ -1089,7 +1093,10 @@ memosRoute
       )
       .orderBy(asc(tagsTable.name));
 
-    return c.json({ tags });
+    return c.json({
+      tags,
+      tagSuggestions: await getTagSuggestions(db, user.id),
+    });
   })
   .post("/:id/regenerate-summary", async (c) => {
     const user = c.get("user");

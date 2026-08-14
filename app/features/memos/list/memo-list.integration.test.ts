@@ -1,5 +1,7 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
+import { getAppDb } from "@/features/access-control/authorization";
+import { getTagSuggestions } from "@/features/tags/data/tags";
 import {
   getMemoList,
   getMemoListDb,
@@ -256,6 +258,16 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
     expect(await getUsedMemoTags(db, "owner", "category-1")).toEqual([
       { id: "tag-work", name: "仕事用" },
     ]);
+    expect(await getTagSuggestions(getAppDb(env), "owner")).toEqual({
+      all: [
+        { id: "tag-private", name: "個人用" },
+        { id: "tag-work", name: "仕事用" },
+      ],
+      byCategory: {
+        "category-1": [{ id: "tag-work", name: "仕事用" }],
+        "category-2": [{ id: "tag-private", name: "個人用" }],
+      },
+    });
   });
 
   it("選択中の所有タグは一覧スコープで未使用でも候補へ残す", () => {

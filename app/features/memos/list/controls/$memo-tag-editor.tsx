@@ -4,11 +4,12 @@ import {
   type MemoListQuery,
   replaceMemoListTag,
 } from "@/features/memos/list/query/memo-list-query";
-import type { Tag } from "@/features/tags/data/tags";
+import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
 import { TagInput } from "@/features/tags/input/tag-input";
 import { addMemoListTagOptions, removeMemoCardFromList } from "./memo-list-dom";
 
 type MemoTagTarget = {
+  categoryId?: string;
   id: string;
   title: string;
   tags: Tag[];
@@ -59,17 +60,26 @@ const updateCardTags = (
 export default function MemoTagEditor({
   activeTagId,
   availableTags,
+  tagSuggestions,
+  suggestedTags = [],
   listPath = "/",
   query = { sort: "desc", page: 1 },
 }: {
   activeTagId?: string;
   availableTags: ReadonlyArray<Tag>;
+  tagSuggestions?: TagSuggestions;
+  suggestedTags?: ReadonlyArray<Tag>;
   listPath?: string;
   query?: MemoListQuery;
 }) {
   const [target, setTarget] = useState<MemoTagTarget | null>(null);
   const [draft, setDraft] = useState<Tag[]>([]);
   const [knownTags, setKnownTags] = useState<Tag[]>(sortTags(availableTags));
+  const [knownSuggestions, setKnownSuggestions] = useState<Tag[]>(
+    sortTags(suggestedTags),
+  );
+  const [knownTagSuggestions, setKnownTagSuggestions] =
+    useState(tagSuggestions);
   const [error, setError] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const [resetKey, setResetKey] = useState(0);
@@ -100,6 +110,7 @@ export default function MemoTagEditor({
       }
 
       const nextTarget = {
+        categoryId: button.dataset.memoCategoryId || undefined,
         id: button.dataset.memoId ?? "",
         title: button.dataset.memoTitle ?? "",
         tags,
@@ -110,12 +121,21 @@ export default function MemoTagEditor({
       setError(undefined);
       setResetKey((value) => value + 1);
       setKnownTags((currentTags) => mergeTags(currentTags, tags));
+      if (knownTagSuggestions) {
+        setKnownSuggestions(
+          sortTags(
+            nextTarget.categoryId
+              ? (knownTagSuggestions.byCategory[nextTarget.categoryId] ?? [])
+              : knownTagSuggestions.all,
+          ),
+        );
+      }
       triggerRef.current = button;
     };
 
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
-  }, []);
+  }, [knownTagSuggestions]);
 
   const save = async () => {
     if (!target) return;
@@ -133,6 +153,7 @@ export default function MemoTagEditor({
       const payload = (await response.json()) as {
         message?: string;
         tags?: Tag[];
+        tagSuggestions?: TagSuggestions;
       };
       if (!response.ok || !payload.tags) {
         setError(payload.message ?? "タグを保存できませんでした。");
@@ -144,6 +165,20 @@ export default function MemoTagEditor({
       setKnownTags((currentTags) =>
         mergeTags(currentTags, draft, payload.tags ?? []),
       );
+      if (payload.tagSuggestions) {
+        setKnownTagSuggestions(payload.tagSuggestions);
+        setKnownSuggestions(
+          sortTags(
+            target.categoryId
+              ? (payload.tagSuggestions.byCategory[target.categoryId] ?? [])
+              : payload.tagSuggestions.all,
+          ),
+        );
+      } else {
+        setKnownSuggestions((currentTags) =>
+          mergeTags(currentTags, payload.tags ?? []),
+        );
+      }
       dialogRef.current?.close();
 
       if (activeTagId && !payload.tags.some((tag) => tag.id === activeTagId)) {
@@ -186,6 +221,7 @@ export default function MemoTagEditor({
             inputId="edit-memo-tags"
             onTagsChange={setDraft}
             resetKey={resetKey}
+            suggestedTags={knownSuggestions}
           />
         </label>
         {error && (

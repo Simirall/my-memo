@@ -1,23 +1,19 @@
-import { asc, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
+import { getAppDb } from "@/features/access-control/authorization";
 import { getUserCategories } from "@/features/categories/data/categories";
 import { getShareIntake } from "@/features/sharing/intake/share-intake";
-import { tagsTable } from "@/schema";
+import { getTagSuggestions, getUserTags } from "@/features/tags/data/tags";
 import CreateMemoForm from "./-components/$create-memo-form";
 
 export default createRoute(async (c) => {
   const user = c.get("user");
   if (!user) return c.redirect("/login");
-  const db = drizzle(c.env.MY_MEMO_D1);
+  const db = getAppDb(c.env);
 
-  const [categories, tags] = await Promise.all([
+  const [categories, tags, tagSuggestions] = await Promise.all([
     getUserCategories(c.env.MY_MEMO_D1, user.id),
-    db
-      .select({ id: tagsTable.id, name: tagsTable.name })
-      .from(tagsTable)
-      .where(eq(tagsTable.userId, user.id))
-      .orderBy(asc(tagsTable.name)),
+    getUserTags(db, user.id),
+    getTagSuggestions(db, user.id),
   ]);
 
   const shareId = c.req.query("shareId");
@@ -49,6 +45,7 @@ export default createRoute(async (c) => {
             initialCategoryId={initialCategoryId}
             initialValues={shareIntake?.prefill}
             shareIntake={shareIntake}
+            tagSuggestions={tagSuggestions}
             tags={tags}
           />
         </div>

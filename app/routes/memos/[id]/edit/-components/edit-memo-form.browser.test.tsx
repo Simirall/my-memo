@@ -37,7 +37,10 @@ function mount(
   document.body.appendChild(container);
   render(
     <EditMemoForm
-      availableTags={[{ id: "tag-1", name: "既存タグ" }]}
+      availableTags={[
+        { id: "tag-1", name: "既存タグ" },
+        { id: "tag-2", name: "カテゴリ候補" },
+      ]}
       categories={[category]}
       memo={{
         id: "memo-1",
@@ -50,6 +53,12 @@ function mount(
         attachments: [attachment],
       }}
       returnTo="/"
+      tagSuggestions={{
+        all: [{ id: "tag-2", name: "カテゴリ候補" }],
+        byCategory: {
+          "category-1": [{ id: "tag-2", name: "カテゴリ候補" }],
+        },
+      }}
     />,
     container,
   );
@@ -311,6 +320,11 @@ describe("メモ編集フォーム", () => {
     );
     mount();
 
+    await page.getByRole("combobox", { name: "タグ" }).click();
+    await expect
+      .element(page.getByRole("option", { name: "#カテゴリ候補" }))
+      .toBeVisible();
+    await page.getByLabelText("タイトル").click();
     await page.getByRole("button", { name: "既存タグを外す" }).click();
     await page.getByPlaceholder("タグを入力").fill("新規タグ");
     await page.getByText("#新規タグを新しいタグとして追加").click();

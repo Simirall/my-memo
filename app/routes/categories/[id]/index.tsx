@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { getCookie } from "hono/cookie";
 import { createRoute } from "honox/factory";
+import { getAppDb } from "@/features/access-control/authorization";
 import { getUserCategories } from "@/features/categories/data/categories";
 import { scheduleBackgroundTask } from "@/features/link-preview/server/background-task";
 import { maintainLinkPreviewCache } from "@/features/link-preview/server/link-preview-cache";
@@ -21,6 +22,7 @@ import {
   getEmptyMemoListRedirectUrl,
   parseMemoListQuery,
 } from "@/features/memos/list/query/memo-list-query";
+import { getTagSuggestions } from "@/features/tags/data/tags";
 import CategoryTabs from "@/islands/$category-tabs";
 import * as schema from "@/schema";
 
@@ -33,21 +35,23 @@ export default createRoute(async (c) => {
   const db = getMemoListDb(c.env);
   const id = c.req.param("id") ?? "";
 
-  const [categories, tags, usedTags, result] = await Promise.all([
-    getUserCategories(c.env.MY_MEMO_D1, user.id),
-    db
-      .select({ id: schema.tagsTable.id, name: schema.tagsTable.name })
-      .from(schema.tagsTable)
-      .where(eq(schema.tagsTable.userId, user.id))
-      .orderBy(asc(schema.tagsTable.name)),
-    getUsedMemoTags(db, user.id, id),
-    db.query.categoriesTable.findFirst({
-      where: and(
-        eq(schema.categoriesTable.userId, user.id),
-        eq(schema.categoriesTable.id, id),
-      ),
-    }),
-  ]);
+  const [categories, tags, usedTags, tagSuggestions, result] =
+    await Promise.all([
+      getUserCategories(c.env.MY_MEMO_D1, user.id),
+      db
+        .select({ id: schema.tagsTable.id, name: schema.tagsTable.name })
+        .from(schema.tagsTable)
+        .where(eq(schema.tagsTable.userId, user.id))
+        .orderBy(asc(schema.tagsTable.name)),
+      getUsedMemoTags(db, user.id, id),
+      getTagSuggestions(getAppDb(c.env), user.id),
+      db.query.categoriesTable.findFirst({
+        where: and(
+          eq(schema.categoriesTable.userId, user.id),
+          eq(schema.categoriesTable.id, id),
+        ),
+      }),
+    ]);
 
   if (!result) {
     c.status(404);
@@ -133,6 +137,8 @@ export default createRoute(async (c) => {
         availableTags={tags}
         listPath={c.req.path}
         query={query}
+        suggestedTags={usedTags}
+        tagSuggestions={tagSuggestions}
       />
       <ActionFab categoryId={result.id} />
     </div>,

@@ -1,6 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { getCookie } from "hono/cookie";
 import { createRoute } from "honox/factory";
+import { getAppDb } from "@/features/access-control/authorization";
 import { getUserCategories } from "@/features/categories/data/categories";
 import { scheduleBackgroundTask } from "@/features/link-preview/server/background-task";
 import { maintainLinkPreviewCache } from "@/features/link-preview/server/link-preview-cache";
@@ -21,6 +22,7 @@ import {
   getEmptyMemoListRedirectUrl,
   parseMemoListQuery,
 } from "@/features/memos/list/query/memo-list-query";
+import { getTagSuggestions } from "@/features/tags/data/tags";
 import CategoryTabs from "@/islands/$category-tabs";
 import * as schema from "@/schema";
 
@@ -32,7 +34,7 @@ export default createRoute(async (c) => {
 
   const db = getMemoListDb(c.env);
 
-  const [categories, tags, usedTags] = await Promise.all([
+  const [categories, tags, usedTags, tagSuggestions] = await Promise.all([
     getUserCategories(c.env.MY_MEMO_D1, user.id),
     db
       .select({ id: schema.tagsTable.id, name: schema.tagsTable.name })
@@ -40,6 +42,7 @@ export default createRoute(async (c) => {
       .where(eq(schema.tagsTable.userId, user.id))
       .orderBy(asc(schema.tagsTable.name)),
     getUsedMemoTags(db, user.id),
+    getTagSuggestions(getAppDb(c.env), user.id),
   ]);
   const query = parseMemoListQuery(
     new URL(c.req.url).searchParams,
@@ -115,6 +118,8 @@ export default createRoute(async (c) => {
         availableTags={tags}
         listPath={c.req.path}
         query={query}
+        suggestedTags={usedTags}
+        tagSuggestions={tagSuggestions}
       />
       <ActionFab />
     </div>,

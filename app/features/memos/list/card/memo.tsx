@@ -95,6 +95,7 @@ export const Memo = ({
                   ? "btn btn-accent btn-soft btn-square btn-xs shrink-0"
                   : "btn btn-accent btn-soft btn-xs shrink-0 gap-1 px-3"
               }
+              data-memo-category-id={memo.categoryId ?? ""}
               data-memo-id={memo.id}
               data-memo-tag-edit
               data-memo-tags={JSON.stringify(tags)}

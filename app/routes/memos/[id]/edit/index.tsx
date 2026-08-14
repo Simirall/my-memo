@@ -1,8 +1,10 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
+import { getAppDb } from "@/features/access-control/authorization";
 import { getUserCategories } from "@/features/categories/data/categories";
 import { getSafeMemoListReturnTo } from "@/features/memos/list/query/memo-list-query";
+import { getTagSuggestions, getUserTags } from "@/features/tags/data/tags";
 import * as schema from "@/schema";
 import EditMemoForm from "./-components/$edit-memo-form";
 
@@ -12,13 +14,11 @@ export default createRoute(async (c) => {
 
   const memoId = c.req.param("id") ?? "";
   const db = drizzle(c.env.MY_MEMO_D1, { schema });
-  const [categories, availableTags, memo] = await Promise.all([
+  const appDb = getAppDb(c.env);
+  const [categories, availableTags, tagSuggestions, memo] = await Promise.all([
     getUserCategories(c.env.MY_MEMO_D1, user.id),
-    db
-      .select({ id: schema.tagsTable.id, name: schema.tagsTable.name })
-      .from(schema.tagsTable)
-      .where(eq(schema.tagsTable.userId, user.id))
-      .orderBy(asc(schema.tagsTable.name)),
+    getUserTags(appDb, user.id),
+    getTagSuggestions(appDb, user.id),
     db.query.memosTable.findFirst({
       where: and(
         eq(schema.memosTable.id, memoId),
@@ -69,6 +69,7 @@ export default createRoute(async (c) => {
               attachments: memo.attachments,
             }}
             returnTo={returnTo}
+            tagSuggestions={tagSuggestions}
           />
         </div>
       </div>

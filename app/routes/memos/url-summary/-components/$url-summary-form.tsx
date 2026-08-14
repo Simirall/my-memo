@@ -8,13 +8,14 @@ import {
   readPendingShare,
 } from "@/features/sharing/client/share-client";
 import { getShareDestination } from "@/features/sharing/model/share";
-import type { Tag } from "@/features/tags/data/tags";
+import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
 import { TagInput } from "@/features/tags/input/tag-input";
 
 export default function UrlSummaryForm({
   categories,
   initialCategoryId,
   tags = [],
+  tagSuggestions = { all: [], byCategory: {} },
   initialUrl,
 }: {
   categories: ReadonlyArray<
@@ -22,6 +23,7 @@ export default function UrlSummaryForm({
   >;
   initialCategoryId?: string;
   tags?: ReadonlyArray<Tag>;
+  tagSuggestions?: TagSuggestions;
   initialUrl?: string;
 }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -177,7 +179,15 @@ export default function UrlSummaryForm({
         <label className="fieldset-legend" htmlFor="summary-tags">
           タグ
         </label>
-        <TagInput availableTags={tags} inputId="summary-tags" />
+        <TagInput
+          availableTags={tags}
+          inputId="summary-tags"
+          suggestedTags={
+            categoryId
+              ? (tagSuggestions.byCategory[categoryId] ?? [])
+              : tagSuggestions.all
+          }
+        />
       </fieldset>
       <button className="btn" disabled={isLoading} type="submit">
         {isLoading ? (

@@ -1,6 +1,6 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import type { AppDb } from "@/features/access-control/authorization";
-import { tagsTable } from "@/schema";
+import { memosTable, memoTagsTable, tagsTable } from "@/schema";
 
 export const MAX_TAGS_PER_MEMO = 10;
 export const MAX_TAG_NAME_LENGTH = 30;
@@ -8,6 +8,11 @@ export const MAX_TAG_NAME_LENGTH = 30;
 export type Tag = {
   id: string;
   name: string;
+};
+
+export type TagSuggestions = {
+  all: ReadonlyArray<Tag>;
+  byCategory: Readonly<Record<string, ReadonlyArray<Tag>>>;
 };
 
 export type TagNamesResult =
@@ -78,6 +83,37 @@ export async function getUserTags(db: AppDb, userId: string): Promise<Tag[]> {
     .from(tagsTable)
     .where(eq(tagsTable.userId, userId))
     .orderBy(asc(tagsTable.name));
+}
+
+export async function getTagSuggestions(
+  db: AppDb,
+  userId: string,
+): Promise<TagSuggestions> {
+  const rows = await db
+    .selectDistinct({
+      id: tagsTable.id,
+      name: tagsTable.name,
+      categoryId: memosTable.categoryId,
+    })
+    .from(tagsTable)
+    .innerJoin(memoTagsTable, eq(memoTagsTable.tagId, tagsTable.id))
+    .innerJoin(memosTable, eq(memosTable.id, memoTagsTable.memoId))
+    .where(and(eq(tagsTable.userId, userId), eq(memosTable.userId, userId)))
+    .orderBy(asc(tagsTable.name));
+
+  const all = new Map<string, Tag>();
+  const byCategory: Record<string, Tag[]> = {};
+  for (const { categoryId, ...tag } of rows) {
+    all.set(tag.id, tag);
+    if (!categoryId) continue;
+    const categoryTags = byCategory[categoryId] ?? [];
+    categoryTags.push(tag);
+    byCategory[categoryId] = categoryTags;
+  }
+  const sortTags = (tags: Tag[]) =>
+    tags.sort((a, b) => a.name.localeCompare(b.name, "ja"));
+  for (const tags of Object.values(byCategory)) sortTags(tags);
+  return { all: sortTags([...all.values()]), byCategory };
 }
 
 export async function replaceMemoTags(

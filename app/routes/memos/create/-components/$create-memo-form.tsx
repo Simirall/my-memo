@@ -34,7 +34,7 @@ import {
   getShareDestination,
   type SharedMemoPrefill,
 } from "@/features/sharing/model/share";
-import type { Tag } from "@/features/tags/data/tags";
+import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
 import { TagInput } from "@/features/tags/input/tag-input";
 
 type AttachmentQuota = {
@@ -57,6 +57,7 @@ export default function CreateMemoForm({
   initialCategoryId,
   initialValues,
   shareIntake,
+  tagSuggestions = { all: [], byCategory: {} },
 }: {
   categories: ReadonlyArray<
     Pick<z.infer<typeof categorySchema.read>, "id" | "name">
@@ -66,6 +67,7 @@ export default function CreateMemoForm({
   initialCategoryId?: string;
   initialValues?: SharedMemoPrefill;
   shareIntake?: ShareIntake;
+  tagSuggestions?: TagSuggestions;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(initialError);
@@ -766,7 +768,15 @@ export default function CreateMemoForm({
         <label className="fieldset-legend" htmlFor="memo-tags">
           タグ
         </label>
-        <TagInput availableTags={tags} inputId="memo-tags" />
+        <TagInput
+          availableTags={tags}
+          inputId="memo-tags"
+          suggestedTags={
+            categoryId
+              ? (tagSuggestions.byCategory[categoryId] ?? [])
+              : tagSuggestions.all
+          }
+        />
       </fieldset>
       {!shareIntake && (
         <section className="space-y-3">

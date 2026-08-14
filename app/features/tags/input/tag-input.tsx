@@ -1,4 +1,4 @@
-import { useEffect, useState } from "hono/jsx";
+import { useEffect, useRef, useState } from "hono/jsx";
 import type { Tag } from "@/features/tags/data/tags";
 import {
   MAX_TAG_NAME_LENGTH,
@@ -8,6 +8,7 @@ import {
 
 export const TagInput = ({
   availableTags,
+  suggestedTags = [],
   initialTags = [],
   inputId,
   name = "tags",
@@ -15,6 +16,7 @@ export const TagInput = ({
   resetKey,
 }: {
   availableTags: ReadonlyArray<Tag>;
+  suggestedTags?: ReadonlyArray<Tag>;
   initialTags?: ReadonlyArray<Tag>;
   inputId: string;
   name?: string;
@@ -24,6 +26,8 @@ export const TagInput = ({
   const [selected, setSelected] = useState<Tag[]>([...initialTags]);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string>();
+  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (resetKey === undefined) return;
@@ -61,7 +65,7 @@ export const TagInput = ({
     setError(undefined);
   };
 
-  const candidates = availableTags.filter(
+  const candidates = (query ? availableTags : suggestedTags).filter(
     (tag) =>
       !selected.some((selectedTag) => selectedTag.name === tag.name) &&
       tag.name.toLocaleLowerCase("ja").includes(query.toLocaleLowerCase("ja")),
@@ -75,6 +79,8 @@ export const TagInput = ({
     !isExistingTag &&
     normalizeTagNames([...selected.map((tag) => tag.name), freeformName]).ok;
   const hasSuggestions = canCreateFreeform || candidates.length > 0;
+  const isOpen =
+    isFocused && selected.length < MAX_TAGS_PER_MEMO && hasSuggestions;
 
   return (
     <div className="flex flex-col gap-2">
@@ -105,9 +111,20 @@ export const TagInput = ({
             aria-autocomplete="list"
             aria-controls={`${inputId}-suggestions`}
             aria-describedby={error ? `${inputId}-error` : undefined}
+            aria-expanded={isOpen}
             className="min-w-32 flex-1 border-0 bg-transparent p-0 outline-none"
             id={inputId}
             maxLength={MAX_TAG_NAME_LENGTH}
+            onBlur={(event) => {
+              const next = event.relatedTarget;
+              if (
+                next instanceof Element &&
+                next.closest(`#${CSS.escape(inputId)}-suggestions`)
+              )
+                return;
+              setIsFocused(false);
+            }}
+            onFocus={() => setIsFocused(true)}
             onInput={(event) => {
               setQuery((event.currentTarget as HTMLInputElement).value);
               setError(undefined);
@@ -124,14 +141,26 @@ export const TagInput = ({
               addTag(query);
             }}
             placeholder={selected.length === 0 ? "タグを入力" : "タグを追加"}
+            ref={inputRef}
+            role="combobox"
             type="text"
             value={query}
           />
         </div>
-        {query && selected.length < MAX_TAGS_PER_MEMO && hasSuggestions && (
+        {isOpen && (
           <div
-            className="menu absolute inset-x-0 top-full z-10 mt-1 rounded-box border border-base-300 bg-base-100 p-1 shadow-sm"
+            className="menu absolute inset-x-0 top-full z-10 mt-1 max-h-60 overflow-y-auto rounded-box border border-base-300 bg-base-100 p-1 shadow-sm"
             id={`${inputId}-suggestions`}
+            onBlur={(event) => {
+              const next = event.relatedTarget;
+              const list = event.currentTarget as HTMLElement;
+              if (
+                next === inputRef.current ||
+                (next instanceof Node && list.contains(next))
+              )
+                return;
+              setIsFocused(false);
+            }}
             role="listbox"
           >
             {canCreateFreeform && (
@@ -140,21 +169,25 @@ export const TagInput = ({
                 onClick={(event) => {
                   event.stopPropagation();
                   addTag(freeformName);
+                  inputRef.current?.focus();
                 }}
+                onMouseDown={(event) => event.preventDefault()}
                 role="option"
                 type="button"
               >
                 #{freeformName}を新しいタグとして追加
               </button>
             )}
-            {candidates.slice(0, 8).map((tag) => (
+            {(query ? candidates.slice(0, 8) : candidates).map((tag) => (
               <button
                 className="btn btn-ghost btn-sm justify-start"
                 key={tag.id}
                 onClick={(event) => {
                   event.stopPropagation();
                   addTag(tag.name);
+                  inputRef.current?.focus();
                 }}
+                onMouseDown={(event) => event.preventDefault()}
                 role="option"
                 type="button"
               >

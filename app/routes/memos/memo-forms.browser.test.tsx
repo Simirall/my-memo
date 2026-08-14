@@ -66,6 +66,47 @@ afterEach(() => {
 });
 
 describe("メモ作成フォーム", () => {
+  it("カテゴリーに応じた未入力タグ候補へ切り替え、選択済みタグを保持する", async () => {
+    const tag1 = { id: "tag-1", name: "仕事" };
+    const tag2 = { id: "tag-2", name: "個人" };
+    mount(
+      <CreateMemoForm
+        categories={categories}
+        initialCategoryId="category-1"
+        tagSuggestions={{
+          all: [tag1, tag2],
+          byCategory: { "category-1": [tag1], "category-2": [tag2] },
+        }}
+        tags={[tag1, tag2]}
+      />,
+    );
+
+    await page.getByRole("combobox", { name: "タグ" }).click();
+    await page.getByRole("option", { name: "#仕事" }).click();
+    await page.getByLabelText("カテゴリー").selectOptions("category-2");
+    await expect.element(page.getByText("#仕事")).toBeInTheDocument();
+    await expect
+      .element(page.getByRole("option", { name: "#個人" }))
+      .toBeVisible();
+  });
+
+  it("AI要約作成でもカテゴリー別の未入力タグ候補を表示する", async () => {
+    const tag = { id: "tag-1", name: "仕事" };
+    mount(
+      <UrlSummaryForm
+        categories={categories}
+        initialCategoryId="category-1"
+        tagSuggestions={{ all: [tag], byCategory: { "category-1": [tag] } }}
+        tags={[tag]}
+      />,
+    );
+
+    await page.getByRole("combobox", { name: "タグ" }).click();
+    await expect
+      .element(page.getByRole("option", { name: "#仕事" }))
+      .toBeVisible();
+  });
+
   it("カテゴリーを初期選択し、変更した保存先を送信する", async () => {
     const fetchSpy = vi
       .spyOn(window, "fetch")

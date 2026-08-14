@@ -1,22 +1,18 @@
-import { asc, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 import { createRoute } from "honox/factory";
+import { getAppDb } from "@/features/access-control/authorization";
 import { getUserCategories } from "@/features/categories/data/categories";
-import { tagsTable } from "@/schema";
+import { getTagSuggestions, getUserTags } from "@/features/tags/data/tags";
 import UrlSummaryForm from "./-components/$url-summary-form";
 
 export default createRoute(async (c) => {
   const user = c.get("user");
   if (!user) return c.redirect("/login");
-  const db = drizzle(c.env.MY_MEMO_D1);
+  const db = getAppDb(c.env);
 
-  const [categories, tags] = await Promise.all([
+  const [categories, tags, tagSuggestions] = await Promise.all([
     getUserCategories(c.env.MY_MEMO_D1, user.id),
-    db
-      .select({ id: tagsTable.id, name: tagsTable.name })
-      .from(tagsTable)
-      .where(eq(tagsTable.userId, user.id))
-      .orderBy(asc(tagsTable.name)),
+    getUserTags(db, user.id),
+    getTagSuggestions(db, user.id),
   ]);
   const requestedCategoryId = c.req.query("category");
   const initialCategoryId = categories.some(
@@ -39,6 +35,7 @@ export default createRoute(async (c) => {
           <UrlSummaryForm
             categories={categories}
             initialCategoryId={initialCategoryId}
+            tagSuggestions={tagSuggestions}
             tags={tags}
           />
         </div>
