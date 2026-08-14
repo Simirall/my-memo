@@ -1,7 +1,7 @@
 import { createRoute } from "honox/factory";
 import { getAppDb } from "@/features/access-control/authorization";
 import { getUserTags } from "@/features/tags/data/tags";
-import { DeleteButton } from "@/islands/$delete-button";
+import { TagList } from "@/islands/$tag-list";
 import { SettingsLayout } from "../-components/settings-layout";
 
 export default createRoute(async (c) => {
@@ -28,20 +28,7 @@ export default createRoute(async (c) => {
               タグはまだありません。
             </p>
           ) : (
-            <ul className="list rounded-box bg-base-200">
-              {tags.map((tag) => (
-                <li className="list-row items-center" key={tag.id}>
-                  <span className="list-col-grow font-semibold">
-                    #{tag.name}
-                  </span>
-                  <DeleteButton
-                    action={`/api/tags/delete/${tag.id}`}
-                    confirmMessage={`「#${tag.name}」を削除しますか？`}
-                    label={`タグ「${tag.name}」を削除`}
-                  />
-                </li>
-              ))}
-            </ul>
+            <TagList initialTags={tags} />
           )}
         </section>
       </div>

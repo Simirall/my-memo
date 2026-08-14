@@ -183,6 +183,104 @@ describe("破壊操作の所有者分離", () => {
   });
 });
 
+describe("タグ名の変更", () => {
+  beforeEach(async () => {
+    await run(
+      "INSERT INTO tags (id, user_id, name) VALUES ('own-tag', 'owner', '仕事'), ('duplicate-tag', 'owner', '個人'), ('other-tag', 'other', '他人')",
+    );
+    await run(
+      "INSERT INTO memos (id, user_id, title, content) VALUES ('tagged-memo', 'owner', 'タグ付き', '本文')",
+    );
+    await run(
+      "INSERT INTO memo_tags (memo_id, tag_id) VALUES ('tagged-memo', 'own-tag')",
+    );
+  });
+
+  it("所有するタグ名の前後空白を除いて変更し、メモとの紐付けを維持する", async () => {
+    const response = await postJson(
+      appForUser("owner"),
+      "/api/tags/rename/own-tag",
+      { name: "  更新後  " },
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, name: "更新後" });
+    expect(
+      await first<{ name: string; tag_id: string }>(
+        `SELECT tags.name, memo_tags.tag_id
+         FROM tags INNER JOIN memo_tags ON memo_tags.tag_id = tags.id
+         WHERE memo_tags.memo_id = 'tagged-memo'`,
+      ),
+    ).toEqual({ name: "更新後", tag_id: "own-tag" });
+  });
+
+  it("未認証・別所有者・存在しないタグを変更しない", async () => {
+    expect(
+      (
+        await postJson(appForUser(null), "/api/tags/rename/own-tag", {
+          name: "変更",
+        })
+      ).status,
+    ).toBe(401);
+    expect(
+      (
+        await postJson(appForUser("owner"), "/api/tags/rename/other-tag", {
+          name: "変更",
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await postJson(appForUser("owner"), "/api/tags/rename/missing", {
+          name: "変更",
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      await first<{ name: string }>(
+        "SELECT name FROM tags WHERE id = 'other-tag'",
+      ),
+    ).toEqual({ name: "他人" });
+  });
+
+  it.each([
+    ["文字列以外", 123],
+    ["空白のみ", "   "],
+    ["名前中の空白", "仕事 メモ"],
+    ["30文字超過", "あ".repeat(31)],
+  ])("%sの名前を拒否する", async (_label, name) => {
+    const response = await postJson(
+      appForUser("owner"),
+      "/api/tags/rename/own-tag",
+      { name },
+    );
+
+    expect(response.status).toBe(400);
+    expect(
+      await first<{ name: string }>(
+        "SELECT name FROM tags WHERE id = 'own-tag'",
+      ),
+    ).toEqual({ name: "仕事" });
+  });
+
+  it("重複名を拒否し、同じ名前は成功として扱う", async () => {
+    const duplicate = await postJson(
+      appForUser("owner"),
+      "/api/tags/rename/own-tag",
+      { name: "個人" },
+    );
+    expect(duplicate.status).toBe(409);
+
+    const unchanged = await postJson(
+      appForUser("owner"),
+      "/api/tags/rename/own-tag",
+      { name: "仕事" },
+    );
+    expect(unchanged.status).toBe(200);
+    expect(await unchanged.json()).toEqual({ ok: true, name: "仕事" });
+  });
+});
+
 describe("カテゴリーの並べ替え", () => {
   beforeEach(async () => {
     await run(
