@@ -12,6 +12,19 @@ const htmlResponse = (html: string, init?: ResponseInit) =>
   });
 
 describe("OGP HTML取得", () => {
+  it("XのリンクはそのままにFixupXからOGPを取得する", async () => {
+    const fetcher = vi.fn<typeof fetch>(async (input) => {
+      expect(input.toString()).toBe(
+        "https://fixupx.com/user/status/123456789",
+      );
+      return htmlResponse('<meta property="og:title" content="Xの記事">');
+    });
+
+    await expect(
+      fetchLinkPreview("https://x.com/user/status/123456789", fetcher),
+    ).resolves.toMatchObject({ title: "Xの記事" });
+  });
+
   it("公開リダイレクトを辿り最終URL基準で画像を解決する", async () => {
     const fetcher = vi.fn<typeof fetch>(async (input) => {
       const url = input.toString();

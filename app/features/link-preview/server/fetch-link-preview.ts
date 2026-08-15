@@ -13,6 +13,21 @@ import {
 export const LINK_PREVIEW_HTML_MAX_BYTES = PUBLIC_HTML_MAX_BYTES;
 export const LINK_PREVIEW_FETCH_TIMEOUT_MS = PUBLIC_HTML_FETCH_TIMEOUT_MS;
 
+const getOgpSourceUrl = (inputUrl: string) => {
+  try {
+    const url = new URL(inputUrl);
+    if (
+      url.hostname === "x.com" &&
+      /^\/[^/]+\/status\/\d+(?:\/.*)?$/.test(url.pathname)
+    ) {
+      url.hostname = "fixupx.com";
+    }
+    return url.href;
+  } catch {
+    return inputUrl;
+  }
+};
+
 class LinkPreviewFetchError extends Error {
   constructor(
     message: string,
@@ -34,7 +49,7 @@ export const fetchLinkPreview = async (
   fetcher: typeof fetch = fetch,
 ): Promise<LinkPreviewMetadata> => {
   try {
-    const result = await fetchPublicHtml(inputUrl, fetcher);
+    const result = await fetchPublicHtml(getOgpSourceUrl(inputUrl), fetcher);
     const html = decodeLinkPreviewHtml(result.bytes, result.headers);
     const metadata = parseLinkPreviewMetadata(html, result.finalUrl);
     if (!metadata) {
