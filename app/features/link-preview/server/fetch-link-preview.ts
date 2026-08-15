@@ -12,6 +12,7 @@ import {
 
 export const LINK_PREVIEW_HTML_MAX_BYTES = PUBLIC_HTML_MAX_BYTES;
 export const LINK_PREVIEW_FETCH_TIMEOUT_MS = PUBLIC_HTML_FETCH_TIMEOUT_MS;
+const FIXUPX_USER_AGENT = "MyMemoBot/1.0 (+https://my-memo.partial.cc)";
 
 const getOgpSourceUrl = (inputUrl: string) => {
   try {
@@ -27,6 +28,19 @@ const getOgpSourceUrl = (inputUrl: string) => {
     return inputUrl;
   }
 };
+
+const withFixupXUserAgent =
+  (fetcher: typeof fetch): typeof fetch =>
+  (input, init) => {
+    const url = new URL(
+      input instanceof Request ? input.url : input.toString(),
+    );
+    if (url.hostname !== "fixupx.com") return fetcher(input, init);
+
+    const headers = new Headers(init?.headers);
+    headers.set("User-Agent", FIXUPX_USER_AGENT);
+    return fetcher(input, { ...init, headers });
+  };
 
 class LinkPreviewFetchError extends Error {
   constructor(
@@ -49,7 +63,10 @@ export const fetchLinkPreview = async (
   fetcher: typeof fetch = fetch,
 ): Promise<LinkPreviewMetadata> => {
   try {
-    const result = await fetchPublicHtml(getOgpSourceUrl(inputUrl), fetcher);
+    const result = await fetchPublicHtml(
+      getOgpSourceUrl(inputUrl),
+      withFixupXUserAgent(fetcher),
+    );
     const html = decodeLinkPreviewHtml(result.bytes, result.headers);
     const metadata = parseLinkPreviewMetadata(html, result.finalUrl);
     if (!metadata) {

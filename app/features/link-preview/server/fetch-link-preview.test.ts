@@ -13,9 +13,10 @@ const htmlResponse = (html: string, init?: ResponseInit) =>
 
 describe("OGP HTML取得", () => {
   it("XのリンクはそのままにFixupXからOGPを取得する", async () => {
-    const fetcher = vi.fn<typeof fetch>(async (input) => {
-      expect(input.toString()).toBe(
-        "https://fixupx.com/user/status/123456789",
+    const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+      expect(input.toString()).toBe("https://fixupx.com/user/status/123456789");
+      expect(new Headers(init?.headers).get("User-Agent")).toBe(
+        "MyMemoBot/1.0 (+https://my-memo.partial.cc)",
       );
       return htmlResponse('<meta property="og:title" content="Xの記事">');
     });
@@ -26,7 +27,8 @@ describe("OGP HTML取得", () => {
   });
 
   it("公開リダイレクトを辿り最終URL基準で画像を解決する", async () => {
-    const fetcher = vi.fn<typeof fetch>(async (input) => {
+    const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+      expect(new Headers(init?.headers).has("User-Agent")).toBe(false);
       const url = input.toString();
       if (url === "https://example.com/start") {
         return new Response(null, {
