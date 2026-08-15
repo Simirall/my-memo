@@ -80,6 +80,23 @@ beforeEach(async () => {
 });
 
 describe("破壊操作の所有者分離", () => {
+  it("メモ削除後は指定された一覧カテゴリーへ戻る", async () => {
+    await run(
+      "INSERT INTO categories (id, user_id, name) VALUES ('category', 'owner', '仕事')",
+    );
+    await run(
+      "INSERT INTO memos (id, user_id, title, content, category_id) VALUES ('memo', 'owner', '題名', '本文', 'category')",
+    );
+
+    const response = await post(
+      appForUser("owner"),
+      "/api/memos/delete/memo?returnTo=%2Fcategories%2Fcategory",
+    );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/categories/category");
+  });
+
   it("未認証ではカテゴリー・タグ・メモを削除しない", async () => {
     await run(
       "INSERT INTO categories (id, user_id, name) VALUES ('category', 'owner', '仕事')",

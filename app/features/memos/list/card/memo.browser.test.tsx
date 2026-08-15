@@ -192,5 +192,10 @@ describe("メモ表示", () => {
     await expect
       .element(page.getByRole("button", { name: "削除" }))
       .toBeVisible();
+    expect(
+      document
+        .querySelector<HTMLFormElement>("form[action]")
+        ?.getAttribute("action"),
+    ).toBe("/api/memos/delete/memo-1?returnTo=%2Fcategories%2Fcategory-1");
   });
 });

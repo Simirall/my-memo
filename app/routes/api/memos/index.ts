@@ -42,12 +42,14 @@ import {
   refreshLinkPreviewCache,
   refreshLinkPreviewCacheFromHtml,
 } from "@/features/link-preview/server/link-preview-cache";
+import { getSafeMemoListReturnTo } from "@/features/memos/list/query/memo-list-query";
 import {
   memoSchema,
   tagUpdateSchema,
 } from "@/features/memos/schema/memo-schema";
 import {
   getTagSuggestions,
+  getUserTags,
   normalizeTagNames,
   replaceMemoTags,
 } from "@/features/tags/data/tags";
@@ -1041,6 +1043,11 @@ memosRoute
     if (!user) return c.redirect("/login");
     const memoId = c.req.param("id");
     const db = getAppDb(c.env);
+    const tags = await getUserTags(db, user.id);
+    const returnTo = getSafeMemoListReturnTo(
+      c.req.query("returnTo"),
+      new Set(tags.map((tag) => tag.id)),
+    );
 
     const memo = await db
       .select()
@@ -1064,7 +1071,7 @@ memosRoute
       }
     }
 
-    return c.redirect("/");
+    return c.redirect(returnTo);
   })
   .post("/:id/tags", zValidator("json", tagUpdateSchema), async (c) => {
     const user = c.get("user");

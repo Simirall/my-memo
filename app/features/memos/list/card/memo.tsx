@@ -138,7 +138,9 @@ export const Memo = ({
           編集
         </a>
         <DeleteButton
-          action={`/api/memos/delete/${memo.id}`}
+          action={`/api/memos/delete/${memo.id}?returnTo=${encodeURIComponent(
+            returnTo,
+          )}`}
           confirmMessage={`「${memo.title}」を削除しますか？`}
           label={`メモ「${memo.title}」を削除`}
         />
