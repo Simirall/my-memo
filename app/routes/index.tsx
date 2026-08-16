@@ -71,11 +71,7 @@ export default createRoute(async (c) => {
       <title>メモ一覧 | My Memo</title>
       <h1 className="sr-only">メモ一覧</h1>
       <div className="sticky top-20 z-10 w-full [&>honox-island]:block [&>honox-island]:w-full">
-        <CategoryTabs
-          activeCategoryId={null}
-          categories={categories}
-          query={query}
-        />
+        <CategoryTabs activeCategoryId={null} categories={categories} />
       </div>
       <div className="mt-4 [&>honox-island]:block [&>honox-island]:w-full">
         <MemoListControls

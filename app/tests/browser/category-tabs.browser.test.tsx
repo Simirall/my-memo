@@ -32,7 +32,6 @@ function mount(
     <CategoryTabs
       activeCategoryId={activeCategoryId}
       categories={displayedCategories}
-      query={{ sort: "asc", page: 3, type: "ai", tag: "tag-1" }}
     />,
     container,
   );
@@ -45,7 +44,7 @@ afterEach(() => {
 });
 
 describe("カテゴリタブ", () => {
-  it("すべてと自分のカテゴリをURLリンクのタブとして表示する", async () => {
+  it("カテゴリを切り替えるリンクでは絞り込みとソートをリセットする", async () => {
     mount(null);
 
     await expect
@@ -53,10 +52,10 @@ describe("カテゴリタブ", () => {
       .toHaveAttribute("aria-current", "page");
     await expect
       .element(page.getByRole("link", { name: "仕事" }))
-      .toHaveAttribute(
-        "href",
-        "/categories/category-1?sort=asc&type=ai&tag=tag-1",
-      );
+      .toHaveAttribute("href", "/categories/category-1");
+    await expect
+      .element(page.getByRole("link", { name: "すべて" }))
+      .toHaveAttribute("href", "/");
 
     let clicked = false;
     const allLink = page.getByRole("link", { name: "すべて" });

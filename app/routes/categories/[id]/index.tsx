@@ -89,11 +89,7 @@ export default createRoute(async (c) => {
       <title>{result.name} | My Memo</title>
       <h1 className="sr-only">{result.name}</h1>
       <div className="sticky top-20 z-10 w-full [&>honox-island]:block [&>honox-island]:w-full">
-        <CategoryTabs
-          activeCategoryId={result.id}
-          categories={categories}
-          query={query}
-        />
+        <CategoryTabs activeCategoryId={result.id} categories={categories} />
       </div>
       <div className="mt-4 [&>honox-island]:block [&>honox-island]:w-full">
         <MemoListControls

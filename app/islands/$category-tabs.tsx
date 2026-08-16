@@ -2,10 +2,6 @@ import { useEffect, useRef, useState } from "hono/jsx";
 import type z from "zod";
 import { FolderOpenIcon } from "@/components/folder-open-icon";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
-import {
-  buildMemoListUrl,
-  type MemoListQuery,
-} from "@/features/memos/list/query/memo-list-query";
 
 type Category = Pick<z.infer<typeof categorySchema.read>, "id" | "name">;
 
@@ -14,11 +10,9 @@ type ScrollEdges = "none" | "left" | "right" | "both";
 export default function CategoryTabs({
   categories,
   activeCategoryId,
-  query = { sort: "desc", page: 1 },
 }: {
   categories: ReadonlyArray<Category>;
   activeCategoryId: string | null;
-  query?: MemoListQuery;
 }) {
   const tabsRef = useRef<HTMLElement>(null);
   const dragRef = useRef<{
@@ -160,7 +154,7 @@ export default function CategoryTabs({
               ? "tab-active [scroll-initial-target:nearest]"
               : ""
           }`}
-          href={buildMemoListUrl("/", { ...query, page: 1 })}
+          href="/"
         >
           すべて
         </a>
@@ -173,10 +167,7 @@ export default function CategoryTabs({
               className={`tab inline-flex shrink-0 items-center gap-1 whitespace-nowrap ${
                 isActive ? "tab-active [scroll-initial-target:nearest]" : ""
               }`}
-              href={buildMemoListUrl(`/categories/${category.id}`, {
-                ...query,
-                page: 1,
-              })}
+              href={`/categories/${category.id}`}
               key={category.id}
             >
               <FolderOpenIcon />
