@@ -89,14 +89,10 @@ attachmentsRoute.get("/:id", async (c: AttachmentsContext) => {
 
   // getPlatformProxy used by the local Vite adapter cannot serialize Headers.
   // A plain R2Range also keeps local development behavior aligned with workerd.
-  const getObject = () =>
-    c.env.MY_MEMO_FILES.get(objectKey, range ? { range } : undefined);
-  let object: Awaited<ReturnType<typeof getObject>>;
-  try {
-    object = await getObject();
-  } catch {
-    object = await getObject();
-  }
+  const object = await c.env.MY_MEMO_FILES.get(
+    objectKey,
+    range ? { range } : undefined,
+  );
   if (!object || !("body" in object)) {
     return c.json({ message: "添付ファイルを取得できませんでした。" }, 404);
   }
@@ -126,18 +122,8 @@ attachmentsRoute.get("/:id", async (c: AttachmentsContext) => {
   if (notModifiedByEtag || notModifiedByDate) {
     return new Response(null, { status: 304, headers: cacheHeaders });
   }
-  let body: BodyInit = object.body;
-  if (isThumbnail) {
-    try {
-      body = await new Response(body).arrayBuffer();
-    } catch {
-      const retryObject = await getObject();
-      if (!retryObject || !("body" in retryObject)) {
-        return c.json({ message: "添付ファイルを取得できませんでした。" }, 404);
-      }
-      body = await new Response(retryObject.body).arrayBuffer();
-    }
-  }
+  const body = object.body;
+
   const preview = c.req.query("preview") === "1" || isThumbnail;
   const inline = preview && getAttachmentPreviewKind(contentType) !== null;
   const headers = new Headers({

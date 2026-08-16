@@ -752,43 +752,13 @@ describe("添付ファイルAPI", () => {
     expect(uploaded.attachment.mediaWidth).toBe(1);
     expect(uploaded.attachment.mediaHeight).toBe(1);
 
-    const getObjectWithReadError = async (
-      ...args: Parameters<typeof env.MY_MEMO_FILES.get>
-    ) => {
-      const object = await env.MY_MEMO_FILES.get(...args);
-      if (!object || !("body" in object)) return object;
-      return new Proxy(object, {
-        get: (target, property) =>
-          property === "body"
-            ? new ReadableStream({
-                start: (controller) =>
-                  controller.error(new Error("一時的なR2読み出しエラー")),
-              })
-            : Reflect.get(target, property, target),
-      });
-    };
-    const getObject = vi
-      .fn<typeof env.MY_MEMO_FILES.get>()
-      .mockImplementationOnce(getObjectWithReadError)
-      .mockImplementationOnce((...args) => env.MY_MEMO_FILES.get(...args))
-      .mockImplementation(getObjectWithReadError);
-    const retryEnv = {
-      ...env,
-      MY_MEMO_FILES: new Proxy(env.MY_MEMO_FILES, {
-        get: (target, property) =>
-          property === "get"
-            ? getObject
-            : Reflect.get(target, property, target),
-      }),
-    } as CloudflareBindings;
     const thumbnail = await ownerApp.fetch(
       new Request(
         `https://example.test/api/attachments/${uploaded.attachment.id}?variant=thumbnail`,
       ),
-      retryEnv,
+      env,
     );
     expect(thumbnail.status).toBe(200);
-    expect(getObject).toHaveBeenCalledTimes(2);
     expect(thumbnail.headers.get("Content-Type")).toBe("image/avif");
     expect(thumbnail.headers.get("Cache-Control")).toBe("private, no-store");
     expect(thumbnail.headers.get("Cross-Origin-Resource-Policy")).toBe(
@@ -803,10 +773,9 @@ describe("添付ファイルAPI", () => {
         `https://example.test/api/attachments/${uploaded.attachment.id}?variant=thumbnail`,
         { headers: { "If-None-Match": thumbnail.headers.get("ETag") ?? "" } },
       ),
-      retryEnv,
+      env,
     );
     expect(notModified.status).toBe(304);
-    expect(getObject).toHaveBeenCalledTimes(3);
     expect(notModified.headers.get("Cache-Control")).toBe("private, no-store");
     expect(notModified.headers.get("Cross-Origin-Resource-Policy")).toBe(
       "same-origin",
