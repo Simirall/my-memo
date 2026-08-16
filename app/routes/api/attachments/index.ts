@@ -126,8 +126,18 @@ attachmentsRoute.get("/:id", async (c: AttachmentsContext) => {
   if (notModifiedByEtag || notModifiedByDate) {
     return new Response(null, { status: 304, headers: cacheHeaders });
   }
-  const body = object.body;
-
+  let body: BodyInit = object.body;
+  if (isThumbnail) {
+    try {
+      body = await new Response(body).arrayBuffer();
+    } catch {
+      const retryObject = await getObject();
+      if (!retryObject || !("body" in retryObject)) {
+        return c.json({ message: "添付ファイルを取得できませんでした。" }, 404);
+      }
+      body = await new Response(retryObject.body).arrayBuffer();
+    }
+  }
   const preview = c.req.query("preview") === "1" || isThumbnail;
   const inline = preview && getAttachmentPreviewKind(contentType) !== null;
   const headers = new Headers({
