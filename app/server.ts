@@ -24,19 +24,23 @@ baseApp.use("*", htmlSecurityHeaders);
 // セッション情報を取得してコンテキストにセットするミドルウェア
 baseApp.use("*", async (c, next) => {
   const auth = getAuth(c.env);
-  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  const { headers, response: session } = await auth.api.getSession({
+    headers: c.req.raw.headers,
+    returnHeaders: true,
+  });
 
   if (!session) {
     c.set("user", null);
     c.set("session", null);
-    await next();
-    return;
+  } else {
+    c.set("user", session.user);
+    c.set("session", session.session);
   }
 
-  c.set("user", session.user);
-  c.set("session", session.session);
-
   await next();
+  for (const cookie of headers.getSetCookie()) {
+    c.header("Set-Cookie", cookie, { append: true });
+  }
 });
 
 baseApp.use("*", async (c, next) => {

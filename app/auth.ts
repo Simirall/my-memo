@@ -122,6 +122,7 @@ export const getAuth = (env: Cloudflare.Env) => {
     },
     session: {
       cookieCache: {
+        enabled: true,
         maxAge: 60 * 60 * 24 * 7, // 7 days
       },
     },
