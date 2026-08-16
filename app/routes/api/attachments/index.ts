@@ -89,10 +89,14 @@ attachmentsRoute.get("/:id", async (c: AttachmentsContext) => {
 
   // getPlatformProxy used by the local Vite adapter cannot serialize Headers.
   // A plain R2Range also keeps local development behavior aligned with workerd.
-  const object = await c.env.MY_MEMO_FILES.get(
-    objectKey,
-    range ? { range } : undefined,
-  );
+  const getObject = () =>
+    c.env.MY_MEMO_FILES.get(objectKey, range ? { range } : undefined);
+  let object: Awaited<ReturnType<typeof getObject>>;
+  try {
+    object = await getObject();
+  } catch {
+    object = await getObject();
+  }
   if (!object || !("body" in object)) {
     return c.json({ message: "添付ファイルを取得できませんでした。" }, 404);
   }

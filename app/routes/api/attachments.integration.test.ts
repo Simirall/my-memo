@@ -752,13 +752,27 @@ describe("添付ファイルAPI", () => {
     expect(uploaded.attachment.mediaWidth).toBe(1);
     expect(uploaded.attachment.mediaHeight).toBe(1);
 
+    const getObject = vi
+      .fn<typeof env.MY_MEMO_FILES.get>()
+      .mockRejectedValueOnce(new Error("一時的なR2取得エラー"))
+      .mockImplementation((...args) => env.MY_MEMO_FILES.get(...args));
+    const retryEnv = {
+      ...env,
+      MY_MEMO_FILES: new Proxy(env.MY_MEMO_FILES, {
+        get: (target, property) =>
+          property === "get"
+            ? getObject
+            : Reflect.get(target, property, target),
+      }),
+    } as CloudflareBindings;
     const thumbnail = await ownerApp.fetch(
       new Request(
         `https://example.test/api/attachments/${uploaded.attachment.id}?variant=thumbnail`,
       ),
-      env,
+      retryEnv,
     );
     expect(thumbnail.status).toBe(200);
+    expect(getObject).toHaveBeenCalledTimes(2);
     expect(thumbnail.headers.get("Content-Type")).toBe("image/avif");
     expect(thumbnail.headers.get("Cache-Control")).toBe("private, no-store");
     expect(thumbnail.headers.get("Cross-Origin-Resource-Policy")).toBe(
