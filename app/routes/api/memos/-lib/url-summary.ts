@@ -153,7 +153,7 @@ export const generateUrlSummary = async (
   const title = markdown.data.match(/\s*title:\s*(?<title>.+?)\s*\n[\s\S]*?/m)
     ?.groups?.title;
   const summary = await readWorkersAiTextStream(
-    await env.AI.run("@cf/openai/gpt-oss-20b", {
+    await env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
       messages: [
         {
           role: "user",
@@ -162,7 +162,7 @@ export const generateUrlSummary = async (
             markdown.data,
         },
       ],
-      reasoning_effort: "low",
+      chat_template_kwargs: { enable_thinking: false },
       max_completion_tokens: 1024,
       stream: true,
     }),
