@@ -14,6 +14,12 @@ type MemoListDb = ReturnType<typeof getMemoListDb>;
 
 export const MEMO_LIST_PAGE_SIZE = 20;
 
+const excludedFromAll = sql`exists (
+  select 1 from categories
+  where categories.id = ${schema.memosTable.categoryId}
+    and categories.exclude_from_all = 1
+)`;
+
 export const getMemoList = async (
   db: MemoListDb,
   userId: string,
@@ -22,7 +28,11 @@ export const getMemoList = async (
 ) => {
   const conditions = [eq(schema.memosTable.userId, userId)];
 
-  if (categoryId) conditions.push(eq(schema.memosTable.categoryId, categoryId));
+  if (categoryId) {
+    conditions.push(eq(schema.memosTable.categoryId, categoryId));
+  } else {
+    conditions.push(sql`not ${excludedFromAll}`);
+  }
 
   if (query.type === "ai") {
     conditions.push(eq(schema.memosTable.isAiSummary, 1));
@@ -96,6 +106,8 @@ export const getUsedMemoTags = async (
   ];
   if (categoryId) {
     conditions.push(eq(schema.memosTable.categoryId, categoryId));
+  } else {
+    conditions.push(sql`not ${excludedFromAll}`);
   }
 
   const tags = await db

@@ -110,11 +110,11 @@ describe("スキーママイグレーション", () => {
     expect(user).toEqual({ role: "user" });
   });
 
-  it("カテゴリー順位の列・インデックス・非負制約を追加する", async () => {
+  it("カテゴリー順位とすべてからの除外設定を追加する", async () => {
     await addUser("category-owner");
     const columns = await db
       .prepare("PRAGMA table_info('categories')")
-      .all<{ name: string }>();
+      .all<{ name: string; dflt_value: string | null }>();
     const indexes = await db
       .prepare("PRAGMA index_list('categories')")
       .all<{ name: string }>();
@@ -122,9 +122,25 @@ describe("スキーママイグレーション", () => {
     expect(columns.results.map((column) => column.name)).toContain(
       "sort_order",
     );
+    expect(columns.results).toContainEqual(
+      expect.objectContaining({
+        name: "exclude_from_all",
+        dflt_value: "false",
+      }),
+    );
     expect(indexes.results.map((index) => index.name)).toContain(
       "categories_user_id_sort_order_idx",
     );
+    await run(
+      "INSERT INTO categories (id, user_id, name) VALUES ('existing-category', 'category-owner', '既存')",
+    );
+    expect(
+      await db
+        .prepare(
+          "SELECT exclude_from_all FROM categories WHERE id = 'existing-category'",
+        )
+        .first(),
+    ).toEqual({ exclude_from_all: 0 });
     await expect(
       run(
         "INSERT INTO categories (id, user_id, name, sort_order) VALUES ('invalid-order', 'category-owner', '不正', -1)",

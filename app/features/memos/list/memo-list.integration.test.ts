@@ -82,7 +82,7 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
       "OGPタイトル",
       "OGP説明",
       "https://images.example.com/card.jpg",
-      "2026-08-20T00:00:00.000Z",
+      "2027-08-20T00:00:00.000Z",
       "2026-08-01T00:00:00.000Z",
     );
 
@@ -193,6 +193,64 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
     ).toEqual(["link", "plain"]);
   });
 
+  it("すべてでは除外カテゴリーを省き、カテゴリー別では表示する", async () => {
+    await addUser("owner");
+    await run(
+      "INSERT INTO categories (id, user_id, name, exclude_from_all) VALUES ('visible', 'owner', '表示', 0), ('hidden', 'owner', '非表示', 1)",
+    );
+    await run(
+      "INSERT INTO tags (id, user_id, name) VALUES ('hidden-tag', 'owner', '非表示用')",
+    );
+    await addMemo("visible-memo", "owner", "2026-08-08 03:00:00", {
+      categoryId: "visible",
+    });
+    await addMemo("hidden-memo", "owner", "2026-08-08 02:00:00", {
+      ai: 1,
+      categoryId: "hidden",
+      url: "https://example.com/hidden",
+    });
+    await addMemo("uncategorized", "owner", "2026-08-08 01:00:00");
+    await run(
+      "INSERT INTO memo_tags (memo_id, tag_id) VALUES ('hidden-memo', 'hidden-tag')",
+    );
+    await run(
+      `INSERT INTO memo_attachments
+        (id, memo_id, user_id, r2_key, file_name, content_type, size_bytes, etag)
+       VALUES ('hidden-attachment', 'hidden-memo', 'owner', 'test/hidden', 'a.txt', 'text/plain', 1, 'etag')`,
+    );
+
+    const db = getMemoListDb(env);
+    expect(
+      memoIds(await getMemoList(db, "owner", { sort: "desc", page: 1 })),
+    ).toEqual(["visible-memo", "uncategorized"]);
+    expect(
+      memoIds(
+        await getMemoList(
+          db,
+          "owner",
+          {
+            sort: "desc",
+            page: 1,
+            type: "ai",
+            attachment: "with",
+            tag: "hidden-tag",
+          },
+          "hidden",
+        ),
+      ),
+    ).toEqual(["hidden-memo"]);
+    expect(
+      memoIds(
+        await getMemoList(db, "owner", {
+          sort: "desc",
+          page: 1,
+          type: "ai",
+          attachment: "with",
+          tag: "hidden-tag",
+        }),
+      ),
+    ).toEqual([]);
+  });
   it("20件と40件の境界で後続ページの有無を判定する", async () => {
     await addUser("owner");
     for (let index = 1; index <= MEMO_LIST_PAGE_SIZE * 2 + 1; index += 1) {
@@ -234,7 +292,7 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
     await addUser("owner");
     await addUser("other");
     await run(
-      "INSERT INTO categories (id, user_id, name) VALUES ('category-1', 'owner', '仕事'), ('category-2', 'owner', '個人')",
+      "INSERT INTO categories (id, user_id, name, exclude_from_all) VALUES ('category-1', 'owner', '仕事', 0), ('category-2', 'owner', '個人', 1)",
     );
     await run(
       "INSERT INTO tags (id, user_id, name) VALUES ('tag-work', 'owner', '仕事用'), ('tag-private', 'owner', '個人用'), ('tag-unused', 'owner', '未使用'), ('tag-other', 'other', '他人')",
@@ -252,11 +310,13 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
 
     const db = getMemoListDb(env);
     expect(await getUsedMemoTags(db, "owner")).toEqual([
-      { id: "tag-private", name: "個人用" },
       { id: "tag-work", name: "仕事用" },
     ]);
     expect(await getUsedMemoTags(db, "owner", "category-1")).toEqual([
       { id: "tag-work", name: "仕事用" },
+    ]);
+    expect(await getUsedMemoTags(db, "owner", "category-2")).toEqual([
+      { id: "tag-private", name: "個人用" },
     ]);
     expect(await getTagSuggestions(getAppDb(env), "owner")).toEqual({
       all: [

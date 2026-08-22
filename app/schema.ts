@@ -272,6 +272,9 @@ export const categoriesTable = sqliteTable(
       .references(() => userTable.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
+    excludeFromAll: integer("exclude_from_all", { mode: "boolean" })
+      .notNull()
+      .default(false),
     createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
     updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   },

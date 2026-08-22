@@ -6,7 +6,10 @@ import { PhosphorIcon } from "@/components/phosphor-icon";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
 import { DeleteButton } from "./$delete-button";
 
-type Category = Pick<z.infer<typeof categorySchema.read>, "id" | "name">;
+type Category = Pick<
+  z.infer<typeof categorySchema.read>,
+  "id" | "name" | "excludeFromAll"
+>;
 type Status = "idle" | "saved" | "error";
 
 const moveCategory = (
@@ -39,6 +42,7 @@ export const SortableCategoryList = ({
   const [status, setStatus] = useState<Status>("idle");
   const [editing, setEditing] = useState<Category | undefined>(undefined);
   const [editingName, setEditingName] = useState("");
+  const [editingExcludeFromAll, setEditingExcludeFromAll] = useState(false);
   const [editError, setEditError] = useState<string | undefined>(undefined);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameSaved, setRenameSaved] = useState(false);
@@ -182,6 +186,9 @@ export const SortableCategoryList = ({
               href={`/categories/${category.id}`}
             >
               {category.name}
+              {category.excludeFromAll && (
+                <span className="badge ml-2">private</span>
+              )}
             </a>
             <button
               aria-label={`カテゴリー「${category.name}」を編集`}
@@ -192,6 +199,7 @@ export const SortableCategoryList = ({
                   event.currentTarget as HTMLButtonElement;
                 setEditing(category);
                 setEditingName(category.name);
+                setEditingExcludeFromAll(category.excludeFromAll);
                 setEditError(undefined);
               }}
               type="button"
@@ -236,20 +244,32 @@ export const SortableCategoryList = ({
                   {
                     method: "POST",
                     headers: { "content-type": "application/json" },
-                    body: JSON.stringify({ name: editingName }),
+                    body: JSON.stringify({
+                      name: editingName,
+                      excludeFromAll: editingExcludeFromAll,
+                    }),
                   },
                 );
                 const result = (await response.json().catch(() => ({}))) as {
                   message?: string;
                   name?: string;
+                  excludeFromAll?: boolean;
                 };
-                if (!response.ok || !result.name) {
+                if (
+                  !response.ok ||
+                  !result.name ||
+                  typeof result.excludeFromAll !== "boolean"
+                ) {
                   throw new Error(result.message ?? "保存できませんでした。");
                 }
                 setCategories((current) =>
                   current.map((category) =>
                     category.id === editing.id
-                      ? { ...category, name: result.name as string }
+                      ? {
+                          ...category,
+                          name: result.name as string,
+                          excludeFromAll: result.excludeFromAll as boolean,
+                        }
                       : category,
                   ),
                 );
@@ -291,6 +311,31 @@ export const SortableCategoryList = ({
             </label>
             <p className="text-base-content/70 text-sm">
               50文字以内で入力してください。
+            </p>
+            <label
+              className="flex cursor-pointer items-center gap-3"
+              htmlFor="edit-category-exclude-from-all"
+            >
+              <input
+                aria-describedby="edit-category-exclude-from-all-help"
+                checked={editingExcludeFromAll}
+                className="checkbox"
+                disabled={isRenaming}
+                id="edit-category-exclude-from-all"
+                onChange={(event) =>
+                  setEditingExcludeFromAll(
+                    (event.currentTarget as HTMLInputElement).checked,
+                  )
+                }
+                type="checkbox"
+              />
+              <span>「すべて」の一覧に表示しない</span>
+            </label>
+            <p
+              className="text-base-content/70 text-sm"
+              id="edit-category-exclude-from-all-help"
+            >
+              カテゴリー別の一覧には表示されます。
             </p>
             <div className="modal-action">
               <button
@@ -359,7 +404,7 @@ export const SortableCategoryList = ({
             className="alert alert-soft alert-success pointer-events-auto w-[min(24rem,calc(100vw-2rem))] shadow-lg"
             role="status"
           >
-            カテゴリー名を変更しました。
+            カテゴリーを変更しました。
           </div>
         )}
       </div>

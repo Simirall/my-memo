@@ -440,20 +440,24 @@ describe("カテゴリー名の変更", () => {
     );
   });
 
-  it("所有するカテゴリー名の前後空白を除いて変更する", async () => {
+  it("所有するカテゴリーの名前と除外設定を変更する", async () => {
     const response = await postJson(
       appForUser("owner"),
       "/api/categories/rename/own-category",
-      { name: "  新しい仕事  " },
+      { name: "  新しい仕事  ", excludeFromAll: true },
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true, name: "新しい仕事" });
+    expect(await response.json()).toEqual({
+      ok: true,
+      name: "新しい仕事",
+      excludeFromAll: true,
+    });
     expect(
-      await first<{ name: string }>(
-        "SELECT name FROM categories WHERE id = 'own-category'",
+      await first<{ name: string; exclude_from_all: number }>(
+        "SELECT name, exclude_from_all FROM categories WHERE id = 'own-category'",
       ),
-    ).toEqual({ name: "新しい仕事" });
+    ).toEqual({ name: "新しい仕事", exclude_from_all: 1 });
   });
 
   it("未認証・別所有者・存在しないカテゴリーを変更しない", async () => {
@@ -462,7 +466,7 @@ describe("カテゴリー名の変更", () => {
         await postJson(
           appForUser(null),
           "/api/categories/rename/own-category",
-          { name: "変更" },
+          { name: "変更", excludeFromAll: false },
         )
       ).status,
     ).toBe(401);
@@ -471,7 +475,7 @@ describe("カテゴリー名の変更", () => {
         await postJson(
           appForUser("owner"),
           "/api/categories/rename/other-category",
-          { name: "変更" },
+          { name: "変更", excludeFromAll: false },
         )
       ).status,
     ).toBe(404);
@@ -479,6 +483,7 @@ describe("カテゴリー名の変更", () => {
       (
         await postJson(appForUser("owner"), "/api/categories/rename/missing", {
           name: "変更",
+          excludeFromAll: false,
         })
       ).status,
     ).toBe(404);
@@ -496,7 +501,7 @@ describe("カテゴリー名の変更", () => {
     const response = await postJson(
       appForUser("owner"),
       "/api/categories/rename/own-category",
-      { name },
+      { name, excludeFromAll: false },
     );
 
     expect(response.status).toBe(400);
@@ -511,16 +516,41 @@ describe("カテゴリー名の変更", () => {
     const duplicate = await postJson(
       appForUser("owner"),
       "/api/categories/rename/own-category",
-      { name: "個人" },
+      { name: "個人", excludeFromAll: false },
     );
     expect(duplicate.status).toBe(409);
 
     const unchanged = await postJson(
       appForUser("owner"),
       "/api/categories/rename/own-category",
-      { name: "仕事" },
+      { name: "仕事", excludeFromAll: false },
     );
     expect(unchanged.status).toBe(200);
-    expect(await unchanged.json()).toEqual({ ok: true, name: "仕事" });
+    expect(await unchanged.json()).toEqual({
+      ok: true,
+      name: "仕事",
+      excludeFromAll: false,
+    });
+  });
+
+  it("除外設定だけを変更し、不正な値を拒否する", async () => {
+    const changed = await postJson(
+      appForUser("owner"),
+      "/api/categories/rename/own-category",
+      { name: "仕事", excludeFromAll: true },
+    );
+    expect(changed.status).toBe(200);
+    expect(
+      await first<{ exclude_from_all: number }>(
+        "SELECT exclude_from_all FROM categories WHERE id = 'own-category'",
+      ),
+    ).toEqual({ exclude_from_all: 1 });
+
+    const invalid = await postJson(
+      appForUser("owner"),
+      "/api/categories/rename/own-category",
+      { name: "仕事", excludeFromAll: "true" },
+    );
+    expect(invalid.status).toBe(400);
   });
 });

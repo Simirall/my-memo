@@ -18,6 +18,7 @@ export const categorySchema = {
       .trim()
       .min(1, "カテゴリー名を入力してください")
       .max(50, "50文字以内で入力してください"),
+    excludeFromAll: z.boolean(),
   }),
   reorder: z.object({
     categoryIds: z.array(z.string().min(1)),

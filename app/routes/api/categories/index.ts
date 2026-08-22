@@ -63,7 +63,10 @@ categoriesRoute
     const db = drizzle(c.env.MY_MEMO_D1);
     const id = c.req.param("id");
     const category = await db
-      .select({ name: categoriesTable.name })
+      .select({
+        name: categoriesTable.name,
+        excludeFromAll: categoriesTable.excludeFromAll,
+      })
       .from(categoriesTable)
       .where(
         and(eq(categoriesTable.id, id), eq(categoriesTable.userId, user.id)),
@@ -73,8 +76,11 @@ categoriesRoute
     if (!category) {
       return c.json({ message: "カテゴリーが見つかりません。" }, 404);
     }
-    if (category.name === parsed.data.name) {
-      return c.json({ ok: true, name: category.name });
+    if (
+      category.name === parsed.data.name &&
+      category.excludeFromAll === parsed.data.excludeFromAll
+    ) {
+      return c.json({ ok: true, ...category });
     }
 
     try {
@@ -82,6 +88,7 @@ categoriesRoute
         .update(categoriesTable)
         .set({
           name: parsed.data.name,
+          excludeFromAll: parsed.data.excludeFromAll,
           updatedAt: sql`CURRENT_TIMESTAMP`,
         })
         .where(
@@ -97,7 +104,7 @@ categoriesRoute
       throw error;
     }
 
-    return c.json({ ok: true, name: parsed.data.name });
+    return c.json({ ok: true, ...parsed.data });
   })
   .post("/reorder", async (c) => {
     const user = c.get("user");

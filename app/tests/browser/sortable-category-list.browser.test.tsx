@@ -5,8 +5,8 @@ import { page, userEvent } from "vitest/browser";
 import { SortableCategoryList } from "@/islands/$sortable-category-list";
 
 const categories = [
-  { id: "first", name: "先頭" },
-  { id: "second", name: "末尾" },
+  { id: "first", name: "先頭", excludeFromAll: false },
+  { id: "second", name: "末尾", excludeFromAll: true },
 ];
 
 const mount = () => {
@@ -141,6 +141,12 @@ describe("カテゴリー名の変更", () => {
     const input = page.getByRole("textbox", { name: "カテゴリー名" });
     await expect.element(input).toHaveValue("先頭");
     await expect.element(input).toHaveFocus();
+    await expect
+      .element(
+        page.getByRole("checkbox", { name: "「すべて」の一覧に表示しない" }),
+      )
+      .not.toBeChecked();
+    await expect.element(page.getByText("private")).toBeVisible();
   });
 
   it("キャンセル・Escape・背景クリックで閉じてフォーカスを戻す", async () => {
@@ -173,15 +179,21 @@ describe("カテゴリー名の変更", () => {
 
   it("保存成功時は一覧を更新して完了を通知する", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ ok: true, name: "更新後" }), {
-        status: 200,
-      }),
+      new Response(
+        JSON.stringify({ ok: true, name: "更新後", excludeFromAll: true }),
+        {
+          status: 200,
+        },
+      ),
     );
     vi.stubGlobal("fetch", fetchMock);
     mount();
 
     await userEvent.click(
       page.getByRole("button", { name: "カテゴリー「先頭」を編集" }),
+    );
+    await userEvent.click(
+      page.getByRole("checkbox", { name: "「すべて」の一覧に表示しない" }),
     );
     await page
       .getByRole("textbox", { name: "カテゴリー名" })
@@ -191,14 +203,17 @@ describe("カテゴリー名の変更", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/categories/rename/first",
       expect.objectContaining({
-        body: JSON.stringify({ name: "  更新後  " }),
+        body: JSON.stringify({
+          name: "  更新後  ",
+          excludeFromAll: true,
+        }),
       }),
     );
     await expect
-      .element(page.getByRole("link", { name: "更新後" }))
+      .element(page.getByRole("link", { name: "更新後すべてで非表示" }))
       .toBeVisible();
     await expect
-      .element(page.getByText("カテゴリー名を変更しました。"))
+      .element(page.getByText("カテゴリーを変更しました。"))
       .toBeVisible();
   });
 
@@ -214,9 +229,10 @@ describe("カテゴリー名の変更", () => {
         ),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ ok: true, name: "別の名前" }), {
-          status: 200,
-        }),
+        new Response(
+          JSON.stringify({ ok: true, name: "別の名前", excludeFromAll: true }),
+          { status: 200 },
+        ),
       );
     vi.stubGlobal("fetch", fetchMock);
     mount();
@@ -226,8 +242,13 @@ describe("カテゴリー名の変更", () => {
     );
     const input = page.getByRole("textbox", { name: "カテゴリー名" });
     await input.fill("末尾");
+    const checkbox = page.getByRole("checkbox", {
+      name: "「すべて」の一覧に表示しない",
+    });
+    await userEvent.click(checkbox);
     await userEvent.click(page.getByRole("button", { name: "保存" }));
 
+    await expect.element(checkbox).toBeChecked();
     await expect
       .element(page.getByRole("alert"))
       .toHaveTextContent("同じ名前のカテゴリーがすでに登録されています。");
