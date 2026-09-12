@@ -1,4 +1,4 @@
-const CACHE_NAME = "my-memo-shell-v3";
+const CACHE_NAME = "my-memo-shell-v4";
 const PRECACHE_URLS = [
   "/offline.html",
   "/manifest.webmanifest",
@@ -8,6 +8,8 @@ const PRECACHE_URLS = [
   "/icons/icon-512.png",
   "/icons/icon-maskable.png",
   "/icons/apple-touch-icon.png",
+  "/icons/shortcut-note.png",
+  "/icons/shortcut-globe.png",
 ];
 
 self.addEventListener("install", (event) => {

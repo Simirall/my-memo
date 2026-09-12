@@ -29,6 +29,30 @@
       "purpose": "maskable"
     }
   ],
+  "shortcuts": [
+    {
+      "name": "メモを作成",
+      "url": "/memos/create",
+      "icons": [
+        {
+          "src": "/icons/shortcut-note.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "WebページをAI要約",
+      "url": "/memos/url-summary",
+      "icons": [
+        {
+          "src": "/icons/shortcut-globe.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
   "share_target": {
     "action": "/share",
     "method": "POST",
