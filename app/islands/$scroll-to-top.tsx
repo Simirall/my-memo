@@ -1,8 +1,13 @@
 import arrowUpIcon from "@phosphor-icons/core/assets/regular/arrow-up.svg?raw";
 import { useEffect, useState } from "hono/jsx";
 import { PhosphorIcon } from "../components/phosphor-icon";
+import PageBackButton from "./$page-back";
 
-export default function ScrollToTopButton() {
+export default function ScrollToTopButton({
+  showBackButton = false,
+}: {
+  showBackButton?: boolean;
+}) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -14,6 +19,10 @@ export default function ScrollToTopButton() {
     window.addEventListener("scroll", updateVisibility, { passive: true });
     return () => window.removeEventListener("scroll", updateVisibility);
   }, []);
+
+  if (showBackButton && !isVisible) {
+    return <PageBackButton />;
+  }
 
   const visibilityClassName = isVisible
     ? "pointer-events-auto opacity-100"
