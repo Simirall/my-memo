@@ -3,6 +3,7 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 const appDirectory = path.resolve("app");
+const e2eDirectory = path.resolve("tests/e2e");
 const pnpmCli = process.env.npm_execpath;
 if (!pnpmCli) {
   throw new Error("pnpm run test:collect経由で実行してください。");
@@ -12,6 +13,7 @@ const categories = {
   unit: /\.test\.ts$/,
   integration: /\.integration\.test\.(?:ts|tsx)$/,
   browser: /\.browser\.test\.tsx$/,
+  e2e: /\.e2e\.test\.ts$/,
 };
 
 const files = [];
@@ -24,6 +26,7 @@ const visit = async (directory) => {
 };
 
 await visit(appDirectory);
+await visit(e2eDirectory);
 
 const expected = Object.fromEntries(
   Object.keys(categories).map((key) => [key, new Set()]),
@@ -33,7 +36,11 @@ for (const file of files) {
   const relativePath = path.relative(process.cwd(), file).replaceAll("\\", "/");
   const matches = Object.entries(categories)
     .filter(([name, pattern]) => {
-      if (name === "unit" && relativePath.includes(".integration.test.")) {
+      if (
+        name === "unit" &&
+        (relativePath.includes(".integration.test.") ||
+          relativePath.includes(".e2e.test."))
+      ) {
         return false;
       }
       return pattern.test(relativePath);
@@ -51,6 +58,7 @@ const listCommands = {
   unit: ["exec", "vitest", "list", "--config=vitest.unit.config.ts"],
   integration: ["exec", "vitest", "list", "--config=vitest.config.ts"],
   browser: ["exec", "vitest", "list", "--config=vitest.browser.config.ts"],
+  e2e: ["exec", "playwright", "test", "--list"],
 };
 
 const collected = {};
@@ -66,21 +74,24 @@ for (const [name, args] of Object.entries(listCommands)) {
   );
   if (result.status !== 0) {
     errors.push(
-      `${name}: vitest listに失敗しました。\n${result.stderr || result.stdout}`,
+      `${name}: テスト一覧の取得に失敗しました。\n${result.stderr || result.stdout}`,
     );
     collected[name] = new Set();
     continue;
   }
 
-  collected[name] = new Set(
-    result.stdout
-      .split(/\r?\n/)
-      .map((line) =>
-        line.match(/^(?:\[[^\]]+\]\s+)?(app[\\/].+?\.test\.(?:ts|tsx))\s+>/),
-      )
-      .filter(Boolean)
-      .map((match) => match[1].replaceAll("\\", "/")),
-  );
+  const listedFiles = result.stdout
+    .split(/\r?\n/)
+    .map((line) =>
+      name === "e2e"
+        ? line.match(/›\s+(.+?\.e2e\.test\.ts):\d+/)
+        : line.match(/^(?:\[[^\]]+\]\s+)?(app[\\/].+?\.test\.(?:ts|tsx))\s+>/),
+    )
+    .filter(Boolean)
+    .map((match) =>
+      name === "e2e" ? `tests/e2e/${match[1]}` : match[1].replaceAll("\\", "/"),
+    );
+  collected[name] = new Set(listedFiles);
 }
 
 for (const name of Object.keys(categories)) {
@@ -104,5 +115,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `テスト収集: unit=${collected.unit.size}, integration=${collected.integration.size}, browser=${collected.browser.size}`,
+  `テスト収集: unit=${collected.unit.size}, integration=${collected.integration.size}, browser=${collected.browser.size}, e2e=${collected.e2e.size}`,
 );

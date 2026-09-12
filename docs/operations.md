@@ -12,6 +12,12 @@ D1、R2、Workers AI、定期実行の設定は`wrangler.jsonc`を正としま�
 
 GitHub OAuth AppのAuthorization callback URLは、`BETTER_AUTH_URL`に`/api/auth/callback/github`を加えたURLです。
 
+## GitHubの必須チェック
+
+`.github/workflows/verify.yml`の`verify`ジョブは、すべてのPull Requestと`main`へのpushで実行します。
+GitHubで一度このworkflowを実行した後、Settings → Rules → Rulesetsで`main`のルールを開き、Require status checks to passを有効にして`verify`を追加します。
+Dependabotの自動マージを設定する場合も、この`verify`を必須条件にします。
+
 ## データモデルの変更
 
 スキーマの定義元は`app/schema.ts`、D1へ適用する履歴は`migrations/`です。

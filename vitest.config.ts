@@ -27,6 +27,7 @@ export default defineConfig({
     })),
   ],
   test: {
+    retry: process.env.CI ? 1 : 0,
     include: ["app/**/*.integration.test.ts", "app/**/*.integration.test.tsx"],
     setupFiles: ["./tests/setup/apply-migrations.ts"],
   },

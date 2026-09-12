@@ -1,3 +1,5 @@
 [tools]
+actionlint = "latest"
 node = "lts"
+pinact = "latest"
 pnpm = "11.21.0"

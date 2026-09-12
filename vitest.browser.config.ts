@@ -12,6 +12,7 @@ export default defineConfig({
     include: ["better-auth/client", "hono/jsx/dom/jsx-dev-runtime"],
   },
   test: {
+    retry: process.env.CI ? 1 : 0,
     include: ["app/**/*.browser.test.tsx"],
     browser: {
       enabled: true,

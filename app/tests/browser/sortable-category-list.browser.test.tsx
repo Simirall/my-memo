@@ -209,8 +209,10 @@ describe("カテゴリー名の変更", () => {
         }),
       }),
     );
+    const updatedLink = page.getByRole("link", { name: "更新後" });
+    await expect.element(updatedLink).toBeVisible();
     await expect
-      .element(page.getByRole("link", { name: "更新後すべてで非表示" }))
+      .element(updatedLink.getByText("private", { exact: true }))
       .toBeVisible();
     await expect
       .element(page.getByText("カテゴリーを変更しました。"))
