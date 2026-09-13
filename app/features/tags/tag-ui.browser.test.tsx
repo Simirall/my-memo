@@ -258,6 +258,9 @@ describe("タグUI", () => {
     await expect
       .element(page.getByRole("option", { name: "#あとで" }))
       .toBeVisible();
+    // 候補を閉じる際のレイアウト変化が保存クリックに重ならないようにする。
+    await page.getByRole("heading", { name: "タグを編集" }).click();
+    await expect.element(page.getByRole("listbox")).not.toBeInTheDocument();
     await page.getByRole("button", { name: "保存" }).click();
 
     await expect.poll(() => fetchMock.mock.calls.length).toBe(1);
