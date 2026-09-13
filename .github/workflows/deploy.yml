@@ -1,7 +1,9 @@
 name: Deploy
 
 on:
-  workflow_call:
+  workflow_run:
+    workflows: [Verify]
+    types: [completed]
 
 permissions:
   contents: read
@@ -9,6 +11,10 @@ permissions:
 jobs:
   deploy:
     name: deploy
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -22,6 +28,8 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - name: Check latest main commit
         id: current
         shell: bash
