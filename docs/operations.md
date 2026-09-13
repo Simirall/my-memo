@@ -18,6 +18,24 @@ GitHub OAuth AppのAuthorization callback URLは、`BETTER_AUTH_URL`に`/api/aut
 GitHubで一度このworkflowを実行した後、Settings → Rules → Rulesetsで`main`のルールを開き、Require status checks to passを有効にして`verify`を追加します。
 Dependabotの自動マージを設定する場合も、この`verify`を必須条件にします。
 
+## GitHub Actionsからの本番デプロイ
+
+`.github/workflows/deploy.yml`は単独では起動せず、`main`へのpushで`verify`が成功した場合だけ`workflow_call`で実行します。
+GitHubの`production` Environmentを作成し、Deployment branchesを`main`に限定して次のEnvironment Secretを登録します。
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN`
+
+API Tokenは対象Accountと`partial.cc` Zoneに限定し、`Workers Scripts Edit`、`D1 Edit`、`Workers Routes Edit`だけを付与します。
+`BETTER_AUTH_URL`、`BETTER_AUTH_SECRET`、`GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET`はWorker SecretとしてCloudflareに残します。
+通常のWorker変数も維持するため、デプロイでは`wrangler deploy --keep-vars`を使用します。
+
+デプロイはD1 migration、Worker、`https://my-memo.partial.cc/login`の疎通確認の順です。
+疎通確認に失敗した場合は自動でrollbackせず、適用済みmigrationとの互換性を確認してCloudflareのdeployment履歴から手動で戻します。
+
+Actionsからの初回デプロイを確認したら、Cloudflare DashboardのWorker → Settings → BuildsでGit RepositoryをDisconnectします。
+Workers Buildsにだけ設定されていたbuild environment variableがないことを確認してから解除します。
+
 ## データモデルの変更
 
 スキーマの定義元は`app/schema.ts`、D1へ適用する履歴は`migrations/`です。
