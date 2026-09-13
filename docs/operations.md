@@ -20,7 +20,7 @@ Dependabotの自動マージを設定する場合も、この`verify`を必須�
 
 ## GitHub Actionsからの本番デプロイ
 
-`.github/workflows/deploy.yml`は単独では起動せず、`main`へのpushで`verify`が成功した場合だけ`workflow_call`で実行します。
+`.github/workflows/deploy.yml`は`main`へのpushで`verify`が成功した場合だけ`workflow_run`で実行します。
 GitHubの`production` Environmentを作成し、Deployment branchesを`main`に限定して次のEnvironment Secretを登録します。
 
 - `CLOUDFLARE_ACCOUNT_ID`
