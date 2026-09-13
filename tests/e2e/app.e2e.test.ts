@@ -38,11 +38,20 @@ const test = base.extend<Fixtures>({
       workers: [
         {
           configPath: "wrangler.jsonc",
+          // Workers AIは既定でリモート接続するため、未使用でもローカルに置き換える。
+          bindingOverrides: { AI: "e2e-disabled-ai" },
           secrets: {
             BETTER_AUTH_URL: "http://localhost",
             BETTER_AUTH_SECRET: secret,
             GITHUB_CLIENT_ID: "e2e-client",
             GITHUB_CLIENT_SECRET: "e2e-client-secret",
+          },
+        },
+        {
+          config: {
+            name: "e2e-disabled-ai",
+            main: "tests/e2e/disabled-ai.ts",
+            compatibility_date: "2026-08-12",
           },
         },
       ],
