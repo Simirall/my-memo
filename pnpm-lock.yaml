@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: ^0.9.0
-        version: 0.9.0(hono@4.13.1)(zod@4.4.3)
+        version: 0.9.0(hono@4.13.8)(zod@4.4.3)
       '@phosphor-icons/core':
         specifier: 2.1.1
         version: 2.1.1
@@ -30,11 +30,11 @@ importers:
         specifier: ^0.8.3
         version: 0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(kysely@0.29.5))(zod@4.4.3)
       hono:
-        specifier: ^4.13.1
-        version: 4.13.1
+        specifier: ^4.13.8
+        version: 4.13.8
       honox:
         specifier: ^0.1.61
-        version: 0.1.61(hono@4.13.1)(miniflare@4.20260111.0)(supports-color@10.2.2)(wrangler@4.132.0(@types/node@26.5.1))
+        version: 0.1.61(hono@4.13.8)(miniflare@4.20260111.0)(supports-color@10.2.2)(wrangler@4.132.0(@types/node@26.5.1))
       markdown-it:
         specifier: ^15.0.2
         version: 15.0.2
@@ -50,10 +50,10 @@ importers:
         version: 0.22.0(@vitest/runner@4.1.10)(@vitest/snapshot@4.1.10)(vitest@4.1.10)
       '@hono/vite-build':
         specifier: ^1.11.1
-        version: 1.11.1(hono@4.13.1)
+        version: 1.11.1(hono@4.13.8)
       '@hono/vite-dev-server':
         specifier: ^0.26.1
-        version: 0.26.1(hono@4.13.1)(miniflare@4.20260111.0)(wrangler@4.132.0(@types/node@26.5.1))
+        version: 0.26.1(hono@4.13.8)(miniflare@4.20260111.0)(wrangler@4.132.0(@types/node@26.5.1))
       '@playwright/test':
         specifier: 1.63.0
         version: 1.63.0
@@ -2504,8 +2504,8 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  hono@4.13.1:
-    resolution: {integrity: sha512-kdJoFVv2xmayw6cY09H7AbMJMt8Jn5jdlEdXsP7AGBdF2DIptVlKlOLKXP41yPip4/a3yQPv9gVcJYI8YY04dw==}
+  hono@4.13.8:
+    resolution: {integrity: sha512-/Gng7NfoykZl2pjukW5Z6+8Yxm3BPRf86GTbQnt0SbySkvax4fyL4H3HhY1cCpBGmiW9XDRFzRV+CXK2W8QudQ==}
     engines: {node: '>=16.9.0'}
 
   honox@0.1.61:
@@ -3650,35 +3650,35 @@ snapshots:
   '@esbuild/win32-x64@0.28.1':
     optional: true
 
-  '@hono/node-server@1.19.17(hono@4.13.1)':
+  '@hono/node-server@1.19.17(hono@4.13.8)':
     dependencies:
-      hono: 4.13.1
+      hono: 4.13.8
 
-  '@hono/vite-build@1.11.1(hono@4.13.1)':
+  '@hono/vite-build@1.11.1(hono@4.13.8)':
     dependencies:
-      hono: 4.13.1
+      hono: 4.13.8
 
-  '@hono/vite-dev-server@0.25.3(hono@4.13.1)(miniflare@4.20260111.0)(wrangler@4.132.0(@types/node@26.5.1))':
+  '@hono/vite-dev-server@0.25.3(hono@4.13.8)(miniflare@4.20260111.0)(wrangler@4.132.0(@types/node@26.5.1))':
     dependencies:
-      '@hono/node-server': 1.19.17(hono@4.13.1)
-      hono: 4.13.1
+      '@hono/node-server': 1.19.17(hono@4.13.8)
+      hono: 4.13.8
       minimatch: 9.0.9
     optionalDependencies:
       miniflare: 4.20260111.0
       wrangler: 4.132.0(@types/node@26.5.1)
 
-  '@hono/vite-dev-server@0.26.1(hono@4.13.1)(miniflare@4.20260111.0)(wrangler@4.132.0(@types/node@26.5.1))':
+  '@hono/vite-dev-server@0.26.1(hono@4.13.8)(miniflare@4.20260111.0)(wrangler@4.132.0(@types/node@26.5.1))':
     dependencies:
-      '@hono/node-server': 1.19.17(hono@4.13.1)
-      hono: 4.13.1
+      '@hono/node-server': 1.19.17(hono@4.13.8)
+      hono: 4.13.8
       minimatch: 9.0.9
     optionalDependencies:
       miniflare: 4.20260111.0
       wrangler: 4.132.0(@types/node@26.5.1)
 
-  '@hono/zod-validator@0.9.0(hono@4.13.1)(zod@4.4.3)':
+  '@hono/zod-validator@0.9.0(hono@4.13.8)(zod@4.4.3)':
     dependencies:
-      hono: 4.13.1
+      hono: 4.13.8
       zod: 4.4.3
 
   '@img/colour@1.1.0': {}
@@ -4837,16 +4837,16 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  hono@4.13.1: {}
+  hono@4.13.8: {}
 
-  honox@0.1.61(hono@4.13.1)(miniflare@4.20260111.0)(supports-color@10.2.2)(wrangler@4.132.0(@types/node@26.5.1)):
+  honox@0.1.61(hono@4.13.8)(miniflare@4.20260111.0)(supports-color@10.2.2)(wrangler@4.132.0(@types/node@26.5.1)):
     dependencies:
       '@babel/generator': 7.29.1
       '@babel/parser': 7.29.3
       '@babel/traverse': 7.29.0(supports-color@10.2.2)
       '@babel/types': 7.29.0
-      '@hono/vite-dev-server': 0.25.3(hono@4.13.1)(miniflare@4.20260111.0)(wrangler@4.132.0(@types/node@26.5.1))
-      hono: 4.13.1
+      '@hono/vite-dev-server': 0.25.3(hono@4.13.8)(miniflare@4.20260111.0)(wrangler@4.132.0(@types/node@26.5.1))
+      hono: 4.13.8
       jsonc-parser: 3.3.1
       precinct: 12.2.0(supports-color@10.2.2)
     optionalDependencies:
