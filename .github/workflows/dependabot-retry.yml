@@ -27,8 +27,8 @@ jobs:
             '.[] | select(.user.login == "dependabot[bot]") | [.number, .head.sha] | @tsv' |
           while IFS=$'\t' read -r pr_number head_sha; do
             # PRの現在のコミットに対応する最新の実行だけを再試行する。
-            run=$(gh api "repos/$REPOSITORY/actions/workflows/verify.yml/runs?event=pull_request&head_sha=$head_sha&per_page=100" |
-              jq -c --arg head_sha "$head_sha" '[.workflow_runs[] | select(.head_sha == $head_sha)] | max_by(.run_number) // empty')
+            run=$(gh api "repos/$REPOSITORY/actions/workflows/verify.yml/runs?head_sha=$head_sha&per_page=100" |
+              jq -c --arg head_sha "$head_sha" '[.workflow_runs[] | select(.head_sha == $head_sha and (.event == "pull_request" or .event == "workflow_dispatch"))] | max_by(.run_number) // empty')
             [[ -n "$run" ]] || continue
 
             read -r status conclusion completed_at run_id < <(jq -r '[.status, .conclusion, .updated_at, .id] | @tsv' <<<"$run")
@@ -44,5 +44,6 @@ jobs:
             [[ "$current" == $'open\t'"$head_sha" ]] || continue
 
             echo "Retrying release-age failure for Dependabot PR #$pr_number (run $run_id)."
-            gh run rerun "$run_id" --repo "$REPOSITORY" --failed
+            # 明示起動したVerifyはworkflow_runに連鎖しないため、マージ処理から再検証する。
+            gh workflow run dependabot-auto-merge.yml --repo "$REPOSITORY" --ref main -f "pr_number=$pr_number"
           done
