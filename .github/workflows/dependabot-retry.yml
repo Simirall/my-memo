@@ -1,0 +1,48 @@
+name: Retry mature Dependabot updates
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+
+jobs:
+  retry-mature-updates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retry only minimum-release-age failures after 24 hours
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cutoff=$(date -u -d '24 hours ago' +%s)
+
+          gh api --paginate "repos/$REPOSITORY/pulls?state=open&per_page=100" --jq \
+            '.[] | select(.user.login == "dependabot[bot]") | [.number, .head.sha] | @tsv' |
+          while IFS=$'\t' read -r pr_number head_sha; do
+            # PRの現在のコミットに対応する最新の実行だけを再試行する。
+            run=$(gh api "repos/$REPOSITORY/actions/workflows/verify.yml/runs?event=pull_request&head_sha=$head_sha&per_page=100" |
+              jq -c --arg head_sha "$head_sha" '[.workflow_runs[] | select(.head_sha == $head_sha)] | max_by(.run_number) // empty')
+            [[ -n "$run" ]] || continue
+
+            read -r status conclusion completed_at run_id < <(jq -r '[.status, .conclusion, .updated_at, .id] | @tsv' <<<"$run")
+            [[ "$status" == "completed" && "$conclusion" == "failure" ]] || continue
+            (( $(date -u -d "$completed_at" +%s) <= cutoff )) || continue
+
+            # 通常のテスト失敗は残し、pnpmの公開後待機による失敗だけを再試行する。
+            gh run view "$run_id" --repo "$REPOSITORY" --log-failed |
+              grep -F 'ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION' > /dev/null || continue
+
+            # 更新・クローズされたPRには古い失敗実行を適用しない。
+            current=$(gh api "repos/$REPOSITORY/pulls/$pr_number" --jq '[.state, .head.sha] | @tsv')
+            [[ "$current" == $'open\t'"$head_sha" ]] || continue
+
+            echo "Retrying release-age failure for Dependabot PR #$pr_number (run $run_id)."
+            gh run rerun "$run_id" --repo "$REPOSITORY" --failed
+          done

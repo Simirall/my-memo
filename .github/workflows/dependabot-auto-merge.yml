@@ -1,0 +1,68 @@
+name: Merge verified Dependabot updates
+
+on:
+  workflow_run:
+    workflows: [Verify]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Merged Dependabot pull request number to recover its main verification
+        required: true
+        type: string
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'pull_request') ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge the verified Dependabot pull request
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const run = context.payload.workflow_run;
+            const numbers = run?.pull_requests?.map(pr => pr.number) ?? [];
+            const number = context.eventName === 'workflow_dispatch'
+              ? Number(process.env.PR_NUMBER)
+              : numbers.length === 1 ? numbers[0] : null;
+            if (!Number.isSafeInteger(number) || number < 1) {
+              core.info('No unique pull request was associated with this Verify run.');
+              return;
+            }
+
+            // Verify実行後にコミットや作成者が変わり得るため、PRを取得し直す。
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+            if (pr.user.login !== 'dependabot[bot]' || pr.base.ref !== 'main' ||
+                pr.head.repo?.full_name !== `${owner}/${repo}` || pr.draft) {
+              core.info(`PR #${number} is not an eligible Dependabot update.`);
+              return;
+            }
+
+            if (pr.state === 'open') {
+              if (!run || pr.head.sha !== run.head_sha) {
+                core.info(`PR #${number} has no matching successful Verify run.`);
+                return;
+              }
+              // マージ時にもGitHubがSHAとmainのRulesetを確認する。
+              await github.rest.pulls.merge({ owner, repo, pull_number: number,
+                merge_method: 'squash', sha: pr.head.sha });
+            } else if (!pr.merged || context.eventName !== 'workflow_dispatch') {
+              // 手動復旧は、マージ済みPRのmain再検証に限る。
+              return;
+            }
+
+            // GITHUB_TOKENによるマージではpushのworkflowが起動しないため、明示起動する。
+            await github.rest.actions.createWorkflowDispatch({ owner, repo,
+              workflow_id: 'verify.yml', ref: 'main' });

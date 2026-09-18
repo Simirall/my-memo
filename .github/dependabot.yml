@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: cron
+      # 06:00 Asia/Tokyo (UTC+9), including weekends.
+      cronjob: "0 21 * * *"
+    cooldown:
+      default-days: 3
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: cron
+      # 06:00 Asia/Tokyo (UTC+9), including weekends.
+      cronjob: "0 21 * * *"
+    cooldown:
+      default-days: 3
