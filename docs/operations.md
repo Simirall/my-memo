@@ -28,9 +28,13 @@ Dependabotの自動マージを設定する場合も、この`verify`を必須�
 
 自動マージを止めるには、`dependabot-auto-merge.yml`を無効化するか、GitHubのActions画面でworkflowをDisableします。待機期間の失敗は`dependabot-retry.yml`を手動実行できます。マージ後のmain検証の起動だけ失敗した場合は、自動マージworkflowを`pr_number`付きで手動実行します。
 
+PRがmainより古い場合は、GitHubのupdate-branch APIでmainを取り込み、更新後のブランチにVerifyを明示起動します。マージ処理は返されたrun IDの成功を待ち、PRの現在のSHAと照合します。待機中にmainが進んだ場合は再び更新・検証し、競合や検証失敗では停止します。全体の待機上限は50分です。必須チェックと署名要件の回避は行いません。
+
+未マージのPRも、Actionsの`Merge verified Dependabot updates`をmainから`pr_number`付きで手動実行すると、再検証から復旧できます。公開後の待機期間による失敗はPR実行・明示起動の両方を対象に、24時間後にこの処理を起動してVerify全体を再実行します。通常のテスト失敗は自動再試行しません。失敗通知はGitHub Actions標準の通知設定を使用します。
+
 ## GitHub Actionsからの本番デプロイ
 
-`.github/workflows/deploy.yml`は`main`へのpushまたは明示起動の`verify`が成功した場合だけ`workflow_run`で実行します。
+`.github/workflows/deploy.yml`は再利用可能なworkflowです。Verify内の`deploy`ジョブが`needs: verify`で検証成功を待ち、mainへのpushまたはmainの明示起動の場合だけ呼び出します。PRとPRブランチの明示起動ではDeployを呼び出しません。GITHUB_TOKENによる明示起動後の`workflow_run`通知には依存しません。
 GitHubの`production` Environmentを作成し、Deployment branchesを`main`に限定して次のEnvironment Secretを登録します。
 
 - `CLOUDFLARE_ACCOUNT_ID`

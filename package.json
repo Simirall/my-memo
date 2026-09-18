@@ -17,7 +17,8 @@
     "test:browser": "vitest run --config=vitest.browser.config.ts",
     "test:e2e": "pnpm run build && playwright test",
     "test:collect": "node scripts/check-test-collection.mjs",
-    "test:all": "pnpm run test:collect && pnpm run test && pnpm run test:browser && pnpm run test:e2e",
+    "test:automation": "node --test scripts/merge-dependabot.test.mjs",
+    "test:all": "pnpm run test:collect && pnpm run test:automation && pnpm run test && pnpm run test:browser && pnpm run test:e2e",
     "knip": "knip",
     "actionlint": "actionlint",
     "pinact": "pinact"
