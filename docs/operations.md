@@ -18,9 +18,19 @@ GitHub OAuth AppのAuthorization callback URLは、`BETTER_AUTH_URL`に`/api/aut
 GitHubで一度このworkflowを実行した後、Settings → Rules → Rulesetsで`main`のルールを開き、Require status checks to passを有効にして`verify`を追加します。
 Dependabotの自動マージを設定する場合も、この`verify`を必須条件にします。
 
+## Dependabotの更新と自動マージ
+
+`.github/dependabot.yml`はnpmとGitHub Actionsの更新を毎日06:00（JST）に確認します。通常の更新は公開後3日待ってPRを作成します。セキュリティ更新はGitHubの仕様により待機せずPRを作成します。
+
+`pnpm-workspace.yaml`の`minimumReleaseAge: 4320`は直接・間接依存を含めて公開後3日未満のインストールを拒否します。Dependabotの待機期間では防げないセキュリティ更新や間接依存による`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`は、`.github/workflows/dependabot-retry.yml`が6時間ごとに調べ、最後の失敗から24時間以上経過したものだけを再実行します。その他の失敗は再実行しません。
+
+`.github/workflows/dependabot-auto-merge.yml`は、Dependabot PRの`Verify`が成功し、PRがmain向け・非draft・同じhead SHAであることを確認してsquash mergeします。マージ後はmainの`Verify`を明示起動し、成功すればDeployが本番反映します。通常のPRは対象外です。
+
+自動マージを止めるには、`dependabot-auto-merge.yml`を無効化するか、GitHubのActions画面でworkflowをDisableします。待機期間の失敗は`dependabot-retry.yml`を手動実行できます。マージ後のmain検証の起動だけ失敗した場合は、自動マージworkflowを`pr_number`付きで手動実行します。
+
 ## GitHub Actionsからの本番デプロイ
 
-`.github/workflows/deploy.yml`は`main`へのpushで`verify`が成功した場合だけ`workflow_run`で実行します。
+`.github/workflows/deploy.yml`は`main`へのpushまたは明示起動の`verify`が成功した場合だけ`workflow_run`で実行します。
 GitHubの`production` Environmentを作成し、Deployment branchesを`main`に限定して次のEnvironment Secretを登録します。
 
 - `CLOUDFLARE_ACCOUNT_ID`
