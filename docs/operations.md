@@ -35,7 +35,7 @@ PRがmainより古い場合は、GitHubのupdate-branch APIでmainを取り込�
 ## GitHub Actionsからの本番デプロイ
 
 `.github/workflows/deploy.yml`は再利用可能なworkflowです。Verify内の`deploy`ジョブが`needs: verify`で検証成功を待ち、mainへのpushまたはmainの明示起動の場合だけ呼び出します。PRとPRブランチの明示起動ではDeployを呼び出しません。GITHUB_TOKENによる明示起動後の`workflow_run`通知には依存しません。
-GitHubの`production` Environmentを作成し、Deployment branchesを`main`に限定して次のEnvironment Secretを登録します。
+GitHubの`production` Environmentを作成し、Deployment branchesを`main`に限定します。次のSecretはリポジトリのActions secretsへ登録し、VerifyからDeployへ明示的に渡します。`production`のEnvironment secretsに登録した場合は、Deployジョブでそちらが優先されます。
 
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN`
