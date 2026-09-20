@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: ^0.9.1
-        version: 0.9.1(hono@4.13.8)(zod@4.4.3)
+        version: 0.9.1(hono@4.13.8)(zod@4.6.5)
       '@phosphor-icons/core':
         specifier: 2.1.1
         version: 2.1.1
@@ -28,7 +28,7 @@ importers:
         version: 0.45.2(@opentelemetry/api@1.9.1)(kysely@0.29.5)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(kysely@0.29.5))(zod@4.4.3)
+        version: 0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(kysely@0.29.5))(zod@4.6.5)
       hono:
         specifier: ^4.13.8
         version: 4.13.8
@@ -39,8 +39,8 @@ importers:
         specifier: ^15.0.2
         version: 15.0.2
       zod:
-        specifier: ^4.4.3
-        version: 4.4.3
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@biomejs/biome':
         specifier: 2.5.13
@@ -3678,10 +3678,10 @@ snapshots:
       miniflare: 4.20260111.0
       wrangler: 4.132.0(@types/node@26.5.1)
 
-  '@hono/zod-validator@0.9.1(hono@4.13.8)(zod@4.4.3)':
+  '@hono/zod-validator@0.9.1(hono@4.13.8)(zod@4.6.5)':
     dependencies:
       hono: 4.13.8
-      zod: 4.4.3
+      zod: 4.6.5
 
   '@img/colour@1.1.0': {}
 
@@ -4666,10 +4666,10 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       kysely: 0.29.5
 
-  drizzle-zod@0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(kysely@0.29.5))(zod@4.4.3):
+  drizzle-zod@0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(kysely@0.29.5))(zod@4.6.5):
     dependencies:
       drizzle-orm: 0.45.2(@opentelemetry/api@1.9.1)(kysely@0.29.5)
-      zod: 4.4.3
+      zod: 4.6.5
 
   enhanced-resolve@5.24.5:
     dependencies:
