@@ -28,7 +28,7 @@
     "@phosphor-icons/core": "2.1.1",
     "@tailwindcss/vite": "^4.3.3",
     "better-auth": "^1.7.5",
-    "daisyui": "^5.7.16",
+    "daisyui": "^5.7.40",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "hono": "^4.13.8",
