@@ -22,8 +22,10 @@ import {
   getEmptyMemoListRedirectUrl,
   parseMemoListQuery,
 } from "@/features/memos/list/query/memo-list-query";
+import { MemoListTable } from "@/features/memos/list/table/memo-list-table";
 import { getTagSuggestions } from "@/features/tags/data/tags";
 import CategoryTabs from "@/islands/$category-tabs";
+import MemoListViewController from "@/islands/$memo-list-view-controller";
 import * as schema from "@/schema";
 
 export default createRoute(async (c) => {
@@ -91,37 +93,51 @@ export default createRoute(async (c) => {
       <div className="sticky top-20 z-10 w-full [&>honox-island]:block [&>honox-island]:w-full">
         <CategoryTabs activeCategoryId={result.id} categories={categories} />
       </div>
-      <div className="mt-4 [&>honox-island]:block [&>honox-island]:w-full">
-        <MemoListControls
-          action={c.req.path}
-          initialOpen={getCookie(c, MEMO_LIST_CONTROLS_OPEN_COOKIE) === "1"}
-          query={query}
-          tags={filterTags}
-        />
-      </div>
-      <div
-        className="grid w-full auto-rows-auto grid-cols-[repeat(auto-fit,minmax(min(100%,30rem),30rem))] items-stretch justify-center gap-4 py-4"
-        data-memo-list-grid
-      >
-        {memos.items.map((memo) => (
-          <Memo
-            key={memo.id}
-            listPath={c.req.path}
-            memo={memo}
+      <div className="mt-4 flex items-start gap-2 [&>honox-island]:shrink-0">
+        <MemoListViewController listPath={c.req.path} />
+        <div className="min-w-0 flex-1 [&>honox-island]:block [&>honox-island]:w-full">
+          <MemoListControls
+            action={c.req.path}
+            initialOpen={getCookie(c, MEMO_LIST_CONTROLS_OPEN_COOKIE) === "1"}
             query={query}
-            returnTo={returnTo}
-            showCategory={false}
+            tags={filterTags}
           />
-        ))}
+        </div>
       </div>
-      {memos.items.length === 0 && (
-        <p
-          className="rounded-box bg-base-200 p-6 text-center text-base-content/70"
-          data-memo-list-empty
+      <div data-memo-list-content hidden>
+        <div
+          className="grid w-full auto-rows-auto grid-cols-[repeat(auto-fit,minmax(min(100%,30rem),30rem))] items-stretch justify-center gap-4 py-4"
+          data-memo-list-grid
+          data-memo-list-view="card"
+          hidden
         >
-          条件に一致するメモはありません。
-        </p>
-      )}
+          {memos.items.map((memo) => (
+            <Memo
+              key={memo.id}
+              listPath={c.req.path}
+              memo={memo}
+              query={query}
+              returnTo={returnTo}
+              showCategory={false}
+            />
+          ))}
+        </div>
+        <MemoListTable
+          items={memos.items}
+          listPath={c.req.path}
+          query={query}
+          returnTo={returnTo}
+          showCategory={false}
+        />
+        {memos.items.length === 0 && (
+          <p
+            className="rounded-box bg-base-200 p-6 text-center text-base-content/70"
+            data-memo-list-empty
+          >
+            条件に一致するメモはありません。
+          </p>
+        )}
+      </div>
       <MemoPagination
         hasNextPage={memos.hasNextPage}
         hasPageAfterNext={memos.hasPageAfterNext}

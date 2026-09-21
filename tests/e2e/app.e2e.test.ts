@@ -253,7 +253,9 @@ test("カテゴリー付きメモと添付を作成・再表示・編集・削�
   await expect(
     page.getByRole("heading", { name: "通しテストのメモ" }),
   ).toBeVisible();
-  await expect(page.getByText("作成した本文")).toBeVisible();
+  await expect(
+    page.getByText("作成した本文").filter({ visible: true }),
+  ).toBeVisible();
   await expect(page.getByRole("link", { name: "仕事" }).last()).toBeVisible();
   await expect(page.getByRole("link", { name: "確認用" })).toBeVisible();
   await expect(
@@ -327,7 +329,9 @@ test("カテゴリー付きメモと添付を作成・再表示・編集・削�
   await expect(
     page.getByRole("heading", { name: "編集後のメモ" }),
   ).toBeVisible();
-  await expect(page.getByText("編集後の本文")).toBeVisible();
+  await expect(
+    page.getByText("編集後の本文").filter({ visible: true }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "メモ「編集後のメモ」を削除" })
     .click();

@@ -5,10 +5,12 @@ import { PhosphorIcon } from "../components/phosphor-icon";
 
 export const DeleteButton = ({
   action,
+  className = "btn btn-soft btn-error",
   confirmMessage,
   label = "削除",
 }: {
   action: string;
+  className?: string;
   confirmMessage?: string;
   label?: string;
 }) => {
@@ -36,7 +38,7 @@ export const DeleteButton = ({
       >
         <button
           aria-label={label}
-          className="btn btn-soft btn-error"
+          className={className}
           disabled={isLoading}
           type="submit"
         >

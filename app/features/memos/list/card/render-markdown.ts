@@ -118,3 +118,28 @@ export function renderMarkdown(content: string): string {
     linkSafety: [],
   } satisfies RenderEnvironment);
 }
+
+/** Markdownから一覧表示用の装飾なしテキストを生成する。 */
+export function renderMarkdownText(content: string): string {
+  return markdown
+    .parse(content, { linkSafety: [] } satisfies RenderEnvironment)
+    .flatMap((token) => {
+      if (token.type === "inline") {
+        return token.children
+          ? [
+              markdown.renderer.renderInlineAsText(
+                token.children,
+                markdown.options,
+                {},
+              ),
+            ]
+          : [];
+      }
+      return token.type === "fence" || token.type === "code_block"
+        ? [token.content]
+        : [];
+    })
+    .map((text) => text.trim())
+    .filter(Boolean)
+    .join("\n");
+}

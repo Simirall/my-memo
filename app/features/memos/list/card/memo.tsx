@@ -16,7 +16,7 @@ import { buildMemoListUrl } from "../query/memo-list-query";
 import { LinkPreviewCard } from "./link-preview-card";
 import { renderMarkdown } from "./render-markdown";
 
-type MemoWithTags = z.infer<typeof memoSchema.read> & {
+export type MemoWithTags = z.infer<typeof memoSchema.read> & {
   category?: Pick<z.infer<typeof categorySchema.read>, "id" | "name"> | null;
   tags?: ReadonlyArray<Tag>;
   memoTags?: ReadonlyArray<{ tag: Tag | null }>;

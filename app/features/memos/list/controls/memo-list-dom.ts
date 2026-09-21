@@ -25,11 +25,17 @@ export const addMemoListTagOptions = (tags: ReadonlyArray<Tag>) => {
 };
 
 export const removeMemoCardFromList = (memoId: string) => {
+  document.dispatchEvent(
+    new CustomEvent("memo-list:remove", { detail: { memoId } }),
+  );
   const card = document.querySelector<HTMLElement>(
     `[data-memo-card="${CSS.escape(memoId)}"]`,
   );
   if (!card) return;
   card.remove();
+  document
+    .querySelector(`[data-memo-list-row="${CSS.escape(memoId)}"]`)
+    ?.remove();
 
   if (document.querySelector("[data-memo-card]")) return;
   const existingEmpty = document.querySelector<HTMLElement>(

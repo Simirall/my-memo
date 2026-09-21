@@ -448,6 +448,13 @@ describe("タグUI", () => {
             query={{ sort: "desc", page: 1, tag: tag.id }}
           />
         </div>
+        <table>
+          <tbody>
+            <tr data-memo-list-row="memo-filtered">
+              <td>絞り込み対象の行</td>
+            </tr>
+          </tbody>
+        </table>
         <MemoTagEditor
           activeTagId={tag.id}
           availableTags={[tag]}
@@ -467,6 +474,9 @@ describe("タグUI", () => {
       .toBeInTheDocument();
     expect(
       document.querySelector('[data-memo-card="memo-filtered"]'),
+    ).toBeNull();
+    expect(
+      document.querySelector('[data-memo-list-row="memo-filtered"]'),
     ).toBeNull();
   });
 });

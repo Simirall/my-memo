@@ -26,35 +26,45 @@ const mergeTags = (...groups: ReadonlyArray<ReadonlyArray<Tag>>): Tag[] => {
   return sortTags([...tagsByName.values()]);
 };
 
-const updateCardTags = (
+const updateMemoTags = (
   memoId: string,
   tags: ReadonlyArray<Tag>,
   listPath: string,
   query: MemoListQuery,
 ) => {
-  const card = document.querySelector<HTMLElement>(
-    `[data-memo-card="${CSS.escape(memoId)}"]`,
-  );
-  const list = card?.querySelector<HTMLElement>("[data-memo-tag-list]");
-  if (!card || !list) return;
-  const editButton = card.querySelector<HTMLButtonElement>(
-    "[data-memo-tag-edit]",
-  );
-  if (editButton) editButton.dataset.memoTags = JSON.stringify(tags);
+  const selector = `[data-memo-card="${CSS.escape(memoId)}"], [data-memo-list-row="${CSS.escape(memoId)}"]`;
+  for (const item of document.querySelectorAll<HTMLElement>(selector)) {
+    const list = item.querySelector<HTMLElement>("[data-memo-tag-list]");
+    if (!list) continue;
+    const editButton = item.querySelector<HTMLButtonElement>(
+      "[data-memo-tag-edit]",
+    );
+    if (editButton) editButton.dataset.memoTags = JSON.stringify(tags);
 
-  const tagList = list.querySelector("ul");
-  if (!tagList) return;
-  tagList.replaceChildren(
-    ...sortTags(tags).map((tag) => {
-      const item = document.createElement("li");
-      const link = document.createElement("a");
-      item.appendChild(link);
-      link.className = "badge badge-soft badge-info hover:underline";
-      link.href = replaceMemoListTag(listPath, query, tag.id);
-      link.textContent = `#${tag.name}`;
-      return item;
-    }),
-  );
+    const tagList = list.querySelector("ul");
+    if (!tagList) continue;
+    const limit = Number(list.dataset.memoTagsLimit) || tags.length;
+    const visibleTags = sortTags(tags).slice(0, limit);
+    tagList.replaceChildren(
+      ...visibleTags.map((tag) => {
+        const listItem = document.createElement("li");
+        const link = document.createElement("a");
+        listItem.appendChild(link);
+        link.className = "badge badge-soft badge-info hover:underline";
+        link.href = replaceMemoListTag(listPath, query, tag.id);
+        link.textContent = `#${tag.name}`;
+        return listItem;
+      }),
+    );
+    const overflow = list.querySelector<HTMLElement>(
+      "[data-memo-tags-overflow]",
+    );
+    const overflowCount = tags.length - visibleTags.length;
+    if (overflow) {
+      overflow.textContent = overflowCount > 0 ? `+${overflowCount}` : "";
+      overflow.hidden = overflowCount === 0;
+    }
+  }
 };
 
 export default function MemoTagEditor({
@@ -160,7 +170,7 @@ export default function MemoTagEditor({
         return;
       }
 
-      updateCardTags(target.id, payload.tags, listPath, query);
+      updateMemoTags(target.id, payload.tags, listPath, query);
       addMemoListTagOptions(payload.tags);
       setKnownTags((currentTags) =>
         mergeTags(currentTags, draft, payload.tags ?? []),
