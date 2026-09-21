@@ -45,7 +45,7 @@
     "@types/node": "^26.6.1",
     "@vitest/browser-playwright": "^4.1.10",
     "drizzle-kit": "^0.31.10",
-    "knip": "^6.36.0",
+    "knip": "^6.37.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
