@@ -84,7 +84,23 @@ export default async function mergeDependabot({
       await pause();
       continue;
     }
-    if (!pr.mergeable) throw new Error(`PR #${number} has merge conflicts.`);
+    if (!pr.mergeable) {
+      const marker = `<!-- dependabot-recreate:${expectedSha} -->`;
+      const { data: comments } = await github.rest.issues.listComments({
+        ...repo,
+        issue_number: number,
+        per_page: 100,
+      });
+      if (!comments.some((comment) => comment.body?.includes(marker))) {
+        await github.rest.issues.createComment({
+          ...repo,
+          issue_number: number,
+          body: `@dependabot recreate\n\n${marker}`,
+        });
+      }
+      core.info(`PR #${number} has conflicts; requested recreation.`);
+      return;
+    }
     if (pr.mergeable_state === "behind") {
       await github.rest.pulls.updateBranch({
         ...args,
