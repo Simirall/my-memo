@@ -42,7 +42,7 @@
     "@hono/vite-build": "^1.11.1",
     "@hono/vite-dev-server": "^0.26.1",
     "@playwright/test": "1.63.0",
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.1",
     "@vitest/browser-playwright": "^4.1.10",
     "drizzle-kit": "^0.31.10",
     "knip": "^6.36.0",
