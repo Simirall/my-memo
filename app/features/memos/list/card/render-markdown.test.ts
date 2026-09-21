@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { renderMarkdown } from "./render-markdown";
+import { renderMarkdown, renderMarkdownText } from "./render-markdown";
 
 describe("安全なMarkdown表示", () => {
+  it("一覧用に装飾と画像を除いたテキストを生成する", () => {
+    expect(
+      renderMarkdownText(
+        "# 見出し\n\n[リンク](https://example.com)と**強調**\n\n![画像の説明](https://example.com/image.png)\n\n| A | B |\n| - | - |\n| C | D |",
+      ),
+    ).toBe("見出し\nリンクと強調\n画像の説明\nA\nB\nC\nD");
+  });
+
   it("メモで案内している見出しと強調を表示する", () => {
     const html = renderMarkdown("# 見出し\n\n**強調**");
 
