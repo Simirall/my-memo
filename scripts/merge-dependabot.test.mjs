@@ -28,6 +28,7 @@ function scenario() {
     dispatched: [],
     merged: [],
     updated: [],
+    comments: [],
     childConclusion: "success",
   };
   const context = {
@@ -76,6 +77,14 @@ function scenario() {
               html_url: `https://example.com/${id}`,
             },
           };
+        },
+      },
+      issues: {
+        listComments: async () => ({
+          data: state.comments.map((body) => ({ body })),
+        }),
+        createComment: async ({ body }) => {
+          state.comments.push(body);
         },
       },
     },
@@ -198,10 +207,18 @@ test("マージ直前にmainが進んだ場合は更新と検証をやり直す"
   assert.deepEqual(s.state.merged, ["updated"]);
 });
 
-test("競合・他のRuleset違反・待機超過は停止する", async () => {
+test("競合時は同じSHAにつき一度だけDependabotへ再作成を依頼する", async () => {
   const conflict = scenario();
   conflict.state.pr.mergeable = false;
-  await assert.rejects(conflict.execute(), /conflicts/);
+  await conflict.execute();
+  await conflict.execute();
+  assert.deepEqual(conflict.state.comments, [
+    "@dependabot recreate\n\n<!-- dependabot-recreate:old -->",
+  ]);
+  assert.deepEqual(conflict.state.merged, []);
+});
+
+test("他のRuleset違反・待機超過は停止する", async () => {
   const blocked = scenario();
   blocked.github.rest.pulls.merge = async () => {
     throw Object.assign(new Error("Ruleset"), { status: 405 });
