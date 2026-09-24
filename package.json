@@ -29,7 +29,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "better-auth": "^1.7.5",
     "daisyui": "^5.7.40",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.3",
     "drizzle-zod": "^0.8.3",
     "hono": "^4.13.8",
     "honox": "^0.1.61",
