@@ -31,7 +31,7 @@
     "daisyui": "^5.7.40",
     "drizzle-orm": "^0.45.3",
     "drizzle-zod": "^0.8.3",
-    "hono": "^4.13.8",
+    "hono": "^4.13.9",
     "honox": "^0.1.61",
     "markdown-it": "^15.0.2",
     "zod": "^4.6.5"
@@ -50,7 +50,7 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.1.10",
-    "wrangler": "^4.139.0"
+    "wrangler": "^4.141.0"
   },
   "packageManager": "pnpm@11.21.0"
 }
