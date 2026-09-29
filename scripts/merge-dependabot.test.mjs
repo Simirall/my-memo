@@ -68,7 +68,8 @@ function scenario() {
                   head_branch: state.pr.head.ref,
                 },
         }),
-        createWorkflowDispatch: async ({ ref }) => {
+        createWorkflowDispatch: async ({ ref, return_run_details }) => {
+          assert.equal(return_run_details, true);
           const id = 20 + state.dispatched.length;
           state.dispatched.push({ ref, id, sha: state.pr.head.sha });
           return {

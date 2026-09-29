@@ -32,7 +32,8 @@ export default async function mergeDependabot({
       ...repo,
       workflow_id: "verify.yml",
       ref,
-      // このAPIバージョンでは起動したrun IDが返る。別実行との取り違えを防ぐ。
+      // 起動したrun IDを受け取り、別実行との取り違えを防ぐ。
+      return_run_details: true,
       headers: { "X-GitHub-Api-Version": "2026-03-10" },
     });
     if (!Number.isSafeInteger(data?.workflow_run_id)) {
