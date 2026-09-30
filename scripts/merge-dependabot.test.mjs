@@ -7,7 +7,7 @@ function scenario() {
   const state = {
     pr: {
       user: { login: "dependabot[bot]" },
-      base: { ref: "main" },
+      base: { ref: "main", sha: "base" },
       head: {
         sha: "old",
         ref: "dependabot/npm/test",
@@ -19,6 +19,10 @@ function scenario() {
       mergeable_state: "clean",
     },
     run: {
+      id: 10,
+      run_number: 1,
+      run_attempt: 1,
+      pull_requests: [{ number: 27 }],
       workflow_id: 1,
       event: "pull_request",
       status: "completed",
@@ -28,6 +32,7 @@ function scenario() {
     dispatched: [],
     merged: [],
     updated: [],
+    rerun: false,
     comments: [],
     childConclusion: "success",
   };
@@ -37,6 +42,10 @@ function scenario() {
     payload: { workflow_run: { id: 10, pull_requests: [{ number: 27 }] } },
   };
   const github = {
+    paginate: async (method, args) => {
+      const { data } = await method(args);
+      return data.workflow_runs ?? data;
+    },
     rest: {
       pulls: {
         get: async () => ({ data: structuredClone(state.pr) }),
@@ -54,19 +63,20 @@ function scenario() {
       },
       actions: {
         getWorkflow: async () => ({ data: { id: 1 } }),
-        getWorkflowRun: async ({ run_id }) => ({
-          data:
-            run_id === 10
-              ? state.run
-              : {
-                  workflow_id: 1,
-                  event: "workflow_dispatch",
-                  status: "completed",
-                  conclusion: state.childConclusion,
-                  head_sha: state.dispatched.find((run) => run.id === run_id)
-                    .sha,
-                  head_branch: state.pr.head.ref,
-                },
+        listWorkflowRuns: async () => ({
+          data: { workflow_runs: [structuredClone(state.run)] },
+        }),
+        reRunWorkflow: async () => {
+          state.rerun = true;
+        },
+        getWorkflowRun: async () => ({
+          data: state.rerun
+            ? {
+                ...state.run,
+                run_attempt: 2,
+                conclusion: state.childConclusion,
+              }
+            : structuredClone(state.run),
         }),
         createWorkflowDispatch: async ({ ref }) => {
           const id = 20 + state.dispatched.length;
@@ -112,16 +122,20 @@ test("成功した現在のSHAだけをマージしmainを明示検証する", a
   );
 });
 
-test("古いPRを更新し、新しいSHAの検証成功後にマージする", async () => {
+test("古いPRはDependabotへリベースを依頼し次のPR検証に引き継ぐ", async () => {
   const s = scenario();
   s.state.pr.mergeable_state = "behind";
   await s.execute();
-  assert.deepEqual(s.state.updated, ["old"]);
-  assert.deepEqual(s.state.merged, ["updated"]);
-  assert.deepEqual(
-    s.state.dispatched.map((run) => run.ref),
-    ["dependabot/npm/test", "main"],
-  );
+  await s.execute();
+  assert.deepEqual(s.state.updated, []);
+  assert.deepEqual(s.state.merged, []);
+  assert.deepEqual(s.state.dispatched, []);
+  assert.deepEqual(s.state.comments, [
+    "@dependabot rebase\n\n<!-- dependabot-rebase:old:base -->",
+  ]);
+  s.state.pr.base.sha = "new-base";
+  await s.execute();
+  assert.equal(s.state.comments.length, 2);
 });
 
 test("対象外PR・古いSHA・不成功の実行では変更しない", async () => {
@@ -158,42 +172,45 @@ test("対象外PR・古いSHA・不成功の実行では変更しない", async 
   }
 });
 
-test("更新後のテスト失敗ではマージもmain検証も実行しない", async () => {
+test("再実行したPR検証の失敗ではマージもmain検証も実行しない", async () => {
   const s = scenario();
-  s.state.pr.mergeable_state = "behind";
+  s.context.eventName = "workflow_dispatch";
+  s.context.payload = { inputs: { pr_number: "27" } };
   s.state.childConclusion = "failure";
-  await assert.rejects(s.execute(), /Verify 20: failure/);
+  await assert.rejects(s.execute(), /Verify 10: failure/);
   assert.deepEqual(s.state.merged, []);
-  assert.equal(s.state.dispatched.length, 1);
+  assert.equal(s.state.dispatched.length, 0);
 });
 
 test("検証中にPRのheadが変わった場合は停止する", async () => {
   const s = scenario();
-  s.state.pr.mergeable_state = "behind";
+  s.context.eventName = "workflow_dispatch";
+  s.context.payload = { inputs: { pr_number: "27" } };
   const getRun = s.github.rest.actions.getWorkflowRun;
   s.github.rest.actions.getWorkflowRun = async (args) => {
     const result = await getRun(args);
-    if (args.run_id !== 10) s.state.pr.head.sha = "someone-else";
+    if (s.state.rerun) s.state.pr.head.sha = "someone-else";
     return result;
   };
   await s.execute();
   assert.deepEqual(s.state.merged, []);
 });
 
-test("別SHAの明示実行は成功しても受け入れない", async () => {
+test("別SHAのPR再検証は成功しても受け入れない", async () => {
   const s = scenario();
-  s.state.pr.mergeable_state = "behind";
+  s.context.eventName = "workflow_dispatch";
+  s.context.payload = { inputs: { pr_number: "27" } };
   const getRun = s.github.rest.actions.getWorkflowRun;
   s.github.rest.actions.getWorkflowRun = async (args) => {
     const result = await getRun(args);
-    if (args.run_id !== 10) result.data.head_sha = "wrong";
+    if (s.state.rerun) result.data.head_sha = "wrong";
     return result;
   };
   await assert.rejects(s.execute(), /does not match/);
   assert.deepEqual(s.state.merged, []);
 });
 
-test("マージ直前にmainが進んだ場合は更新と検証をやり直す", async () => {
+test("マージ直前にmainが進んだ場合もDependabotの更新へ引き継ぐ", async () => {
   const s = scenario();
   const merge = s.github.rest.pulls.merge;
   s.github.rest.pulls.merge = async (args) => {
@@ -204,7 +221,8 @@ test("マージ直前にmainが進んだ場合は更新と検証をやり直す"
     return merge(args);
   };
   await s.execute();
-  assert.deepEqual(s.state.merged, ["updated"]);
+  assert.deepEqual(s.state.merged, []);
+  assert.equal(s.state.comments.length, 1);
 });
 
 test("競合時は同じSHAにつき一度だけDependabotへ再作成を依頼する", async () => {
@@ -213,7 +231,7 @@ test("競合時は同じSHAにつき一度だけDependabotへ再作成を依頼�
   await conflict.execute();
   await conflict.execute();
   assert.deepEqual(conflict.state.comments, [
-    "@dependabot recreate\n\n<!-- dependabot-recreate:old -->",
+    "@dependabot recreate\n\n<!-- dependabot-recreate:old:base -->",
   ]);
   assert.deepEqual(conflict.state.merged, []);
 });
@@ -247,14 +265,58 @@ test("main検証の起動失敗後は二重マージせず手動復旧できる"
   );
 });
 
-test("未マージPRの手動復旧では必ず新しく検証する", async () => {
+test("未マージPRの手動復旧ではPR検証を再実行してマージする", async () => {
   const s = scenario();
   s.context.eventName = "workflow_dispatch";
   s.context.payload = { inputs: { pr_number: "27" } };
   await s.execute();
+  assert.equal(s.state.rerun, true);
   assert.deepEqual(
     s.state.dispatched.map((run) => run.ref),
-    ["dependabot/npm/test", "main"],
+    ["main"],
   );
   assert.deepEqual(s.state.merged, ["old"]);
+});
+
+test("実行中のPR検証は二重起動せず完了を待つ", async () => {
+  const s = scenario();
+  s.context.eventName = "workflow_dispatch";
+  s.context.payload = { inputs: { pr_number: "27" } };
+  s.state.run.status = "in_progress";
+  s.github.rest.actions.getWorkflowRun = async () => ({
+    data: { ...s.state.run, status: "completed" },
+  });
+  await s.execute();
+  assert.equal(s.state.rerun, false);
+  assert.deepEqual(s.state.merged, ["old"]);
+});
+
+test("手動復旧ではworkflow_dispatch・別PR・古いSHAの検証を使わない", async () => {
+  for (const change of [
+    (run) => {
+      run.event = "workflow_dispatch";
+    },
+    (run) => {
+      run.pull_requests = [{ number: 99 }];
+    },
+    (run) => {
+      run.head_sha = "stale";
+    },
+  ]) {
+    const s = scenario();
+    s.context.eventName = "workflow_dispatch";
+    s.context.payload = { inputs: { pr_number: "27" } };
+    change(s.state.run);
+    await assert.rejects(s.execute(), /No PR Verify/);
+    assert.deepEqual(s.state.merged, []);
+  }
+});
+
+test("再実行前の成功を再実行完了と取り違えない", async () => {
+  const s = scenario();
+  s.context.eventName = "workflow_dispatch";
+  s.context.payload = { inputs: { pr_number: "27" } };
+  s.github.rest.actions.getWorkflowRun = async () => ({ data: s.state.run });
+  await assert.rejects(s.execute(), /timed out/);
+  assert.deepEqual(s.state.merged, []);
 });
