@@ -66,7 +66,7 @@ export default async function mergeDependabot({
       return;
     verifiedSha = run.head_sha;
   }
-  let expectedSha = pr.head.sha;
+  const expectedSha = pr.head.sha;
   const deadline = now() + 50 * 60 * 1000;
   const pause = async () => {
     if (now() >= deadline)
@@ -84,9 +84,10 @@ export default async function mergeDependabot({
       await pause();
       continue;
     }
-    if (!pr.mergeable) {
-      const marker = `<!-- dependabot-recreate:${expectedSha} -->`;
-      const { data: comments } = await github.rest.issues.listComments({
+    if (!pr.mergeable || pr.mergeable_state === "behind") {
+      const command = pr.mergeable ? "rebase" : "recreate";
+      const marker = `<!-- dependabot-${command}:${expectedSha}:${pr.base.sha} -->`;
+      const comments = await github.paginate(github.rest.issues.listComments, {
         ...repo,
         issue_number: number,
         per_page: 100,
@@ -95,45 +96,57 @@ export default async function mergeDependabot({
         await github.rest.issues.createComment({
           ...repo,
           issue_number: number,
-          body: `@dependabot recreate\n\n${marker}`,
+          body: `@dependabot ${command}\n\n${marker}`,
         });
       }
-      core.info(`PR #${number} has conflicts; requested recreation.`);
+      core.info(
+        `PR #${number}: requested ${command}; waiting for a new PR Verify.`,
+      );
       return;
     }
-    if (pr.mergeable_state === "behind") {
-      await github.rest.pulls.updateBranch({
-        ...args,
-        expected_head_sha: expectedSha,
-      });
-      // update-branchは非同期。更新されたSHAを確認してからVerifyを起動する。
-      do {
-        await pause();
-        pr = await getPr();
-        if (!eligible(pr) || pr.state !== "open") return;
-      } while (pr.head.sha === expectedSha);
-      expectedSha = pr.head.sha;
-      verifiedSha = null;
-    }
     if (verifiedSha !== expectedSha) {
-      const runId = await dispatch(pr.head.ref);
+      // workflow_dispatchのチェックはRulesetを満たさない。元のPR実行を再実行する。
+      const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+        ...repo,
+        workflow_id: workflow.id,
+        event: "pull_request",
+        head_sha: expectedSha,
+        per_page: 100,
+      });
+      const previous = runs
+        .filter(
+          (run) =>
+            run.head_sha === expectedSha &&
+            run.event === "pull_request" &&
+            run.pull_requests?.some((pull) => pull.number === number),
+        )
+        .sort((a, b) => b.run_number - a.run_number)[0];
+      if (!previous)
+        throw new Error("No PR Verify found for the current commit.");
+      const runId = previous.id;
+      let attempt = previous.run_attempt;
+      if (previous.status === "completed") {
+        await github.rest.actions.reRunWorkflow({ ...repo, run_id: runId });
+        attempt++;
+      }
       while (true) {
         await pause();
+        pr = await getPr();
+        if (!eligible(pr) || pr.state !== "open" || pr.head.sha !== expectedSha)
+          return;
         const { data: run } = await github.rest.actions.getWorkflowRun({
           ...repo,
           run_id: runId,
         });
         if (
           run.workflow_id !== workflow.id ||
-          run.event !== "workflow_dispatch" ||
+          run.event !== "pull_request" ||
           run.head_sha !== expectedSha ||
-          run.head_branch !== pr.head.ref
+          !run.pull_requests?.some((pull) => pull.number === number)
         ) {
-          throw new Error(
-            "Dispatched Verify does not match the expected PR commit.",
-          );
+          throw new Error("PR Verify does not match the expected PR commit.");
         }
-        if (run.status !== "completed") continue;
+        if (run.run_attempt < attempt || run.status !== "completed") continue;
         if (run.conclusion !== "success")
           throw new Error(`Verify ${runId}: ${run.conclusion}`);
         verifiedSha = expectedSha;

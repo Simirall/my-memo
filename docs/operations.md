@@ -20,17 +20,64 @@ Dependabotの自動マージを設定する場合も、この`verify`を必須�
 
 ## Dependabotの更新と自動マージ
 
-`.github/dependabot.yml`はnpmとGitHub Actionsの更新を毎日06:00（JST）に確認します。通常の更新は公開後3日待ってPRを作成します。セキュリティ更新はGitHubの仕様により待機せずPRを作成します。
+### 更新の確認と待機期間
 
-`pnpm-workspace.yaml`の`minimumReleaseAge: 4320`は直接・間接依存を含めて公開後3日未満のインストールを拒否します。Dependabotの待機期間では防げないセキュリティ更新や間接依存による`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`は、`.github/workflows/dependabot-retry.yml`が6時間ごとに調べ、最後の失敗から24時間以上経過したものだけを再実行します。その他の失敗は再実行しません。
+`.github/dependabot.yml`はnpmとGitHub Actionsの更新を毎日06:00（JST）に確認します。
+通常の更新は公開後3日待ってPRを作成します。
+セキュリティ更新には、この待機期間を適用しません。[^dependabot-cooldown]
 
-`.github/workflows/dependabot-auto-merge.yml`は、Dependabot PRの`Verify`が成功し、PRがmain向け・非draft・同じhead SHAであることを確認してsquash mergeします。マージ後はmainの`Verify`を明示起動し、成功すればDeployが本番反映します。通常のPRは対象外です。
+`pnpm-workspace.yaml`の`minimumReleaseAge: 4320`は直接依存と間接依存を含めて公開後3日未満のインストールを拒否します。
+Dependabotの待機期間では防げないセキュリティ更新や間接依存による`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`は、`.github/workflows/dependabot-retry.yml`が6時間ごとに調べ、最後の失敗から24時間以上経過したものだけを再実行します。
+その他の失敗は再実行しません。
 
-自動マージを止めるには、`dependabot-auto-merge.yml`を無効化するか、GitHubのActions画面でworkflowをDisableします。待機期間の失敗は`dependabot-retry.yml`を手動実行できます。マージ後のmain検証の起動だけ失敗した場合は、自動マージworkflowを`pr_number`付きで手動実行します。
+### 検証とマージ
 
-PRがmainより古い場合は、GitHubのupdate-branch APIでmainを取り込み、更新後のブランチにVerifyを明示起動します。マージ処理は返されたrun IDの成功を待ち、PRの現在のSHAと照合します。待機中にmainが進んだ場合は再び更新・検証します。競合時は同じhead SHAにつき一度だけ`@dependabot recreate`を投稿し、Dependabotによる再作成後のVerifyへ引き継ぎます。検証失敗では停止します。全体の待機上限は50分です。必須チェックと署名要件の回避は行いません。
+`.github/workflows/dependabot-auto-merge.yml`は、Dependabot PRの`Verify`が成功したときに自動マージを試みます。
+対象はmain向けの非draft PRで、同じリポジトリ内のブランチに限ります。
+検証したコミットのSHAと現在のPRのhead SHAが一致することを確認してから、squash mergeします。
+必須チェックと署名要件はGitHubのRulesetで維持します。
 
-未マージのPRも、Actionsの`Merge verified Dependabot updates`をmainから`pr_number`付きで手動実行すると、再検証から復旧できます。公開後の待機期間による失敗はPR実行・明示起動の両方を対象に、24時間後にこの処理を起動してVerify全体を再実行します。通常のテスト失敗は自動再試行しません。失敗通知はGitHub Actions標準の通知設定を使用します。
+PRがmainに追従していない場合は、`@dependabot rebase`を投稿して更新を依頼します。[^dependabot-commands]
+この実行ではマージせず、Dependabotによる更新後のPR検証へ引き継ぎます。
+マージ直前にmainが進んだ場合も、同じ更新依頼へ戻ります。
+
+競合がある場合は、`@dependabot recreate`を投稿して再作成を依頼します。[^dependabot-commands]
+各依頼は、同じhead SHAとbase SHAの組み合わせにつき一度だけ投稿します。
+再作成はPRへの編集を上書きするため、Dependabot PRには手動変更を加えない運用とします。
+依頼後に更新されない場合は、PR上のDependabotの応答と更新ログを確認します。
+
+PRブランチの検証には、通常の`pull_request`イベントを使用します。
+`workflow_dispatch`で起動したジョブのチェックは、成功してもPRの必須ステータスチェックを満たしません。[^required-checks]
+また、`GITHUB_TOKEN`でPRを更新すると、発生するPR検証に承認が必要になるため、update-branch APIでmainを取り込む処理は使用しません。[^workflow-triggers]
+
+### 手動復旧と停止
+
+未マージのPRを復旧するには、Actionsの`Merge verified Dependabot updates`をmainから実行し、`pr_number`に対象のPR番号を指定します。
+mainに追従していない場合や競合がある場合は、前述の更新依頼を行います。
+
+mainに追従済みの場合は、現在のhead SHAに対応する最新のPR検証を再実行し、新しい実行回数（`run_attempt`）の成功を待ちます。[^workflow-rerun]
+すでに実行中の場合は、二重起動せず完了を待ちます。
+対象のPR検証が存在しない場合、検証が失敗した場合、またはPRのhead SHAが変わった場合は、マージせず停止します。
+待機上限は50分です。
+公開後の待機期間による失敗も、定期再試行からこの復旧処理を呼び出します。
+
+マージ後はmainの`Verify`を明示起動し、検証成功後にDeployが本番へ反映します。
+この起動ではAPIバージョン`2026-03-10`を指定し、返されたrun IDを確認します。
+このAPIバージョンでは常にrun情報が返るため、`return_run_details`の指定は不要です。[^dispatch-api]
+マージ後のmain検証の起動だけが失敗した場合は、マージ済みのPR番号で復旧処理を実行すると、main検証だけを起動します。
+
+自動マージを止めるには、Actions画面で`dependabot-auto-merge.yml`を無効化します。
+公開後の待機期間による失敗の再試行は、`dependabot-retry.yml`を手動実行できます。
+失敗通知はGitHub Actions標準の通知設定を使用します。
+
+設定値と復旧手順は、このリポジトリのワークフローと`scripts/merge-dependabot.mjs`を根拠としています。
+
+[^dependabot-cooldown]: GitHub Docs, [Dependabot options reference: cooldown](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#cooldown)。待機期間はバージョン更新に適用され、セキュリティ更新には適用されません。
+[^dependabot-commands]: GitHub Docs, [Dependabot pull request comment commands](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-pull-request-comment-commands)。`rebase`はリベースを依頼し、`recreate`は追加された編集を上書きしてPRを再作成します。
+[^required-checks]: GitHub Docs, [Troubleshooting required status checks: Checks from some workflow jobs are not evaluated](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks#checks-from-some-workflow-jobs-are-not-evaluated)。`workflow_dispatch`によるジョブのチェックは、PRの必須チェックとして評価されません。
+[^workflow-triggers]: GitHub Docs, [Triggering a workflow: Triggering a workflow from a workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow)。`GITHUB_TOKEN`でPRを作成または更新した場合、`opened`、`synchronize`、`reopened`によるワークフロー実行は承認待ちになります。
+[^workflow-rerun]: GitHub Docs, [REST API endpoints for workflow runs: Re-run a workflow](https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2026-03-10#re-run-a-workflow)。既存のrun IDを指定してワークフローを再実行します。
+[^dispatch-api]: GitHub Docs, [Breaking changes: Version 2026-03-10](https://docs.github.com/en/rest/about-the-rest-api/breaking-changes#version-2026-03-10)。workflow dispatchの応答はrun情報を含むHTTP 200に変更され、`return_run_details`は削除されています。
 
 ## GitHub Actionsからの本番デプロイ
 
