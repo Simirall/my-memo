@@ -105,6 +105,7 @@ export const memoSchema = {
     }),
   url: z.object({
     url: memoUrlField,
+    classificationMode: z.enum(["none", "manual", "ai"]).default("none"),
     category: z
       .string()
       .transform((val) => {

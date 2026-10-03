@@ -39,6 +39,16 @@ export default createRoute(async (c) => {
                 </p>
               </div>
               <div className="rounded-box bg-base-200 p-4">
+                <p className="font-semibold">AIサジェスト（UTC月次）</p>
+                <p className="text-2xl">
+                  {usage.aiSuggestion.used} /{" "}
+                  {formatLimit(usage.aiSuggestion.limit)}
+                </p>
+                <p className="text-base-content/70 text-sm">
+                  期間開始: {usage.aiSummaryPeriod}
+                </p>
+              </div>
+              <div className="rounded-box bg-base-200 p-4">
                 <p className="font-semibold">添付ストレージ</p>
                 <p className="text-2xl">
                   {formatAttachmentSize(usage.attachmentStorage.used)} /{" "}

@@ -7,7 +7,7 @@ export type UrlSummaryFailure = {
 };
 
 export type UrlSummaryResult =
-  | { ok: true }
+  | { ok: true; warning?: string }
   | { ok: false; failure: UrlSummaryFailure };
 
 export type SummaryStreamPayload = {

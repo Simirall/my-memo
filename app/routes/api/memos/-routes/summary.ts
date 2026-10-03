@@ -12,10 +12,16 @@ import {
 } from "@/features/access-control/authorization";
 import {
   insertMemoWithinQuota,
+  releaseAiSuggestionQuota,
   releaseAiSummaryQuota,
+  reserveAiSuggestionQuota,
   reserveAiSummaryQuota,
 } from "@/features/access-control/quota";
 import { refreshLinkPreviewCacheFromHtml } from "@/features/link-preview/server/link-preview-cache";
+import {
+  NoClassificationCandidatesError,
+  suggestMemoClassification,
+} from "@/features/memos/classification/ai-suggestion";
 import { memoSchema } from "@/features/memos/schema/memo-schema";
 import { memosTable } from "@/schema";
 import { decodeHtmlEntities } from "../-lib/decode-html-entities";
@@ -191,6 +197,8 @@ summaryRoute.post("/url", zValidator("form", memoSchema.url), async (c) => {
           };
         }
         let reservationConsumed = false;
+        let suggestionReserved = false;
+        let suggestionConsumed = false;
         try {
           await writeEvent("status", { message: "要約を生成しています…" });
           const generated = await generateUrlSummary(c.env, url, async (text) =>
@@ -206,6 +214,50 @@ summaryRoute.post("/url", zValidator("form", memoSchema.url), async (c) => {
             };
           }
 
+          let categoryId = validated.category ?? null;
+          let tags = validated.tags;
+          let classificationWarning: string | undefined;
+          let classificationSucceeded = false;
+          if (validated.classificationMode === "ai") {
+            await writeEvent("status", {
+              message: "カテゴリーとタグを判断しています…",
+            });
+            suggestionReserved = await reserveAiSuggestionQuota(
+              c.env.MY_MEMO_D1,
+              user.id,
+              reservationPeriodStart,
+            );
+            if (suggestionReserved) {
+              try {
+                const suggestion = await suggestMemoClassification(
+                  c.env,
+                  user.id,
+                  {
+                    title: decodeHtmlEntities(generated.title || "No Title"),
+                    content: generated.summary,
+                    currentCategoryId: categoryId,
+                    currentTags: tags,
+                  },
+                );
+                categoryId ||= suggestion.categoryId;
+                tags = [...tags, ...suggestion.tags.map((tag) => tag.name)];
+                classificationSucceeded = true;
+                if (suggestion.candidatesLimited) {
+                  classificationWarning =
+                    "使用頻度の高いカテゴリー・タグ候補に絞って自動分類しました。";
+                }
+              } catch (error) {
+                classificationWarning =
+                  error instanceof NoClassificationCandidatesError
+                    ? error.message
+                    : "AIによるカテゴリー・タグの判断に失敗しました。";
+              }
+            } else {
+              classificationWarning =
+                "AIサジェストの今月の上限に達しているため、自動分類しませんでした。";
+            }
+          }
+
           await writeEvent("status", { message: "要約を保存しています…" });
 
           const inserted = await insertMemoWithinQuota(c.env.MY_MEMO_D1, {
@@ -215,8 +267,8 @@ summaryRoute.post("/url", zValidator("form", memoSchema.url), async (c) => {
             userId: user.id,
             isAiSummary: 1,
             url,
-            categoryId: validated.category ?? null,
-            tags: validated.tags,
+            categoryId,
+            tags,
           });
           if (!inserted) {
             return {
@@ -228,6 +280,8 @@ summaryRoute.post("/url", zValidator("form", memoSchema.url), async (c) => {
             };
           }
 
+          suggestionConsumed = suggestionReserved && classificationSucceeded;
+
           await refreshLinkPreviewCacheFromHtml(
             c.env.MY_MEMO_D1,
             url,
@@ -236,10 +290,17 @@ summaryRoute.post("/url", zValidator("form", memoSchema.url), async (c) => {
           );
 
           reservationConsumed = true;
-          return { ok: true };
+          return { ok: true, warning: classificationWarning };
         } finally {
           if (!reservationConsumed) {
             await releaseAiSummaryQuota(
+              c.env.MY_MEMO_D1,
+              user.id,
+              reservationPeriodStart,
+            );
+          }
+          if (suggestionReserved && !suggestionConsumed) {
+            await releaseAiSuggestionQuota(
               c.env.MY_MEMO_D1,
               user.id,
               reservationPeriodStart,
@@ -257,7 +318,7 @@ summaryRoute.post("/url", zValidator("form", memoSchema.url), async (c) => {
 
       await stream.writeSSE({
         event: "complete",
-        data: JSON.stringify({ redirect: "/" }),
+        data: JSON.stringify({ redirect: "/", warning: result.warning }),
       });
     } catch {
       await writeError({

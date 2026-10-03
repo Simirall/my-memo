@@ -12,6 +12,7 @@ import {
 import {
   insertMemoWithinQuota,
   releaseAiSummaryQuota,
+  reserveAiSuggestionQuota,
   reserveAiSummaryQuota,
 } from "@/features/access-control/quota";
 import usersRoute from "./index";
@@ -98,6 +99,9 @@ beforeEach(async () => {
     ),
     db.prepare(
       "UPDATE plan_limits SET limit_value = 10 WHERE plan_id = 'free' AND metric = 'ai_summary.monthly'",
+    ),
+    db.prepare(
+      "UPDATE plan_limits SET limit_value = 30 WHERE plan_id = 'free' AND metric = 'ai_suggestion.monthly'",
     ),
     db.prepare(
       "UPDATE plan_limits SET limit_value = 524288000 WHERE plan_id = 'free' AND metric = 'attachment.storage_bytes'",
@@ -235,6 +239,28 @@ describe("使用量の集計と上限の適用", () => {
       .bind(currentUtcMonthStart())
       .first<{ used: number }>();
     expect(counter?.used).toBe(2);
+  });
+
+  it("AIサジェストを同時に予約しても独立した月次上限を超えない", async () => {
+    await addUser("suggestion-user");
+    await run(
+      "UPDATE plan_limits SET limit_value = 2 WHERE plan_id = 'free' AND metric = 'ai_suggestion.monthly'",
+    );
+
+    const results = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        reserveAiSuggestionQuota(db, "suggestion-user"),
+      ),
+    );
+
+    expect(results.filter(Boolean)).toHaveLength(2);
+    expect(
+      await getUsage(
+        getAppDb(env),
+        "suggestion-user",
+        PLAN_METRICS.aiSuggestionMonthly,
+      ),
+    ).toBe(2);
   });
 
   it("AI要約の上限NULLは無制限とし、上限未定義なら予約を拒否する", async () => {

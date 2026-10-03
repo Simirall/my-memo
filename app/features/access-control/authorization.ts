@@ -16,6 +16,7 @@ import {
 export const PLAN_METRICS = {
   memoTotal: "memo.total",
   aiSummaryMonthly: "ai_summary.monthly",
+  aiSuggestionMonthly: "ai_suggestion.monthly",
   attachmentStorageBytes: "attachment.storage_bytes",
 } as const;
 
@@ -125,19 +126,26 @@ export async function getPlanUsage(db: AppDb, userId: string) {
     userId,
     PLAN_METRICS.aiSummaryMonthly,
   );
+  const aiSuggestion = await getEntitlement(
+    db,
+    userId,
+    PLAN_METRICS.aiSuggestionMonthly,
+  );
   const attachmentStorage = await getEntitlement(
     db,
     userId,
     PLAN_METRICS.attachmentStorageBytes,
   );
 
-  if (!memo || !aiSummary || !attachmentStorage) return null;
+  if (!memo || !aiSummary || !aiSuggestion || !attachmentStorage) return null;
 
-  const [memoUsed, aiSummaryUsed, attachmentStorageUsed] = await Promise.all([
-    getUsage(db, userId, PLAN_METRICS.memoTotal),
-    getUsage(db, userId, PLAN_METRICS.aiSummaryMonthly),
-    getUsage(db, userId, PLAN_METRICS.attachmentStorageBytes),
-  ]);
+  const [memoUsed, aiSummaryUsed, aiSuggestionUsed, attachmentStorageUsed] =
+    await Promise.all([
+      getUsage(db, userId, PLAN_METRICS.memoTotal),
+      getUsage(db, userId, PLAN_METRICS.aiSummaryMonthly),
+      getUsage(db, userId, PLAN_METRICS.aiSuggestionMonthly),
+      getUsage(db, userId, PLAN_METRICS.attachmentStorageBytes),
+    ]);
 
   return {
     planId: memo.planId,
@@ -145,6 +153,7 @@ export async function getPlanUsage(db: AppDb, userId: string) {
     planName: memo.planName,
     memo: { used: memoUsed, limit: memo.limit },
     aiSummary: { used: aiSummaryUsed, limit: aiSummary.limit },
+    aiSuggestion: { used: aiSuggestionUsed, limit: aiSuggestion.limit },
     attachmentStorage: {
       used: attachmentStorageUsed,
       limit: attachmentStorage.limit,
