@@ -16,6 +16,7 @@ import {
 const requiredPlanMetrics = [
   "memo.total",
   "ai_summary.monthly",
+  "ai_suggestion.monthly",
   "attachment.storage_bytes",
 ] as const;
 

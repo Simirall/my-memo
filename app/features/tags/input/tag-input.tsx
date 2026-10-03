@@ -10,6 +10,7 @@ export const TagInput = ({
   availableTags,
   suggestedTags = [],
   initialTags = [],
+  value,
   inputId,
   name = "tags",
   onTagsChange,
@@ -18,6 +19,7 @@ export const TagInput = ({
   availableTags: ReadonlyArray<Tag>;
   suggestedTags?: ReadonlyArray<Tag>;
   initialTags?: ReadonlyArray<Tag>;
+  value?: ReadonlyArray<Tag>;
   inputId: string;
   name?: string;
   onTagsChange?: (tags: Tag[]) => void;
@@ -28,6 +30,10 @@ export const TagInput = ({
   const [error, setError] = useState<string>();
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (value) setSelected([...value]);
+  }, [value]);
 
   useEffect(() => {
     if (resetKey === undefined) return;

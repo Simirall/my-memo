@@ -21,6 +21,7 @@ import {
 } from "@/features/attachments/model/attachment-constants";
 import type { AttachmentQuota } from "@/features/attachments/server/attachments";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
+import { ClassificationSuggestionButton } from "@/features/memos/input/classification-suggestion-button";
 import { useFormSubmitShortcut } from "@/features/memos/input/use-form-submit-shortcut";
 import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
 import { TagInput } from "@/features/tags/input/tag-input";
@@ -557,8 +558,18 @@ export default function EditMemoForm({
               ? (tagSuggestions.byCategory[categoryId] ?? [])
               : tagSuggestions.all
           }
+          value={tags}
         />
       </fieldset>
+      <ClassificationSuggestionButton
+        categoryId={categoryId}
+        content={content}
+        disabled={isSaving || isRegenerating}
+        onCategory={setCategoryId}
+        onTags={setTags}
+        tags={tags}
+        title={title}
+      />
       <section className="space-y-3">
         <h2 className="font-semibold">添付ファイル</h2>
         {attachments.length > 0 && (

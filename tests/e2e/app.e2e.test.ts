@@ -226,6 +226,7 @@ test("カテゴリー付きメモと添付を作成・再表示・編集・削�
   await page.waitForLoadState("networkidle");
   await page.locator("#memo-title").fill("通しテストのメモ");
   await page.locator("#memo-content").fill("作成した本文");
+  await page.getByRole("button", { name: "手動で設定する" }).click();
   await page.getByLabel("カテゴリー").selectOption({ label: "仕事" });
   await page.getByLabel("タグ").fill("確認用");
   await page.getByLabel("タグ").press("Enter");

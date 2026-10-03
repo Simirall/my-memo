@@ -23,6 +23,7 @@ import {
   MAX_ATTACHMENTS_PER_MEMO,
 } from "@/features/attachments/model/attachment-constants";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
+import { MemoClassificationInput } from "@/features/memos/input/memo-classification-input";
 import { getCreatedMemoListPath } from "@/features/memos/input/memo-create-navigation";
 import { useFormSubmitShortcut } from "@/features/memos/input/use-form-submit-shortcut";
 import {
@@ -35,7 +36,6 @@ import {
   type SharedMemoPrefill,
 } from "@/features/sharing/model/share";
 import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
-import { TagInput } from "@/features/tags/input/tag-input";
 
 type AttachmentQuota = {
   used: number;
@@ -75,6 +75,7 @@ export default function CreateMemoForm({
   const [content, setContent] = useState(initialValues?.content ?? "");
   const [url, setUrl] = useState(initialValues?.url ?? "");
   const [categoryId, setCategoryId] = useState(initialCategoryId ?? "");
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [shareWarning, setShareWarning] = useState(() =>
     getShareWarning(initialValues),
   );
@@ -741,43 +742,18 @@ export default function CreateMemoForm({
           value={url}
         />
       </fieldset>
-      {categories.length > 0 && (
-        <fieldset className="fieldset">
-          <label className="fieldset-legend" htmlFor="memo-category">
-            カテゴリー
-          </label>
-          <select
-            className="select category-select w-full!"
-            id="memo-category"
-            name="categoryId"
-            onChange={(event) =>
-              setCategoryId((event.currentTarget as HTMLSelectElement).value)
-            }
-            value={categoryId}
-          >
-            <option value="">カテゴリーなし</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </fieldset>
-      )}
-      <fieldset className="fieldset">
-        <label className="fieldset-legend" htmlFor="memo-tags">
-          タグ
-        </label>
-        <TagInput
-          availableTags={tags}
-          inputId="memo-tags"
-          suggestedTags={
-            categoryId
-              ? (tagSuggestions.byCategory[categoryId] ?? [])
-              : tagSuggestions.all
-          }
-        />
-      </fieldset>
+      <MemoClassificationInput
+        availableTags={tags}
+        categories={categories}
+        categoryId={categoryId}
+        content={content}
+        disabled={isLoading || Boolean(createdMemoId)}
+        onCategory={setCategoryId}
+        onTags={setSelectedTags}
+        tagSuggestions={tagSuggestions}
+        tags={selectedTags}
+        title={title}
+      />
       {!shareIntake && (
         <section className="space-y-3">
           <h2 className="font-semibold">添付ファイル</h2>

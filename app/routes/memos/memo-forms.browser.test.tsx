@@ -28,6 +28,7 @@ function mount(node: Parameters<typeof render>[0]) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   render(node, container);
+  return container;
 }
 
 function dispatchPaste(
@@ -66,6 +67,272 @@ afterEach(() => {
 });
 
 describe("メモ作成フォーム", () => {
+  it("分類方法を選ばず閉じた初期カテゴリーで保存しAIを呼ばない", async () => {
+    const fetchSpy = vi
+      .spyOn(window, "fetch")
+      .mockResolvedValue(Response.json({ message: "確認用" }, { status: 500 }));
+    mount(
+      <CreateMemoForm categories={categories} initialCategoryId="category-1" />,
+    );
+    await expect
+      .element(page.getByRole("combobox", { name: "カテゴリー" }))
+      .not.toBeInTheDocument();
+    await expect
+      .element(page.getByRole("combobox", { name: "タグ" }))
+      .not.toBeInTheDocument();
+    await expect
+      .element(page.getByRole("region", { name: "現在の分類" }))
+      .toHaveTextContent("カテゴリー1");
+    await page.getByLabelText("タイトル").fill("任意の分類");
+    await page.getByRole("button", { name: "メモを作成" }).click();
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const body = fetchSpy.mock.calls[0][1]?.body as FormData;
+    expect(body.get("categoryId")).toBe("category-1");
+    expect(body.get("tags")).toBe("[]");
+  });
+
+  it("手動設定のカテゴリー・タグと入力途中の文字を保持して保存する", async () => {
+    const fetchSpy = vi
+      .spyOn(window, "fetch")
+      .mockResolvedValue(Response.json({ message: "確認用" }, { status: 500 }));
+    mount(<CreateMemoForm categories={categories} />);
+    await page.getByLabelText("タイトル").fill("手動分類");
+    await page.getByRole("button", { name: "手動で設定する" }).click();
+    await page.getByLabelText("カテゴリー").selectOptions("category-2");
+    const tags = page.getByRole("combobox", { name: "タグ" });
+    await tags.fill("手動タグ");
+    await page
+      .getByRole("option", { name: "#手動タグを新しいタグとして追加" })
+      .click();
+    await tags.fill("入力途中");
+    await page.getByLabelText("タイトル").click();
+    await expect
+      .element(page.getByRole("button", { name: "手動タグを外す" }))
+      .toBeVisible();
+    await page.getByRole("button", { name: "手動で設定する" }).click();
+    await expect.element(tags).toHaveValue("入力途中");
+    await page.getByRole("button", { name: "メモを作成" }).click();
+    const body = fetchSpy.mock.calls[0][1]?.body as FormData;
+    expect(body.get("categoryId")).toBe("category-2");
+    expect(JSON.parse(String(body.get("tags")))).toEqual(["手動タグ"]);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it.each(["manual", "save", "leave"] as const)(
+    "AI待機中の%s操作で結果を破棄し二重実行を防ぐ",
+    async (operation) => {
+      let resolveResponse: ((response: Response) => void) | undefined;
+      const fetchSpy = vi
+        .spyOn(window, "fetch")
+        .mockImplementationOnce(
+          () =>
+            new Promise<Response>((resolve) => {
+              resolveResponse = resolve;
+            }),
+        )
+        .mockResolvedValue(
+          Response.json({ message: "保存失敗" }, { status: 500 }),
+        );
+      const container = mount(<CreateMemoForm categories={categories} />);
+      await page.getByLabelText("タイトル").fill("待機中");
+      await page.getByRole("button", { name: "AIで自動設定する" }).click();
+      await expect
+        .element(page.getByRole("button", { name: "判断しています…" }))
+        .toBeDisabled();
+      if (operation === "manual") {
+        await page.getByRole("button", { name: "手動で設定する" }).click();
+        await page.getByLabelText("カテゴリー").selectOptions("category-1");
+      } else if (operation === "save") {
+        await page.getByRole("button", { name: "メモを作成" }).click();
+        await expect
+          .element(page.getByRole("alert"))
+          .toHaveTextContent("保存失敗");
+      } else {
+        window.dispatchEvent(new Event("pagehide"));
+        render(null, container);
+      }
+      resolveResponse?.(
+        Response.json({
+          categoryId: "category-2",
+          tags: [{ id: "ai", name: "古いタグ" }],
+          candidatesLimited: false,
+          usage: { used: 1, limit: 30 },
+        }),
+      );
+      if (operation !== "leave") {
+        await expect
+          .element(page.getByText(/古いサジェスト結果は反映しませんでした/))
+          .toBeVisible();
+        if (operation === "manual") {
+          await expect
+            .element(page.getByLabelText("カテゴリー"))
+            .toHaveValue("category-1");
+          await expect
+            .element(page.getByRole("button", { name: "手動で設定する" }))
+            .toHaveAttribute("aria-expanded", "true");
+        } else {
+          await expect
+            .element(page.getByRole("region", { name: "現在の分類" }))
+            .toHaveTextContent("カテゴリー：なし");
+        }
+        await expect
+          .element(page.getByText("#古いタグ"))
+          .not.toBeInTheDocument();
+      }
+      expect(
+        fetchSpy.mock.calls.filter(
+          ([url]) => url === "/api/memos/suggest-classification",
+        ),
+      ).toHaveLength(1);
+    },
+  );
+
+  it.each(["none", "ai", "manual"] as const)(
+    "URL要約で分類方法%sを送信し保存前にAIを呼ばない",
+    async (mode) => {
+      const fetchSpy = vi
+        .spyOn(window, "fetch")
+        .mockResolvedValue(
+          Response.json({ message: "確認用" }, { status: 500 }),
+        );
+      mount(
+        <UrlSummaryForm
+          categories={categories}
+          initialCategoryId="category-1"
+        />,
+      );
+      if (mode !== "none") {
+        await page.getByRole("button", { name: "AIで自動設定する" }).click();
+        await expect
+          .element(page.getByText("要約後にAIで分類します。"))
+          .toBeVisible();
+        await expect
+          .element(page.getByRole("button", { name: "編集", exact: true }))
+          .not.toBeInTheDocument();
+        if (mode === "manual")
+          await page.getByRole("button", { name: "手動で設定する" }).click();
+      }
+      expect(fetchSpy).not.toHaveBeenCalled();
+      await page
+        .getByLabelText("要約するページのURL")
+        .fill("https://example.com/article");
+      await page.getByRole("button", { name: "要約して保存" }).click();
+      expect(fetchSpy).toHaveBeenCalledOnce();
+      const body = fetchSpy.mock.calls[0][1]?.body as FormData;
+      expect(body.get("classificationMode")).toBe(mode);
+      expect(body.get("category")).toBe("category-1");
+    },
+  );
+
+  it("AIサジェストを既存入力へ追加し自由入力中の文字を保持する", async () => {
+    const suggestedTag = { id: "tag-ai", name: "AI候補" };
+    const fetchSpy = vi.spyOn(window, "fetch").mockResolvedValue(
+      Response.json({
+        categoryId: "category-2",
+        tags: [suggestedTag],
+        candidatesLimited: false,
+        usage: { used: 1, limit: 30 },
+      }),
+    );
+    mount(<CreateMemoForm categories={categories} tags={[suggestedTag]} />);
+
+    await page.getByLabelText("タイトル").fill("分類するメモ");
+    await page.getByRole("button", { name: "手動で設定する" }).click();
+    const tagInput = page.getByRole("combobox", { name: "タグ" });
+    await tagInput.fill("入力途中");
+    await page.getByLabelText("タイトル").click();
+    await page.getByRole("button", { name: "AIで自動設定する" }).click();
+
+    await expect
+      .element(page.getByRole("region", { name: "現在の分類" }))
+      .toHaveTextContent("カテゴリー2");
+    await expect
+      .element(page.getByRole("region", { name: "現在の分類" }))
+      .toHaveTextContent("#AI候補");
+    await page.getByRole("button", { name: "編集", exact: true }).click();
+    await expect
+      .element(page.getByLabelText("カテゴリー"))
+      .toHaveValue("category-2");
+    await expect.element(tagInput).toHaveValue("入力途中");
+    await expect.element(page.getByText(/残り29回/)).toBeVisible();
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it("手動からAIへ戻しても既存カテゴリー・タグを保持し再実行できる", async () => {
+    const fetchSpy = vi.spyOn(window, "fetch").mockImplementation(async () =>
+      Response.json({
+        categoryId: null,
+        tags: [{ id: "ai-tag", name: "AI追加" }],
+        candidatesLimited: false,
+        usage: { used: fetchSpy.mock.calls.length, limit: 30 },
+      }),
+    );
+    mount(
+      <CreateMemoForm categories={categories} initialCategoryId="category-1" />,
+    );
+    await page.getByLabelText("タイトル").fill("補完のみ");
+    await page.getByRole("button", { name: "手動で設定する" }).click();
+    await page.getByRole("combobox", { name: "タグ" }).fill("手動タグ");
+    await page
+      .getByRole("option", { name: "#手動タグを新しいタグとして追加" })
+      .click();
+    await page.getByLabelText("タイトル").click();
+    await page.getByRole("button", { name: "AIで自動設定する" }).click();
+    await expect.element(page.getByText(/残り29回/)).toBeVisible();
+    const classification = page.getByRole("region", { name: "現在の分類" });
+    await expect.element(classification).toHaveTextContent("カテゴリー1");
+    await expect
+      .element(classification)
+      .toHaveTextContent("#手動タグ、#AI追加");
+    expect(JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))).toMatchObject({
+      currentCategoryId: "category-1",
+      currentTags: ["手動タグ"],
+    });
+    await page.getByRole("button", { name: "AIで自動設定する" }).click();
+    await expect.element(page.getByText(/残り28回/)).toBeVisible();
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String(fetchSpy.mock.calls[1][1]?.body))).toMatchObject({
+      currentCategoryId: "category-1",
+      currentTags: ["手動タグ", "AI追加"],
+    });
+    await page.getByRole("button", { name: "編集", exact: true }).click();
+    await page.getByRole("button", { name: "AI追加を外す" }).click();
+    await expect
+      .element(page.getByText("#AI追加", { exact: true }))
+      .not.toBeInTheDocument();
+  });
+
+  it("AIサジェスト待機中に入力を変更して戻しても古い結果を反映しない", async () => {
+    let resolveResponse: ((response: Response) => void) | undefined;
+    vi.spyOn(window, "fetch").mockReturnValue(
+      new Promise<Response>((resolve) => {
+        resolveResponse = resolve;
+      }),
+    );
+    mount(<CreateMemoForm categories={categories} />);
+
+    const title = page.getByLabelText("タイトル");
+    await title.fill("変更前");
+    await page.getByRole("button", { name: "AIで自動設定する" }).click();
+    await title.fill("変更後");
+    await title.fill("変更前");
+    resolveResponse?.(
+      Response.json({
+        categoryId: "category-2",
+        tags: [],
+        candidatesLimited: false,
+        usage: { used: 1, limit: 30 },
+      }),
+    );
+
+    await expect
+      .element(page.getByText(/古いサジェスト結果は反映しませんでした/))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("region", { name: "現在の分類" }))
+      .toHaveTextContent("カテゴリー：なし");
+  });
+
   it("カテゴリーに応じた未入力タグ候補へ切り替え、選択済みタグを保持する", async () => {
     const tag1 = { id: "tag-1", name: "仕事" };
     const tag2 = { id: "tag-2", name: "個人" };
@@ -81,6 +348,7 @@ describe("メモ作成フォーム", () => {
       />,
     );
 
+    await page.getByRole("button", { name: "手動で設定する" }).click();
     await page.getByRole("combobox", { name: "タグ" }).click();
     await page.getByRole("option", { name: "#仕事" }).click();
     await page.getByLabelText("カテゴリー").selectOptions("category-2");
@@ -101,6 +369,7 @@ describe("メモ作成フォーム", () => {
       />,
     );
 
+    await page.getByRole("button", { name: "手動で設定する" }).click();
     await page.getByRole("combobox", { name: "タグ" }).click();
     await expect
       .element(page.getByRole("option", { name: "#仕事" }))
@@ -115,6 +384,10 @@ describe("メモ作成フォーム", () => {
       <CreateMemoForm categories={categories} initialCategoryId="category-1" />,
     );
 
+    await expect
+      .element(page.getByRole("region", { name: "現在の分類" }))
+      .toHaveTextContent("カテゴリー1");
+    await page.getByRole("button", { name: "手動で設定する" }).click();
     const category = page.getByLabelText("カテゴリー");
     await expect.element(category).toHaveValue("category-1");
     await category.selectOptions("category-2");
@@ -532,6 +805,7 @@ describe("メモ作成フォーム", () => {
       <UrlSummaryForm categories={categories} initialCategoryId="category-1" />,
     );
 
+    await page.getByRole("button", { name: "手動で設定する" }).click();
     const category = page.getByLabelText("カテゴリー");
     await expect.element(category).toHaveValue("category-1");
     await category.selectOptions("category-2");
@@ -542,6 +816,7 @@ describe("メモ作成フォーム", () => {
 
     const body = fetchSpy.mock.calls[0]?.[1]?.body as FormData;
     expect(body.get("category")).toBe("category-2");
+    expect(body.get("classificationMode")).toBe("manual");
   });
 
   it("入力欄にフォーカス中でもCtrl+EnterでAI要約を送信する", async () => {

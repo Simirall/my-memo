@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "hono/jsx";
 import type z from "zod";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
+import { MemoClassificationInput } from "@/features/memos/input/memo-classification-input";
 import { getCreatedMemoListPath } from "@/features/memos/input/memo-create-navigation";
 import { useFormSubmitShortcut } from "@/features/memos/input/use-form-submit-shortcut";
 import {
@@ -9,7 +10,6 @@ import {
 } from "@/features/sharing/client/share-client";
 import { getShareDestination } from "@/features/sharing/model/share";
 import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
-import { TagInput } from "@/features/tags/input/tag-input";
 
 export default function UrlSummaryForm({
   categories,
@@ -32,6 +32,7 @@ export default function UrlSummaryForm({
   const [summary, setSummary] = useState("");
   const [url, setUrl] = useState(initialUrl ?? "");
   const [categoryId, setCategoryId] = useState(initialCategoryId ?? "");
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
 
   useFormSubmitShortcut(formRef, isLoading);
@@ -81,11 +82,13 @@ export default function UrlSummaryForm({
           setProgress("要約を生成しています…");
           setSummary((current) => current + payload.text);
         } else if (event === "complete") {
-          window.location.assign(
-            submittedCategoryId
-              ? getCreatedMemoListPath(submittedCategoryId, initialCategoryId)
-              : (payload.redirect ?? "/"),
-          );
+          const destination = submittedCategoryId
+            ? getCreatedMemoListPath(submittedCategoryId, initialCategoryId)
+            : (payload.redirect ?? "/");
+          const target = new URL(destination, window.location.origin);
+          if (payload.warning)
+            target.searchParams.set("notice", payload.warning);
+          window.location.assign(`${target.pathname}${target.search}`);
         } else if (event === "error") {
           throw new Error(payload.message ?? "AI要約を作成できませんでした。");
         }
@@ -152,43 +155,17 @@ export default function UrlSummaryForm({
           value={url}
         />
       </fieldset>
-      {categories.length > 0 && (
-        <fieldset className="fieldset">
-          <label className="fieldset-legend" htmlFor="summary-category">
-            カテゴリー
-          </label>
-          <select
-            className="select category-select w-full!"
-            id="summary-category"
-            name="category"
-            onChange={(event) =>
-              setCategoryId((event.currentTarget as HTMLSelectElement).value)
-            }
-            value={categoryId}
-          >
-            <option value="">カテゴリーなし</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </fieldset>
-      )}
-      <fieldset className="fieldset">
-        <label className="fieldset-legend" htmlFor="summary-tags">
-          タグ
-        </label>
-        <TagInput
-          availableTags={tags}
-          inputId="summary-tags"
-          suggestedTags={
-            categoryId
-              ? (tagSuggestions.byCategory[categoryId] ?? [])
-              : tagSuggestions.all
-          }
-        />
-      </fieldset>
+      <MemoClassificationInput
+        availableTags={tags}
+        categories={categories}
+        categoryId={categoryId}
+        disabled={isLoading}
+        onCategory={setCategoryId}
+        onTags={setSelectedTags}
+        summary
+        tagSuggestions={tagSuggestions}
+        tags={selectedTags}
+      />
       <button className="btn" disabled={isLoading} type="submit">
         {isLoading ? (
           <span className="loading loading-spinner" />
@@ -206,6 +183,7 @@ type SummaryStreamPayload = {
   message?: string;
   redirect?: string;
   text?: string;
+  warning?: string;
 };
 
 const readSummaryStream = async (

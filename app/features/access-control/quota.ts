@@ -206,12 +206,12 @@ export async function insertMemoAndAttachmentsWithinQuota(
   );
 }
 
-export async function reserveAiSummaryQuota(
+async function reserveMonthlyQuota(
   db: D1Database,
   userId: string,
+  metric: string,
   periodStart = currentUtcMonthStart(),
 ): Promise<boolean> {
-  const metric = PLAN_METRICS.aiSummaryMonthly;
   const result = await db
     .prepare(
       `INSERT INTO usage_counters (user_id, metric, period_start, used)
@@ -242,9 +242,10 @@ export async function reserveAiSummaryQuota(
   return result.meta.changes === 1;
 }
 
-export async function releaseAiSummaryQuota(
+async function releaseMonthlyQuota(
   db: D1Database,
   userId: string,
+  metric: string,
   periodStart: string,
 ): Promise<void> {
   await db
@@ -257,9 +258,47 @@ export async function releaseAiSummaryQuota(
          AND period_start = ?
          AND used > 0`,
     )
-    .bind(userId, PLAN_METRICS.aiSummaryMonthly, periodStart)
+    .bind(userId, metric, periodStart)
     .run();
 }
+
+export const reserveAiSummaryQuota = (
+  db: D1Database,
+  userId: string,
+  periodStart = currentUtcMonthStart(),
+) =>
+  reserveMonthlyQuota(db, userId, PLAN_METRICS.aiSummaryMonthly, periodStart);
+
+export const releaseAiSummaryQuota = (
+  db: D1Database,
+  userId: string,
+  periodStart: string,
+) =>
+  releaseMonthlyQuota(db, userId, PLAN_METRICS.aiSummaryMonthly, periodStart);
+
+export const reserveAiSuggestionQuota = (
+  db: D1Database,
+  userId: string,
+  periodStart = currentUtcMonthStart(),
+) =>
+  reserveMonthlyQuota(
+    db,
+    userId,
+    PLAN_METRICS.aiSuggestionMonthly,
+    periodStart,
+  );
+
+export const releaseAiSuggestionQuota = (
+  db: D1Database,
+  userId: string,
+  periodStart: string,
+) =>
+  releaseMonthlyQuota(
+    db,
+    userId,
+    PLAN_METRICS.aiSuggestionMonthly,
+    periodStart,
+  );
 
 export async function insertAttachmentWithinQuota(
   db: D1Database,

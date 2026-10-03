@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import attachmentsRoute from "./-routes/attachments";
+import classificationRoute from "./-routes/classification";
 import createRoute from "./-routes/create";
 import deleteRoute from "./-routes/delete";
 import summaryRoute from "./-routes/summary";
@@ -14,6 +15,7 @@ memosRoute
   .route("/", updateRoute)
   .route("/", deleteRoute)
   .route("/", tagsRoute)
-  .route("/", summaryRoute);
+  .route("/", summaryRoute)
+  .route("/", classificationRoute);
 
 export default memosRoute;

@@ -58,6 +58,7 @@ describe("スキーママイグレーション", () => {
       is_active: 1,
     });
     expect(limits.results).toEqual([
+      { metric: "ai_suggestion.monthly", limit_value: 30 },
       { metric: "ai_summary.monthly", limit_value: 10 },
       { metric: "attachment.storage_bytes", limit_value: 524288000 },
       { metric: "memo.total", limit_value: 100 },

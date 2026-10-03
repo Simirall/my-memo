@@ -29,6 +29,13 @@
       "when": 1787397574235,
       "tag": "0003_blue_lady_deathstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789992000000,
+      "tag": "0004_ai_suggestion_quota",
+      "breakpoints": true
     }
   ]
 }
