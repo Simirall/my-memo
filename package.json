@@ -27,7 +27,7 @@
     "@hono/zod-validator": "^0.9.1",
     "@phosphor-icons/core": "2.1.1",
     "@tailwindcss/vite": "^4.3.3",
-    "better-auth": "^1.7.6",
+    "better-auth": "^1.7.7",
     "daisyui": "^5.7.47",
     "drizzle-orm": "^0.45.3",
     "drizzle-zod": "^0.8.3",
