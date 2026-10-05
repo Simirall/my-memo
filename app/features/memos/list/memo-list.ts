@@ -103,6 +103,8 @@ export const getUsedMemoTags = async (
   const conditions = [
     eq(schema.tagsTable.userId, userId),
     eq(schema.memosTable.userId, userId),
+    eq(schema.memoTagsTable.tagId, schema.tagsTable.id),
+    eq(schema.memosTable.id, schema.memoTagsTable.memoId),
   ];
   if (categoryId) {
     conditions.push(eq(schema.memosTable.categoryId, categoryId));
@@ -110,17 +112,12 @@ export const getUsedMemoTags = async (
     conditions.push(sql`not ${excludedFromAll}`);
   }
 
+  // タグ→関連付け→メモの順に固定し、タグごとの全メモ走査を防ぐ。
   const tags = await db
     .selectDistinct({ id: schema.tagsTable.id, name: schema.tagsTable.name })
     .from(schema.tagsTable)
-    .innerJoin(
-      schema.memoTagsTable,
-      eq(schema.memoTagsTable.tagId, schema.tagsTable.id),
-    )
-    .innerJoin(
-      schema.memosTable,
-      eq(schema.memosTable.id, schema.memoTagsTable.memoId),
-    )
+    .crossJoin(schema.memoTagsTable)
+    .crossJoin(schema.memosTable)
     .where(and(...conditions))
     .orderBy(asc(schema.tagsTable.name));
   return tags.sort((a, b) => a.name.localeCompare(b.name, "ja"));
