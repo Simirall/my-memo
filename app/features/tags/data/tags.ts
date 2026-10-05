@@ -89,6 +89,7 @@ export async function getTagSuggestions(
   db: AppDb,
   userId: string,
 ): Promise<TagSuggestions> {
+  // タグ→関連付け→メモの順に固定し、タグごとの全メモ走査を防ぐ。
   const rows = await db
     .selectDistinct({
       id: tagsTable.id,
@@ -96,9 +97,16 @@ export async function getTagSuggestions(
       categoryId: memosTable.categoryId,
     })
     .from(tagsTable)
-    .innerJoin(memoTagsTable, eq(memoTagsTable.tagId, tagsTable.id))
-    .innerJoin(memosTable, eq(memosTable.id, memoTagsTable.memoId))
-    .where(and(eq(tagsTable.userId, userId), eq(memosTable.userId, userId)))
+    .crossJoin(memoTagsTable)
+    .crossJoin(memosTable)
+    .where(
+      and(
+        eq(tagsTable.userId, userId),
+        eq(memosTable.userId, userId),
+        eq(memoTagsTable.tagId, tagsTable.id),
+        eq(memosTable.id, memoTagsTable.memoId),
+      ),
+    )
     .orderBy(asc(tagsTable.name));
 
   const all = new Map<string, Tag>();

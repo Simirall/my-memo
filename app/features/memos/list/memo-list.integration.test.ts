@@ -330,6 +330,50 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
     });
   });
 
+  it("複数メモ・カテゴリの共通タグを重複させず、未分類の候補も返す", async () => {
+    await addUser("owner");
+    await run(
+      "INSERT INTO categories (id, user_id, name) VALUES ('category-1', 'owner', '仕事'), ('category-2', 'owner', '個人')",
+    );
+    await run(
+      "INSERT INTO tags (id, user_id, name) VALUES ('tag-shared', 'owner', '共通'), ('tag-uncategorized', 'owner', '未分類用')",
+    );
+    await addMemo("work-1", "owner", "2026-08-08 04:00:00", {
+      categoryId: "category-1",
+    });
+    await addMemo("work-2", "owner", "2026-08-08 03:00:00", {
+      categoryId: "category-1",
+    });
+    await addMemo("private", "owner", "2026-08-08 02:00:00", {
+      categoryId: "category-2",
+    });
+    await addMemo("uncategorized", "owner", "2026-08-08 01:00:00");
+    await run(
+      "INSERT INTO memo_tags (memo_id, tag_id) VALUES ('work-1', 'tag-shared'), ('work-2', 'tag-shared'), ('private', 'tag-shared'), ('uncategorized', 'tag-shared'), ('uncategorized', 'tag-uncategorized')",
+    );
+
+    const sharedTag = { id: "tag-shared", name: "共通" };
+    const uncategorizedTag = { id: "tag-uncategorized", name: "未分類用" };
+    const db = getMemoListDb(env);
+    expect(await getUsedMemoTags(db, "owner")).toEqual([
+      sharedTag,
+      uncategorizedTag,
+    ]);
+    expect(await getUsedMemoTags(db, "owner", "category-1")).toEqual([
+      sharedTag,
+    ]);
+    expect(await getUsedMemoTags(db, "owner", "category-2")).toEqual([
+      sharedTag,
+    ]);
+    expect(await getTagSuggestions(getAppDb(env), "owner")).toEqual({
+      all: [sharedTag, uncategorizedTag],
+      byCategory: {
+        "category-1": [sharedTag],
+        "category-2": [sharedTag],
+      },
+    });
+  });
+
   it("選択中の所有タグは一覧スコープで未使用でも候補へ残す", () => {
     expect(
       includeSelectedMemoListTag(
