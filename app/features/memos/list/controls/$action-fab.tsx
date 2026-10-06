@@ -1,6 +1,7 @@
 import globeIcon from "@phosphor-icons/core/assets/regular/globe.svg?raw";
 import notePencilIcon from "@phosphor-icons/core/assets/regular/note-pencil.svg?raw";
 import plusIcon from "@phosphor-icons/core/assets/regular/plus.svg?raw";
+import tableIcon from "@phosphor-icons/core/assets/regular/table.svg?raw";
 import xIcon from "@phosphor-icons/core/assets/regular/x.svg?raw";
 import { PhosphorIcon } from "@/components/phosphor-icon";
 
@@ -62,6 +63,11 @@ export const ActionFab = ({ categoryId }: { categoryId?: string }) => {
         href={`/memos/create${categoryQuery}`}
         label="メモを作成"
         svg={notePencilIcon}
+      />
+      <FabAction
+        href="/memos/create/bulk"
+        label="メモを一括作成"
+        svg={tableIcon}
       />
       <FabAction
         href={`/memos/url-summary${categoryQuery}`}

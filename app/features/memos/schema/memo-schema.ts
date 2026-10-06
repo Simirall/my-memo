@@ -1,31 +1,16 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import z from "zod";
-import { isSafeMemoUrl } from "@/features/memos/model/memo-url";
 import {
-  normalizeTagNames,
-  parseTagNamesField,
-} from "@/features/tags/data/tags";
+  memoContentField,
+  memoTitleField,
+  memoUrlField,
+  optionalMemoUrlField,
+  tagNamesField,
+} from "@/features/memos/schema/memo-input-schema";
+import { normalizeTagNames } from "@/features/tags/data/tags";
 import { memosTable } from "@/schema";
 
-const tagNamesField = z.preprocess((value) => {
-  const result = parseTagNamesField(value);
-  if (!result.ok) return z.NEVER;
-  return result.names;
-}, z.array(z.string()));
-
 const memoReadSchema = createSelectSchema(memosTable);
-const memoContentField = z.preprocess(
-  (value) => (typeof value === "string" && value.trim() === "" ? null : value),
-  z.string().max(10000, "10,000文字以内で入力してください").nullable(),
-);
-const memoUrlField = z
-  .string()
-  .max(2048, "2048文字以内で入力してください")
-  .refine(isSafeMemoUrl, "httpまたはhttpsのURLを入力してください");
-const optionalMemoUrlField = z.preprocess(
-  (value) => (value === "" ? null : value),
-  memoUrlField.nullable().optional(),
-);
 const mediaDimensionsField = z.preprocess(
   (value) => {
     if (value === undefined || value === "") return [];
@@ -59,7 +44,7 @@ export const memoSchema = {
   read: memoReadSchema,
   create: createInsertSchema(memosTable, {
     userId: (schema) => schema.optional(),
-    title: (schema) => schema.max(255, "255文字以内で入力してください"),
+    title: () => memoTitleField,
     url: () => optionalMemoUrlField,
     categoryId: (schema) =>
       schema.transform((val) => {
@@ -73,7 +58,7 @@ export const memoSchema = {
   }),
   update: createInsertSchema(memosTable, {
     userId: (schema) => schema.optional(),
-    title: (schema) => schema.max(255, "255文字以内で入力してください"),
+    title: () => memoTitleField,
     url: () => memoUrlField.nullable().optional(),
     categoryId: (schema) => schema.nullable().optional(),
     isAiSummary: (schema) => schema.optional(),

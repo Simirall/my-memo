@@ -15,13 +15,16 @@ afterEach(() => {
 });
 
 describe("操作メニュー", () => {
-  it("作成メニューから2つの作成方法へ移動できる", async () => {
+  it("作成メニューから3つの作成方法へ移動できる", async () => {
     mount();
 
     await page.getByRole("button", { name: "作成メニューを開く" }).click();
     await expect
       .element(page.getByRole("link", { name: "メモを作成" }))
       .toHaveAttribute("href", "/memos/create");
+    await expect
+      .element(page.getByRole("link", { name: "メモを一括作成" }))
+      .toHaveAttribute("href", "/memos/create/bulk");
     await expect
       .element(page.getByRole("link", { name: "WebページをAI要約" }))
       .toHaveAttribute("href", "/memos/url-summary");

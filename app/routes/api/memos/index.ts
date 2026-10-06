@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import attachmentsRoute from "./-routes/attachments";
+import bulkRoute from "./-routes/bulk";
 import classificationRoute from "./-routes/classification";
 import createRoute from "./-routes/create";
 import deleteRoute from "./-routes/delete";
@@ -11,6 +12,7 @@ const memosRoute = new Hono<{ Bindings: CloudflareBindings }>();
 
 memosRoute
   .route("/", createRoute)
+  .route("/", bulkRoute)
   .route("/", attachmentsRoute)
   .route("/", updateRoute)
   .route("/", deleteRoute)

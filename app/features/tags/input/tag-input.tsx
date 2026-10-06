@@ -15,6 +15,9 @@ export const TagInput = ({
   name = "tags",
   onTagsChange,
   resetKey,
+  queryValue,
+  onQueryChange,
+  compact = false,
 }: {
   availableTags: ReadonlyArray<Tag>;
   suggestedTags?: ReadonlyArray<Tag>;
@@ -24,12 +27,21 @@ export const TagInput = ({
   name?: string;
   onTagsChange?: (tags: Tag[]) => void;
   resetKey?: number | string;
+  queryValue?: string;
+  onQueryChange?: (query: string) => void;
+  compact?: boolean;
 }) => {
   const [selected, setSelected] = useState<Tag[]>([...initialTags]);
-  const [query, setQuery] = useState("");
+  const [queryState, setQueryState] = useState("");
+  const query = queryValue ?? queryState;
+  const setQuery = (next: string) => {
+    setQueryState(next);
+    onQueryChange?.(next);
+  };
   const [error, setError] = useState<string>();
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (value) setSelected([...value]);
@@ -88,13 +100,20 @@ export const TagInput = ({
   const isOpen =
     isFocused && selected.length < MAX_TAGS_PER_MEMO && hasSuggestions;
 
+  useEffect(() => {
+    if (compact && isOpen) suggestionsRef.current?.showPopover?.();
+  }, [compact, isOpen]);
+
   return (
     <div className="flex flex-col gap-2">
-      <div className="relative">
+      <div
+        className="relative"
+        style={compact ? { "anchor-name": `--${inputId}-anchor` } : undefined}
+      >
         <div className="input h-auto min-h-10 w-full flex-wrap gap-2 p-2">
           {selected.map((tag) => (
             <span
-              className={`badge gap-1 pr-0 ${
+              className={`badge gap-1 pr-0 ${compact ? "max-w-full shrink-0" : ""} ${
                 tag.name === freeformName
                   ? "badge-soft badge-primary"
                   : "badge-soft badge-info"
@@ -102,10 +121,15 @@ export const TagInput = ({
               data-tag-chip={tag.name}
               key={tag.name}
             >
-              #{tag.name}
+              <span
+                className={compact ? "truncate" : undefined}
+                title={tag.name}
+              >
+                #{tag.name}
+              </span>
               <button
                 aria-label={`${tag.name}を外す`}
-                className="btn btn-circle btn-ghost btn-xs p-0 text-xs leading-none"
+                className="btn btn-circle btn-ghost btn-xs shrink-0 p-0 text-xs leading-none"
                 onClick={() => removeTag(tag.name)}
                 type="button"
               >
@@ -118,7 +142,7 @@ export const TagInput = ({
             aria-controls={`${inputId}-suggestions`}
             aria-describedby={error ? `${inputId}-error` : undefined}
             aria-expanded={isOpen}
-            className="min-w-32 flex-1 border-0 bg-transparent p-0 outline-none"
+            className={`${compact ? "min-w-0 flex-[1_1_8rem]" : "min-w-32 flex-1"} border-0 bg-transparent p-0 outline-none`}
             id={inputId}
             maxLength={MAX_TAG_NAME_LENGTH}
             onBlur={(event) => {
@@ -136,6 +160,7 @@ export const TagInput = ({
               setError(undefined);
             }}
             onKeyDown={(event) => {
+              if (event.isComposing) return;
               if (event.key !== "Enter") return;
               event.preventDefault();
               if (selected.length >= MAX_TAGS_PER_MEMO) {
@@ -155,7 +180,7 @@ export const TagInput = ({
         </div>
         {isOpen && (
           <div
-            className="menu absolute inset-x-0 top-full z-10 mt-1 max-h-60 overflow-y-auto rounded-box border border-base-300 bg-base-100 p-1 shadow-sm"
+            className={`menu ${compact ? "m-0" : "absolute inset-x-0 top-full z-10 mt-1"} max-h-60 overflow-y-auto rounded-box border border-base-300 bg-base-100 p-1 shadow-sm`}
             id={`${inputId}-suggestions`}
             onBlur={(event) => {
               const next = event.relatedTarget;
@@ -167,7 +192,21 @@ export const TagInput = ({
                 return;
               setIsFocused(false);
             }}
+            popover={compact ? "manual" : undefined}
+            ref={suggestionsRef}
             role="listbox"
+            style={
+              compact
+                ? {
+                    "position-anchor": `--${inputId}-anchor`,
+                    inset: "auto",
+                    "position-area": "block-end span-inline-end",
+                    "position-try-fallbacks": "flip-block, flip-inline",
+                    "max-height": "min(15rem, 100%)",
+                    width: "anchor-size(width)",
+                  }
+                : undefined
+            }
           >
             {canCreateFreeform && (
               <button
