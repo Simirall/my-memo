@@ -5,3 +5,5 @@ export const getCreatedMemoListPath = (
   sourceCategoryId && categoryId
     ? `/categories/${encodeURIComponent(categoryId)}`
     : "/";
+
+export const goToMemoList = () => window.location.assign("/");

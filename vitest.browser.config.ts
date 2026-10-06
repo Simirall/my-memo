@@ -9,7 +9,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ["better-auth/client", "hono/jsx/dom/jsx-dev-runtime"],
+    include: ["better-auth/client", "hono/jsx/dom/jsx-dev-runtime", "zod"],
   },
   test: {
     retry: process.env.CI ? 1 : 0,

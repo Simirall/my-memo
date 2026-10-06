@@ -91,6 +91,108 @@ test.afterEach(async ({ server }, testInfo) => {
 
 test.setTimeout(60_000);
 
+test("一括入力で失敗行だけ再試行し、全件保存後にトップへ戻る", async ({
+  env,
+  page,
+  appUrl,
+}) => {
+  await env.MY_MEMO_D1.prepare(
+    "INSERT INTO categories (id,user_id,name) VALUES ('bulk-work','owner','仕事')",
+  ).run();
+  await page.goto(`${appUrl}/`);
+  await page
+    .getByRole("button", { name: "作成メニューを開く", exact: true })
+    .click();
+  await page.getByRole("link", { name: "メモを一括作成", exact: true }).click();
+  const first = page.getByRole("row", { name: "メモ1", exact: true });
+  await first.getByLabel("タイトル（必須）").fill("移行メモ1");
+  await first.getByLabel("タイトル（必須）").press("Tab");
+  await expect(first.getByLabel("本文", { exact: true })).toBeFocused();
+  await page.keyboard.type("元のメモ本文");
+  await first
+    .getByLabel("カテゴリー", { exact: true })
+    .selectOption("bulk-work");
+  await first
+    .getByRole("combobox", { name: "タグ", exact: true })
+    .fill("移行タグ");
+  await first
+    .getByRole("option", {
+      name: "#移行タグを新しいタグとして追加",
+      exact: true,
+    })
+    .click();
+  await page.getByRole("button", { name: "行を追加", exact: true }).click();
+  const second = page.getByRole("row", { name: "メモ2", exact: true });
+  await second.getByLabel("本文", { exact: true }).fill("未保存の本文");
+  await page.getByRole("button", { name: "まとめて保存", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "メモ2: タイトルを入力してください",
+  );
+  await expect(first.getByLabel("タイトル（必須）")).toBeDisabled();
+  await expect(second.getByLabel("本文", { exact: true })).toHaveValue(
+    "未保存の本文",
+  );
+  await second.getByLabel("タイトル（必須）").fill("移行メモ2");
+  await page.getByRole("button", { name: "まとめて保存", exact: true }).click();
+  await expect(page).toHaveURL(`${appUrl}/`);
+  expect(
+    await env.MY_MEMO_D1.prepare(
+      "SELECT COUNT(*) AS count FROM memos WHERE user_id='owner'",
+    ).first(),
+  ).toEqual({ count: 2 });
+  expect(
+    await env.MY_MEMO_D1.prepare(
+      "SELECT COUNT(*) AS count FROM memo_tags mt JOIN tags t ON t.id=mt.tag_id WHERE t.user_id='owner' AND t.name='移行タグ'",
+    ).first(),
+  ).toEqual({ count: 1 });
+  await page.goto(`${appUrl}/memos/create/bulk`);
+  await expect(first.getByLabel("タイトル（必須）")).toHaveValue("");
+  await expect(second).toHaveCount(0);
+});
+
+test("一括入力のタグ候補は狭い画面でも全候補を選択できる", async ({
+  env,
+  page,
+  appUrl,
+}) => {
+  await env.MY_MEMO_D1.prepare(
+    "INSERT INTO memos (id,user_id,title) VALUES ('suggestions','owner','候補の元メモ')",
+  ).run();
+  const statements = [];
+  for (let index = 0; index < 10; index++) {
+    const id = `suggestion-${index}`;
+    statements.push(
+      env.MY_MEMO_D1.prepare(
+        "INSERT INTO tags (id,user_id,name) VALUES (?,'owner',?)",
+      ).bind(id, `候補${index}`),
+    );
+    statements.push(
+      env.MY_MEMO_D1.prepare(
+        "INSERT INTO memo_tags (memo_id,tag_id) VALUES ('suggestions',?)",
+      ).bind(id),
+    );
+  }
+  await env.MY_MEMO_D1.batch(statements);
+  await page.setViewportSize({
+    width: page.viewportSize()?.width ?? 1059,
+    height: 400,
+  });
+  await page.goto(`${appUrl}/memos/create/bulk`);
+  for (let index = 1; index < 10; index++)
+    await page.getByRole("button", { name: "行を追加", exact: true }).click();
+  const lastRow = page.getByRole("row", { name: "メモ10", exact: true });
+  await lastRow.getByRole("combobox", { name: "タグ", exact: true }).click();
+  const menu = page.getByRole("listbox");
+  await expect(menu).toBeVisible();
+  const bounds = await menu.boundingBox();
+  expect(bounds?.y).toBeGreaterThanOrEqual(0);
+  expect((bounds?.y ?? 0) + (bounds?.height ?? 0)).toBeLessThanOrEqual(400);
+  await page.getByRole("option", { name: "#候補9", exact: true }).click();
+  await expect(
+    lastRow.getByRole("button", { name: "候補9を外す", exact: true }),
+  ).toBeVisible();
+});
+
 test("GitHub認証で新規・再ログイン・ログアウト・不正stateを処理する", async ({
   env,
   page,

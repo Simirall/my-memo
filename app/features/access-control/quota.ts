@@ -69,7 +69,8 @@ const buildMemoStatements = (
         `INSERT INTO memos
           (id, user_id, title, content, url, category_id, is_ai_summary)
          SELECT ?, ?, ?, ?, ?, ?, ?
-         WHERE EXISTS (
+         WHERE EXISTS (SELECT 1 FROM memos WHERE id = ?)
+         OR (EXISTS (
            SELECT 1
            FROM user AS u
            INNER JOIN plan_limits AS pl ON pl.plan_id = u.plan_id
@@ -79,7 +80,7 @@ const buildMemoStatements = (
                pl.limit_value IS NULL
                OR (SELECT COUNT(*) FROM memos WHERE user_id = ?) < pl.limit_value
              )
-         )${attachmentQuotaCondition}`,
+         )${attachmentQuotaCondition})`,
       )
       .bind(
         memo.id,
@@ -89,6 +90,8 @@ const buildMemoStatements = (
         memo.url,
         memo.categoryId,
         memo.isAiSummary,
+        // 既存IDはクォータに関係なく一意制約でバッチを中断し、タグ・添付の追記を防ぐ。
+        memo.id,
         memo.userId,
         memo.userId,
         ...(attachmentCount > 0
