@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: ^0.9.1
-        version: 0.9.1(hono@4.13.12)(zod@4.6.5)
+        version: 0.9.1(hono@4.13.13)(zod@4.6.5)
       '@phosphor-icons/core':
         specifier: 2.1.1
         version: 2.1.1
@@ -30,11 +30,11 @@ importers:
         specifier: ^0.8.3
         version: 0.8.3(drizzle-orm@0.45.3(@opentelemetry/api@1.9.1)(kysely@0.29.6))(zod@4.6.5)
       hono:
-        specifier: ^4.13.12
-        version: 4.13.12
+        specifier: ^4.13.13
+        version: 4.13.13
       honox:
         specifier: ^0.1.61
-        version: 0.1.61(hono@4.13.12)(miniflare@4.20260111.0)(supports-color@10.2.2)(wrangler@4.147.0(@types/node@26.6.4))
+        version: 0.1.61(hono@4.13.13)(miniflare@4.20260111.0)(supports-color@10.2.2)(wrangler@4.147.0(@types/node@26.6.4))
       markdown-it:
         specifier: ^15.0.2
         version: 15.0.2
@@ -50,10 +50,10 @@ importers:
         version: 0.22.0(@vitest/runner@4.1.10)(@vitest/snapshot@4.1.10)(vitest@4.1.10)
       '@hono/vite-build':
         specifier: ^1.11.1
-        version: 1.11.1(hono@4.13.12)
+        version: 1.11.1(hono@4.13.13)
       '@hono/vite-dev-server':
         specifier: ^0.26.1
-        version: 0.26.1(hono@4.13.12)(miniflare@4.20260111.0)(wrangler@4.147.0(@types/node@26.6.4))
+        version: 0.26.1(hono@4.13.13)(miniflare@4.20260111.0)(wrangler@4.147.0(@types/node@26.6.4))
       '@playwright/test':
         specifier: 1.63.0
         version: 1.63.0
@@ -300,6 +300,7 @@ packages:
 
   '@cloudflare/vitest-pool-workers@0.22.0':
     resolution: {integrity: sha512-OJv/qikkOgxnKxJ5xrLS7zuOLZhc/6iziU+llqZm4tiQf2CJUYwlMuXN68VaWIQebORd1AUx4w6A0oy8XRbuaQ==}
+    deprecated: '@cloudflare/vitest-pool-workers has been renamed to @cloudflare/vitest-plugin. This package will not receive future updates.'
     peerDependencies:
       '@vitest/runner': ^4.1.0
       '@vitest/snapshot': ^4.1.0
@@ -2505,8 +2506,8 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  hono@4.13.12:
-    resolution: {integrity: sha512-6E2QDAc9Ick9Sq77ZrGS/dk2WUYni91aufTw6LJKpV7w8kW5/GxVUc650FOADOmlwg3K+f7Pun6XlV+pYmW6gw==}
+  hono@4.13.13:
+    resolution: {integrity: sha512-CQ46U0ZkAGmbT/4UxdzzGJpacP2IeKgY4a5/tOI9AABbpOMfK739wfDXmv1usCk+3RkKj1hQy4/fjhiwa2xlrA==}
     engines: {node: '>=16.9.0'}
 
   honox@0.1.61:
@@ -3669,35 +3670,35 @@ snapshots:
   '@esbuild/win32-x64@0.28.1':
     optional: true
 
-  '@hono/node-server@1.19.17(hono@4.13.12)':
+  '@hono/node-server@1.19.17(hono@4.13.13)':
     dependencies:
-      hono: 4.13.12
+      hono: 4.13.13
 
-  '@hono/vite-build@1.11.1(hono@4.13.12)':
+  '@hono/vite-build@1.11.1(hono@4.13.13)':
     dependencies:
-      hono: 4.13.12
+      hono: 4.13.13
 
-  '@hono/vite-dev-server@0.25.3(hono@4.13.12)(miniflare@4.20260111.0)(wrangler@4.147.0(@types/node@26.6.4))':
+  '@hono/vite-dev-server@0.25.3(hono@4.13.13)(miniflare@4.20260111.0)(wrangler@4.147.0(@types/node@26.6.4))':
     dependencies:
-      '@hono/node-server': 1.19.17(hono@4.13.12)
-      hono: 4.13.12
+      '@hono/node-server': 1.19.17(hono@4.13.13)
+      hono: 4.13.13
       minimatch: 9.0.9
     optionalDependencies:
       miniflare: 4.20260111.0
       wrangler: 4.147.0(@types/node@26.6.4)
 
-  '@hono/vite-dev-server@0.26.1(hono@4.13.12)(miniflare@4.20260111.0)(wrangler@4.147.0(@types/node@26.6.4))':
+  '@hono/vite-dev-server@0.26.1(hono@4.13.13)(miniflare@4.20260111.0)(wrangler@4.147.0(@types/node@26.6.4))':
     dependencies:
-      '@hono/node-server': 1.19.17(hono@4.13.12)
-      hono: 4.13.12
+      '@hono/node-server': 1.19.17(hono@4.13.13)
+      hono: 4.13.13
       minimatch: 9.0.9
     optionalDependencies:
       miniflare: 4.20260111.0
       wrangler: 4.147.0(@types/node@26.6.4)
 
-  '@hono/zod-validator@0.9.1(hono@4.13.12)(zod@4.6.5)':
+  '@hono/zod-validator@0.9.1(hono@4.13.13)(zod@4.6.5)':
     dependencies:
-      hono: 4.13.12
+      hono: 4.13.13
       zod: 4.6.5
 
   '@img/colour@1.1.0': {}
@@ -4845,16 +4846,16 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  hono@4.13.12: {}
+  hono@4.13.13: {}
 
-  honox@0.1.61(hono@4.13.12)(miniflare@4.20260111.0)(supports-color@10.2.2)(wrangler@4.147.0(@types/node@26.6.4)):
+  honox@0.1.61(hono@4.13.13)(miniflare@4.20260111.0)(supports-color@10.2.2)(wrangler@4.147.0(@types/node@26.6.4)):
     dependencies:
       '@babel/generator': 7.29.1
       '@babel/parser': 7.29.3
       '@babel/traverse': 7.29.0(supports-color@10.2.2)
       '@babel/types': 7.29.0
-      '@hono/vite-dev-server': 0.25.3(hono@4.13.12)(miniflare@4.20260111.0)(wrangler@4.147.0(@types/node@26.6.4))
-      hono: 4.13.12
+      '@hono/vite-dev-server': 0.25.3(hono@4.13.13)(miniflare@4.20260111.0)(wrangler@4.147.0(@types/node@26.6.4))
+      hono: 4.13.13
       jsonc-parser: 3.3.1
       precinct: 12.2.0(supports-color@10.2.2)
     optionalDependencies:
