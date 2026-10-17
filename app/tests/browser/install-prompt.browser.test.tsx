@@ -1,8 +1,7 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import InstallPrompt from "@/islands/$install-prompt";
+import { render } from "@/tests/browser/render";
 
 function mount(mode: "banner" | "settings" = "banner") {
   const container = document.createElement("div");

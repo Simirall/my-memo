@@ -26,7 +26,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm exec tsc --noEmit
-      - run: pnpm exec biome check app scripts tests playwright.config.ts vitest.config.ts vitest.unit.config.ts vitest.browser.config.ts package.json
+      - run: pnpm exec biome check app scripts tests playwright.config.ts vitest.config.ts vitest.unit.config.ts vitest.browser.config.ts waku.config.ts package.json
       - run: pnpm run test:all
         env:
           CI: true

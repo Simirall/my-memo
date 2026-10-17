@@ -1,3 +1,4 @@
+import { AppLink } from "@/components/app-link";
 import type { MemoListQuery } from "@/features/memos/list/query/memo-list-query";
 import { buildMemoListUrl } from "@/features/memos/list/query/memo-list-query";
 
@@ -27,59 +28,59 @@ export const MemoPagination = ({
     <nav aria-label="メモ一覧のページ" className="flex justify-center py-4">
       <div className="join">
         {query.page > 1 ? (
-          <a
+          <AppLink
             aria-label="前のページ"
             className="btn join-item"
             href={pageUrl(pathname, query, query.page - 1)}
           >
             前へ
-          </a>
+          </AppLink>
         ) : (
           <button className="btn join-item" disabled type="button">
             前へ
           </button>
         )}
-        <a
+        <AppLink
           aria-current={query.page === 1 ? "page" : undefined}
           aria-label="1ページ目"
           className={`btn join-item ${query.page === 1 ? "btn-soft btn-primary" : ""}`}
           href={pageUrl(pathname, query, 1)}
         >
           1
-        </a>
+        </AppLink>
         {firstPastPage > 2 && (
           <span aria-hidden="true" className="btn btn-disabled join-item">
             …
           </span>
         )}
         {pastPages.map((page) => (
-          <a
+          <AppLink
             aria-label={`${page}ページ目`}
             className="btn join-item"
             href={pageUrl(pathname, query, page)}
             key={page}
           >
             {page}
-          </a>
+          </AppLink>
         ))}
         {query.page > 1 && (
-          <a
+          <AppLink
             aria-current="page"
             aria-label={`${query.page}ページ目`}
             className="btn btn-soft btn-primary join-item"
             href={pageUrl(pathname, query, query.page)}
           >
             {query.page}
-          </a>
+          </AppLink>
         )}
         {hasNextPage && (
-          <a
+          <AppLink
             aria-label={`${query.page + 1}ページ目`}
             className="btn join-item"
             href={pageUrl(pathname, query, query.page + 1)}
           >
             {query.page + 1}
-          </a>
+          </AppLink>
         )}
         {hasPageAfterNext && (
           <button
@@ -92,13 +93,13 @@ export const MemoPagination = ({
           </button>
         )}
         {hasNextPage ? (
-          <a
+          <AppLink
             aria-label="次のページ"
             className="btn join-item"
             href={pageUrl(pathname, query, query.page + 1)}
           >
             次へ
-          </a>
+          </AppLink>
         ) : (
           <button className="btn join-item" disabled type="button">
             次へ

@@ -4,11 +4,16 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {
-      "@/*": ["./app/*"]
+      "@/*": [
+        "./app/*"
+      ]
     },
     "strict": true,
     "skipLibCheck": true,
-    "lib": ["ESNext", "DOM"],
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
     "types": [
       "vite/client",
       "vitest/importMeta",
@@ -16,8 +21,10 @@
       "@cloudflare/vitest-pool-workers/types",
       "./worker-configuration.d.ts"
     ],
-    "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
+    "jsx": "react-jsx"
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ]
 }

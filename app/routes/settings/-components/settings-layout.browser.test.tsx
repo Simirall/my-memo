@@ -1,7 +1,6 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
+import { render } from "@/tests/browser/render";
 import { SettingsLayout } from "./settings-layout";
 
 function mount(activeSection: "categories" | "tags" | "files") {

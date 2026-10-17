@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { afterDialogCloseAnimation } from "@/components/dialog-close";
+import { useAppRouter } from "@/components/navigation";
 
 type FileToDelete = {
   id: string;
@@ -45,6 +48,7 @@ const setHeight = (
 };
 
 export default function FileListController() {
+  const router = useAppRouter();
   const [error, setError] = useState<string>();
   const [status, setStatus] = useState<string>();
   const [fileToDelete, setFileToDelete] = useState<FileToDelete>();
@@ -60,16 +64,20 @@ export default function FileListController() {
   }, [error, status]);
 
   useEffect(() => {
-    const categoryFilter = document.querySelector<HTMLElement>(
+    const categoryFilter = document.querySelector(
       "[data-file-category-filter]",
-    );
+    ) as unknown as HTMLSelectElement | null;
     if (!categoryFilter) return;
 
-    const submitFilter = () =>
-      categoryFilter.closest<HTMLFormElement>("form")?.requestSubmit();
+    const submitFilter = () => {
+      const value = categoryFilter.value;
+      const params = new URLSearchParams();
+      if (value) params.set("category", value);
+      void router.push(`/settings/files${params.size ? `?${params}` : ""}`);
+    };
     categoryFilter.addEventListener("change", submitFilter);
     return () => categoryFilter.removeEventListener("change", submitFilter);
-  }, []);
+  }, [router.push]);
 
   useEffect(() => {
     const grid = document.querySelector<HTMLElement>("[data-file-grid]");
@@ -98,7 +106,7 @@ export default function FileListController() {
       loading.className = "flex min-h-40 items-center justify-center";
       loading.setAttribute("role", "status");
       loading.innerHTML =
-        '<span class="loading loading-spinner loading-lg"></span><span class="sr-only">原寸画像を読み込んでいます</span>';
+        '<span className="loading loading-spinner loading-lg"></span><span className="sr-only">原寸画像を読み込んでいます</span>';
       mediaContainer.appendChild(loading);
       return loading;
     };
@@ -192,7 +200,7 @@ export default function FileListController() {
       dialog.showModal();
     };
 
-    const findCard = (fileId: string) =>
+    const _findCard = (fileId: string) =>
       Array.from(grid.querySelectorAll<HTMLElement>("[data-file-card]")).find(
         (card) => card.dataset.fileCard === fileId,
       );
@@ -217,28 +225,15 @@ export default function FileListController() {
           );
         }
 
-        findCard(fileId)?.remove();
         if (dialog.open) dialog.close();
         setStatus("ファイルを削除しました。");
-
-        const remaining = grid.querySelectorAll("[data-file-card]").length;
-        if (remaining > 0) return;
-
-        const currentUrl = new URL(window.location.href);
-        const page = Number(currentUrl.searchParams.get("page") ?? "1");
-        if (Number.isSafeInteger(page) && page > 1) {
-          currentUrl.searchParams.set("page", String(page - 1));
-          window.location.assign(currentUrl.toString());
-          return;
+        try {
+          await router.reload();
+        } catch {
+          setError(
+            "削除済みですが表示を更新できませんでした。ページを再読み込みしてください。",
+          );
         }
-
-        grid.hidden = true;
-        const emptyMessage = document.createElement("p");
-        emptyMessage.className =
-          "rounded-box bg-base-200 p-6 text-center text-base-content/70";
-        emptyMessage.dataset.fileListEmpty = "true";
-        emptyMessage.textContent = "ファイルはまだありません。";
-        grid.insertAdjacentElement("beforebegin", emptyMessage);
       } catch (cause) {
         setStatus(undefined);
         setError(
@@ -330,7 +325,7 @@ export default function FileListController() {
         dialog.removeEventListener("click", onFallbackBackdropClick);
       }
     };
-  }, []);
+  }, [router.reload]);
 
   return (
     <>

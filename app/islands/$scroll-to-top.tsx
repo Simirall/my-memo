@@ -1,5 +1,7 @@
+"use client";
+
 import arrowUpIcon from "@phosphor-icons/core/assets/regular/arrow-up.svg?raw";
-import { useEffect, useState } from "hono/jsx";
+import { useEffect, useState } from "react";
 import { PhosphorIcon } from "../components/phosphor-icon";
 import PageBackButton from "./$page-back";
 

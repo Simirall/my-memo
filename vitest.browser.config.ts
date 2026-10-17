@@ -9,9 +9,11 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ["better-auth/client", "hono/jsx/dom/jsx-dev-runtime", "zod"],
+    include: ["better-auth/client", "react-dom/client", "zod"],
   },
   test: {
+    setupFiles: ["./tests/setup/browser.tsx"],
+    clearMocks: true,
     retry: process.env.CI ? 1 : 0,
     include: ["app/**/*.browser.test.tsx"],
     browser: {

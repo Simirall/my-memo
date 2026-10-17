@@ -1,34 +1,34 @@
-# RouteベースのVertical Slice
+# ページとHTTPルートの配置
 
-`app/routes`をHTTPと画面の境界とします。HonoXのrouteファイルはこのツリーに配置し、routeとして扱わないファイルやディレクトリには先頭に`-`を付けます。
+`app/pages`はWakuのページとレイアウトの入口です。
+全ページを`dynamic`にし、個人データをビルド時に取得しません。
+`app/waku.server.tsx`のglobはテストを除外します。
 
-このファイル名が`-README.md`なのは、HonoXが`app/routes`配下のMarkdownもrouteとして探索するためです。
+`app/routes/api`には既存のHono APIを置き、`app/server.ts`で明示的に接続します。
+`POST /share`もHonoで本文サイズを制限して受け付け、WakuのServer Action処理には渡しません。
 
-## 所有範囲
+## コンポーネントとデータ取得
 
-- 単一routeだけが利用するコンポーネント、Island、入力処理、テストは、そのrouteへco-locationします。
-- 2つ以上のrouteが実際に利用する業務コードだけを`app/features`へ配置します。将来の再利用予測だけではfeatureへ移しません。
-- 共通UIと共通Islandは、それぞれ`app/components`と`app/islands`へ配置します。
-- featureが大きくなった場合は、技術レイヤーより先に業務上の小ドメインで分割します。小ドメイン内で必要な場合だけ`client`や`server`などの技術レイヤーを設けます。
-- テストは対象実装と同じ小ドメインに隣接させ、テスト専用ディレクトリへ集約しません。
+ページはServer Componentとし、認証済みコンテキストを`app/server/request-context.ts`から取得します。
+Bindingsと認証情報はClient Componentへ渡しません。
+一覧とMarkdownはサーバーで描画し、描画結果をClient Componentのpropsに渡します。
+操作やhooksを使うファイルには`'use client'`を指定します。
+既存の`$*.tsx`と`app/islands`は配置を維持していますが、自動変換の規則はありません。
 
-## import規約
+単一画面だけが利用するコンポーネントと入力処理は、その画面に対応する`app/routes`配下へ置きます。
+複数画面が利用する業務コードは`app/features`、共通UIは`app/components`を使います。
+featureからrouteを参照せず、バレルファイルは作成しません。
 
-- バレルファイルは作成せず、利用する実装ファイルから直接importします。
-- feature内部のファイル同士は相対importまたは`@/*` aliasを使用できます。責務が離れた参照は、移動に強い`@/*` aliasを優先します。
-- `app/features`から`app/routes`を参照してはいけません。
-- route同士で内部実装を直接参照しません。共有が発生した実装は`app/features`へ昇格します。
-- route横断の統合テストは、対象route群を包含する最も近いrouteドメインに置けます。
+## 遷移と更新
 
-## IslandとHonoXの除外規則
+内部リンクは`AppLink`、フォームからの遷移は`useAppRouter`を使います。
+OAuth、ログアウト、ファイル取得、外部リンクはHTTPで処理します。
+更新は既存APIを呼び、一覧へ反映するときはRouterの`reload()`で再取得します。
+Reactが所有するカードや選択肢をDOM操作で移動、削除、追加しません。
+保存成功と画面再取得の失敗を区別し、成功したAPIを自動再送しません。
 
-route内にIslandをco-locationする場合は、ファイル名を`$*.tsx`にします。`app/islands`の共通Islandも同じ命名規則を使用します。
+## テスト
 
-HonoXでは、次のファイル・ディレクトリはrouteとして扱われません。
-
-- `-`で始まるファイル
-- `-`で始まるディレクトリと、その配下のファイル
-- `$*.tsx`ファイル
-- `*.test.ts`、`*.test.tsx`、`*.spec.ts`、`*.spec.tsx`
-
-`$*.tsx`はroute探索から除外されますが、HonoXによってIslandとして変換され、SSRとclient hydrationの対象になります。
+テストは対象実装の近くに配置します。
+ブラウザ単体テストはReactのrootをテストごとに破棄し、Routerをmockしてアプリの入力とAPI契約を検証します。
+SSR、RSC、CSP、所有者分離、画面をまたぐ操作は、ビルド済みWorkerを使うE2Eで検証します。

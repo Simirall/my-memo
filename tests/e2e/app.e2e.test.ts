@@ -37,7 +37,7 @@ const test = base.extend<Fixtures>({
     const server = createTestHarness({
       workers: [
         {
-          configPath: "wrangler.jsonc",
+          configPath: "dist/server/wrangler.json",
           // Workers AIは既定でリモート接続するため、未使用でもローカルに置き換える。
           bindingOverrides: { AI: "e2e-disabled-ai" },
           secrets: {
@@ -90,6 +90,198 @@ test.afterEach(async ({ server }, testInfo) => {
 });
 
 test.setTimeout(60_000);
+
+test("SSRとRSCの所有者分離を維持し、nonce付きCSPで内部遷移できる", async ({
+  env,
+  page,
+  server,
+  appUrl,
+  ownerCookie,
+  otherCookie,
+}) => {
+  await env.MY_MEMO_D1.batch([
+    env.MY_MEMO_D1.prepare(
+      "INSERT INTO memos (id,user_id,title,content) VALUES ('owner-ssr','owner','所有者だけのメモ','サーバーで描画する本文')",
+    ),
+    env.MY_MEMO_D1.prepare(
+      "INSERT INTO memos (id,user_id,title,content) VALUES ('other-ssr','other','別所有者のメモ','別所有者の本文')",
+    ),
+  ]);
+  const cookie = (token: string) => ({
+    Cookie: `better-auth.session_token=${token}`,
+  });
+  const denied = await server.fetch("/admin/users", {
+    headers: cookie(ownerCookie),
+  });
+  expect(denied.status).toBe(403);
+  expect(await denied.text()).not.toContain("owner@example.com");
+  const response = await server.fetch("/", { headers: cookie(ownerCookie) });
+  const html = await response.text();
+  expect(html).toContain("サーバーで描画する本文");
+  expect(html).not.toContain("別所有者の本文");
+  const nonce = response.headers
+    .get("Content-Security-Policy")
+    ?.match(/'nonce-([^']+)'/)?.[1];
+  expect(nonce).toBeTruthy();
+  expect(html).toContain(`nonce="${nonce}"`);
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.addInitScript(() => {
+    const violations: string[] = [];
+    Reflect.set(window, "migrationCspViolations", violations);
+    window.addEventListener("securitypolicyviolation", (event) =>
+      violations.push(event.effectiveDirective),
+    );
+  });
+  const rscRequests: string[] = [];
+  page.on("response", (res) => {
+    if (new URL(res.url()).pathname.startsWith("/RSC/"))
+      rscRequests.push(res.url());
+  });
+  await page.goto(`${appUrl}/`);
+  await expect(
+    page.getByRole("heading", { name: "所有者だけのメモ" }),
+  ).toBeVisible();
+  await page.evaluate(() => {
+    Object.assign(window, { migrationDocument: "preserved" });
+  });
+  await page.getByRole("link", { name: "編集", exact: true }).click();
+  await expect(
+    page.getByRole("textbox", { name: "タイトル", exact: true }),
+  ).toHaveValue("所有者だけのメモ");
+  expect(
+    await page.evaluate(() => Reflect.get(window, "migrationDocument")),
+  ).toBe("preserved");
+  const rsc = rscRequests.find((url) => url.includes("owner-ssr"));
+  expect(rsc).toBeTruthy();
+  const rscPath =
+    new URL(rsc as string).pathname + new URL(rsc as string).search;
+  const ownerRsc = await server.fetch(rscPath, {
+    headers: cookie(ownerCookie),
+  });
+  expect(ownerRsc.headers.get("Cache-Control")).toBe("private, no-store");
+  expect(await ownerRsc.text()).toContain("所有者だけのメモ");
+  for (const headers of [cookie(otherCookie), {}]) {
+    const result = await server.fetch(rscPath, { headers });
+    expect(await result.text()).not.toContain("所有者だけのメモ");
+  }
+  await Promise.all(
+    Array.from({ length: 6 }, async (_, index) => {
+      const owner = index % 2 === 0;
+      const result = await server.fetch("/", {
+        headers: cookie(owner ? ownerCookie : otherCookie),
+      });
+      const body = await result.text();
+      expect(body).toContain(
+        owner ? "サーバーで描画する本文" : "別所有者の本文",
+      );
+      expect(body).not.toContain(
+        owner ? "別所有者の本文" : "サーバーで描画する本文",
+      );
+    }),
+  );
+  await page.getByRole("link", { name: "My Memo", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "所有者だけのメモ" }),
+  ).toBeVisible();
+  await page.goBack();
+  await expect(
+    page.getByRole("textbox", { name: "タイトル", exact: true }),
+  ).toHaveValue("所有者だけのメモ");
+  expect(pageErrors).toEqual([]);
+  expect(
+    await page.evaluate(() => Reflect.get(window, "migrationCspViolations")),
+  ).toEqual([]);
+});
+
+test("退会処理中の画面制限はHTTPとRSC遷移の両方で適用する", async ({
+  env,
+  page,
+  server,
+  appUrl,
+  ownerCookie,
+}) => {
+  await env.MY_MEMO_D1.prepare(
+    "INSERT INTO memos (id,user_id,title,content) VALUES ('deleting-memo','owner','退会制限の対象','本文')",
+  ).run();
+  await page.goto(`${appUrl}/`);
+  await expect(
+    page.getByRole("heading", { name: "退会制限の対象" }),
+  ).toBeVisible();
+  await env.MY_MEMO_D1.prepare(
+    "INSERT INTO account_deletion_requests (id,user_id,receipt_hash,status) VALUES ('deleting','owner','receipt-hash','failed')",
+  ).run();
+  const response = await server.fetch("/", {
+    headers: { Cookie: `better-auth.session_token=${ownerCookie}` },
+    redirect: "manual",
+  });
+  expect(response.status).toBe(307);
+  expect(response.headers.get("Location")).toBe("/settings/account");
+  await page.getByRole("link", { name: "編集", exact: true }).click();
+  await expect(page).toHaveURL(`${appUrl}/settings/account`);
+  await expect(
+    page.getByRole("heading", { name: "退会制限の対象" }),
+  ).not.toBeVisible();
+});
+
+test("タグ保存後はRSCで再取得し、絞り込み結果と候補へ反映する", async ({
+  env,
+  page,
+  appUrl,
+}) => {
+  await env.MY_MEMO_D1.prepare(
+    "INSERT INTO memos (id,user_id,title,content) VALUES ('tag-refresh','owner','タグ更新対象','本文')",
+  ).run();
+  await page.goto(`${appUrl}/`);
+  await page.getByRole("button", { name: "タグを編集: タグ更新対象" }).click();
+  await page.getByRole("dialog").getByRole("combobox").fill("新しいタグ");
+  await page
+    .getByRole("option", { name: "#新しいタグを新しいタグとして追加" })
+    .click();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(
+    page.getByRole("link", { name: "#新しいタグ", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "#新しいタグ", exact: true }).click();
+  await page.getByRole("button", { name: "タグを編集: タグ更新対象" }).click();
+  await page.getByRole("button", { name: "新しいタグを外す" }).click();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(
+    page.getByText("条件に一致するメモはありません。"),
+  ).toBeVisible();
+});
+
+test("テキスト共有は本文をURLへ出さず受付から作成画面へ復元する", async ({
+  page,
+  appUrl,
+}) => {
+  await page.goto(`${appUrl}/`);
+  await page.evaluate(() => {
+    const form = document.createElement("form");
+    form.action = "/share";
+    form.method = "post";
+    for (const [name, value] of Object.entries({
+      title: "共有タイトル",
+      text: '<script>alert("共有本文")</script>',
+    })) {
+      const input = document.createElement("input");
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    }
+    document.body.appendChild(form);
+    form.submit();
+  });
+  await expect(page).toHaveURL(/\/memos\/create\?shared=1$/);
+  await expect(
+    page.getByRole("textbox", { name: "タイトル", exact: true }),
+  ).toHaveValue("共有タイトル");
+  await expect(
+    page.getByRole("textbox", { name: "本文", exact: true }),
+  ).toHaveValue('<script>alert("共有本文")</script>');
+  expect(page.url()).not.toContain("共有本文");
+});
 
 test("一括入力で失敗行だけ再試行し、全件保存後にトップへ戻る", async ({
   env,
@@ -380,6 +572,23 @@ test("カテゴリー付きメモと添付を作成・再表示・編集・削�
     .first<{ id: string; r2_key: string; file_name: string }>();
   expect(file?.file_name).toBe("pixel.png");
   expect(await env.MY_MEMO_FILES.get(file?.r2_key ?? "")).not.toBeNull();
+  await page.goto(`${appUrl}/settings/files`);
+  await page
+    .getByRole("combobox", { name: "カテゴリー" })
+    .selectOption("uncategorized");
+  await expect(page.getByText("ファイルはまだありません。")).toBeVisible();
+  await page.getByRole("combobox", { name: "カテゴリー" }).selectOption("");
+  await page
+    .getByRole("button", { name: "ファイル「pixel.png」の詳細を表示" })
+    .click();
+  await expect(
+    page.getByRole("dialog").getByRole("heading", { name: "pixel.png" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "ファイル詳細を閉じる" })
+    .first()
+    .click();
+  await page.getByRole("link", { name: "My Memo", exact: true }).click();
   const editPath = `/memos/${memo?.id}/edit`;
   expect(
     (

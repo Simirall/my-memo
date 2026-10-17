@@ -1,7 +1,10 @@
+"use client";
+
 import dotsSixVerticalIcon from "@phosphor-icons/core/assets/regular/dots-six-vertical.svg?raw";
 import pencilSimpleIcon from "@phosphor-icons/core/assets/regular/pencil-simple.svg?raw";
-import { useEffect, useRef, useState } from "hono/jsx";
+import { useEffect, useRef, useState } from "react";
 import type { z } from "zod";
+import { AppLink } from "@/components/app-link";
 import { PhosphorIcon } from "@/components/phosphor-icon";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
 import { DeleteButton } from "./$delete-button";
@@ -181,7 +184,7 @@ export const SortableCategoryList = ({
             >
               <PhosphorIcon svg={dotsSixVerticalIcon} />
             </button>
-            <a
+            <AppLink
               className="list-col-grow font-semibold hover:underline"
               href={`/categories/${category.id}`}
             >
@@ -189,7 +192,7 @@ export const SortableCategoryList = ({
               {category.excludeFromAll && (
                 <span className="badge ml-2">private</span>
               )}
-            </a>
+            </AppLink>
             <button
               aria-label={`カテゴリー「${category.name}」を編集`}
               className="btn btn-soft"
@@ -218,7 +221,7 @@ export const SortableCategoryList = ({
         aria-label="カテゴリー名を変更"
         className="modal modal-middle"
         closedby="any"
-        onCancel={(event: Event) => {
+        onCancel={(event) => {
           event.preventDefault();
           closeEditor();
         }}

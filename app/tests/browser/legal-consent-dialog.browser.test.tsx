@@ -1,6 +1,3 @@
-/** @jsxImportSource hono/jsx/dom */
-
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import {
@@ -8,6 +5,7 @@ import {
   LEGAL_EFFECTIVE_AT,
 } from "@/features/legal/consent";
 import LegalConsentDialog from "@/islands/$legal-consent-dialog";
+import { render } from "@/tests/browser/render";
 
 function mount(acceptedAt?: string) {
   if (acceptedAt) {

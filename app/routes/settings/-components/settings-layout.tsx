@@ -3,7 +3,8 @@ import fileIcon from "@phosphor-icons/core/assets/regular/file.svg?raw";
 import foldersIcon from "@phosphor-icons/core/assets/regular/folders.svg?raw";
 import tagIcon from "@phosphor-icons/core/assets/regular/tag.svg?raw";
 import userCircleIcon from "@phosphor-icons/core/assets/regular/user-circle.svg?raw";
-import type { Child } from "hono/jsx";
+import type { ReactNode as Child } from "react";
+import { AppLink } from "@/components/app-link";
 import { PhosphorIcon } from "@/components/phosphor-icon";
 
 export type SettingsSection =
@@ -81,7 +82,7 @@ export const SettingsLayout = ({
 
                 return (
                   <li className="w-full" key={item.section}>
-                    <a
+                    <AppLink
                       aria-current={isActive ? "page" : undefined}
                       className={`w-full justify-start gap-3 ${isActive ? "menu-active" : ""}`}
                       href={item.href}
@@ -91,7 +92,7 @@ export const SettingsLayout = ({
                         svg={item.icon}
                       />
                       {item.label}
-                    </a>
+                    </AppLink>
                   </li>
                 );
               })}

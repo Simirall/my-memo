@@ -1,8 +1,7 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { TagList } from "@/islands/$tag-list";
+import { render } from "@/tests/browser/render";
 
 const tags = [
   { id: "work", name: "仕事" },

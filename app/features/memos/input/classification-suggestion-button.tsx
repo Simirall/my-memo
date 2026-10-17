@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import type { Tag } from "@/features/tags/data/tags";
 
 type Payload = {
@@ -34,7 +36,7 @@ export function useClassificationSuggestion({
   const revision = useRef(0);
   const busy = useRef(false);
   const mounted = useRef(true);
-  const rootRef = useRef<HTMLElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const isDisabled = useRef(disabled);
   isDisabled.current = disabled;
   const currentInput = useRef("");

@@ -1,4 +1,6 @@
-import { useEffect, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useState } from "react";
 
 export default function AccountDeletionComplete() {
   const [visible, setVisible] = useState(true);

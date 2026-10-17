@@ -1,4 +1,6 @@
-import { useState } from "hono/jsx";
+"use client";
+
+import { useState } from "react";
 
 type UserAccessFormProps = {
   user: { id: string; role: string; planId: string };
@@ -11,7 +13,7 @@ export default function UserAccessForm({ user, plans }: UserAccessFormProps) {
   const [message, setMessage] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
 
-  const submit = async (event: Event) => {
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage(undefined);
     setIsSaving(true);
@@ -59,13 +61,10 @@ export default function UserAccessForm({ user, plans }: UserAccessFormProps) {
           onChange={(event) =>
             setRole((event.currentTarget as HTMLSelectElement).value)
           }
+          value={role}
         >
-          <option selected={role === "user"} value="user">
-            一般ユーザー
-          </option>
-          <option selected={role === "admin"} value="admin">
-            管理者
-          </option>
+          <option value="user">一般ユーザー</option>
+          <option value="admin">管理者</option>
         </select>
       </fieldset>
       <fieldset className="fieldset">
@@ -79,9 +78,10 @@ export default function UserAccessForm({ user, plans }: UserAccessFormProps) {
           onChange={(event) =>
             setPlanId((event.currentTarget as HTMLSelectElement).value)
           }
+          value={planId}
         >
           {plans.map((plan) => (
-            <option key={plan.id} selected={plan.id === planId} value={plan.id}>
+            <option key={plan.id} value={plan.id}>
               {plan.name}
             </option>
           ))}

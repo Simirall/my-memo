@@ -23,7 +23,14 @@ describe("HTMLレスポンスのセキュリティヘッダー", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
     const csp = response.headers.get("Content-Security-Policy");
-    expect(csp).toContain("script-src 'self' 'report-sample'");
+    expect(csp).toMatch(
+      /script-src 'self' 'nonce-[a-f0-9]{32}' 'report-sample'/,
+    );
+    expect(
+      csp
+        ?.split(";")
+        .find((directive) => directive.trim().startsWith("script-src")),
+    ).not.toContain("unsafe-inline");
     expect(csp).toContain("img-src 'self' https: data: blob:");
     expect(csp).toContain("media-src 'self' blob:");
     expect(csp).toContain("object-src 'none'");

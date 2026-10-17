@@ -6,4 +6,5 @@ export const getCreatedMemoListPath = (
     ? `/categories/${encodeURIComponent(categoryId)}`
     : "/";
 
-export const goToMemoList = () => window.location.assign("/");
+export const goToMemoList = (router: { push: (to: string) => Promise<void> }) =>
+  router.push("/");

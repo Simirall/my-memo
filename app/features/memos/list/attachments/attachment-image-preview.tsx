@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+"use client";
+
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import { afterDialogCloseAnimation } from "@/components/dialog-close";
 import type { memoAttachmentsTable } from "@/schema";
 import {
@@ -59,13 +67,13 @@ export default function AttachmentImagePreview({
     return pointersRef.current;
   };
 
-  const resetView = () => {
+  const resetView = useCallback(() => {
     setTransform(INITIAL_TRANSFORM);
     setGestureOffset({ x: 0, y: 0 });
-    getPointers().clear();
+    pointersRef.current?.clear();
     gestureRef.current = null;
     pinchRef.current = null;
-  };
+  }, []);
 
   const close = () => dialogRef.current?.close();
 
@@ -114,8 +122,10 @@ export default function AttachmentImagePreview({
     setCurrentIndex(initialIndex);
     resetView();
     setImageStatus("loading");
-  }, [initialIndex]);
+  }, [initialIndex, resetView]);
 
+  const onClosedEffect = useEffectEvent(onClosed);
+  const switchImageEffect = useEffectEvent(switchImage);
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog || initialIndex === null || currentIndex !== initialIndex) {
@@ -131,16 +141,16 @@ export default function AttachmentImagePreview({
     const handleClose = () => {
       afterDialogCloseAnimation(dialog, () => {
         resetView();
-        onClosed();
+        onClosedEffect();
       });
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "ArrowLeft") {
         event.preventDefault();
-        switchImage(currentIndex - 1);
+        switchImageEffect(currentIndex - 1);
       } else if (event.key === "ArrowRight") {
         event.preventDefault();
-        switchImage(currentIndex + 1);
+        switchImageEffect(currentIndex + 1);
       }
     };
     const handleFallbackBackdrop = (event: MouseEvent) => {
@@ -167,9 +177,9 @@ export default function AttachmentImagePreview({
         dialog.removeEventListener("click", handleFallbackBackdrop);
       }
     };
-  }, [currentIndex, attachments.length]);
+  }, [resetView, currentIndex]);
 
-  const onWheel = (event: WheelEvent) => {
+  const onWheel = (event: React.WheelEvent<HTMLElement>) => {
     event.preventDefault();
     const scale = clampPreviewScale(
       transform.scale + (event.deltaY < 0 ? 0.2 : -0.2),
@@ -178,7 +188,7 @@ export default function AttachmentImagePreview({
     setTransform(constrain({ ...transform, scale }));
   };
 
-  const onPointerDown = (event: PointerEvent) => {
+  const onPointerDown = (event: React.PointerEvent<HTMLElement>) => {
     event.preventDefault();
     lastPointerTypeRef.current = event.pointerType;
     pointerMovedRef.current = false;
@@ -205,7 +215,7 @@ export default function AttachmentImagePreview({
     }
   };
 
-  const onPointerMove = (event: PointerEvent) => {
+  const onPointerMove = (event: React.PointerEvent<HTMLElement>) => {
     const pointers = getPointers();
     if (!pointers.has(event.pointerId)) return;
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -246,7 +256,7 @@ export default function AttachmentImagePreview({
     }
   };
 
-  const finishPointer = (event: PointerEvent) => {
+  const finishPointer = (event: React.PointerEvent<HTMLElement>) => {
     const gesture = gestureRef.current;
     const viewport = viewportRef.current;
     const pointers = getPointers();
@@ -294,7 +304,7 @@ export default function AttachmentImagePreview({
   };
 
   const cancelPointer = () => {
-    getPointers().clear();
+    pointersRef.current?.clear();
     gestureRef.current = null;
     pinchRef.current = null;
     pointerMovedRef.current = true;
@@ -374,7 +384,7 @@ export default function AttachmentImagePreview({
             data-attachment-preview-image
             draggable="false"
             height={current.mediaHeight ?? undefined}
-            onDragStart={(event: DragEvent) => event.preventDefault()}
+            onDragStart={(event) => event.preventDefault()}
             onError={() => setImageStatus("error")}
             onLoad={() => setImageStatus("loaded")}
             ref={imageRef}

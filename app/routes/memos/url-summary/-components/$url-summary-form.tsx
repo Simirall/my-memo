@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import type z from "zod";
+import { useAppRouter } from "@/components/navigation";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
 import { MemoClassificationInput } from "@/features/memos/input/memo-classification-input";
 import { getCreatedMemoListPath } from "@/features/memos/input/memo-create-navigation";
@@ -26,6 +29,7 @@ export default function UrlSummaryForm({
   tagSuggestions?: TagSuggestions;
   initialUrl?: string;
 }) {
+  const router = useAppRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [progress, setProgress] = useState<string>();
@@ -50,7 +54,7 @@ export default function UrlSummaryForm({
     clearPendingShare();
   }, []);
 
-  const submit = async (event: Event) => {
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
     const submittedCategoryId = String(
@@ -88,7 +92,7 @@ export default function UrlSummaryForm({
           const target = new URL(destination, window.location.origin);
           if (payload.warning)
             target.searchParams.set("notice", payload.warning);
-          window.location.assign(`${target.pathname}${target.search}`);
+          void router.push(`${target.pathname}${target.search}`);
         } else if (event === "error") {
           throw new Error(payload.message ?? "AI要約を作成できませんでした。");
         }

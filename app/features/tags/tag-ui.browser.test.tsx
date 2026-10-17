@@ -1,11 +1,11 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { Memo } from "@/features/memos/list/card/memo";
 import MemoListControls from "@/features/memos/list/controls/$memo-list-controls";
 import MemoTagEditor from "@/features/memos/list/controls/$memo-tag-editor";
 import { TagInput } from "@/features/tags/input/tag-input";
+import { render } from "@/tests/browser/render";
+import { navigation } from "../../../tests/setup/navigation";
 
 function mount(node: Parameters<typeof render>[0]) {
   const container = document.createElement("div");
@@ -269,9 +269,7 @@ describe("タグUI", () => {
       body: JSON.stringify({ tags: [] }),
     });
     await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
-    await expect
-      .element(page.getByRole("link", { name: "#仕事" }))
-      .not.toBeInTheDocument();
+    await expect.poll(() => navigation.reload.mock.calls.length).toBe(1);
 
     await page.getByRole("button", { name: "タグを編集: テストメモ" }).click();
     await page.getByRole("dialog").getByRole("combobox").click();
@@ -354,9 +352,7 @@ describe("タグUI", () => {
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
       body: JSON.stringify({ tags: ["windows"] }),
     });
-    await expect
-      .element(page.getByRole("link", { name: "#windows" }))
-      .toHaveAttribute("href", "/?tag=tag-new");
+    await expect.poll(() => navigation.reload.mock.calls.length).toBe(1);
   });
 
   it("保存した新規タグを再度開いた候補にも反映する", async () => {
@@ -400,9 +396,7 @@ describe("タグUI", () => {
       .click();
     await page.getByRole("button", { name: "保存" }).click();
     await expect.poll(() => fetchMock.mock.calls.length).toBe(1);
-    expect(
-      document.querySelector('#memo-tag option[value="tag-ab"]')?.textContent,
-    ).toBe("#ab");
+    await expect.poll(() => navigation.reload.mock.calls.length).toBe(1);
 
     await page
       .getByRole("button", { name: "タグを編集: 候補更新テスト" })
@@ -469,14 +463,6 @@ describe("タグUI", () => {
     await page.getByRole("button", { name: "仕事を外す" }).click();
     await page.getByRole("button", { name: "保存" }).click();
 
-    await expect
-      .element(page.getByText("条件に一致するメモはありません。"))
-      .toBeInTheDocument();
-    expect(
-      document.querySelector('[data-memo-card="memo-filtered"]'),
-    ).toBeNull();
-    expect(
-      document.querySelector('[data-memo-list-row="memo-filtered"]'),
-    ).toBeNull();
+    await expect.poll(() => navigation.reload.mock.calls.length).toBe(1);
   });
 });

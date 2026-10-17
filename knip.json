@@ -1,24 +1,28 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
-    "app/server.ts",
-    "app/client.ts",
+    "app/pages/**/*.{ts,tsx}",
+    "app/pages.gen.ts",
     "app/style.css",
     "app/routes/**/*.{ts,tsx}",
     "app/**/*.test.{ts,tsx}",
     "app/**/*.integration.test.{ts,tsx}",
     "app/**/*.browser.test.{ts,tsx}",
-    "tests/**/*.ts",
+    "tests/**/*.{ts,tsx}",
     "vitest*.config.ts",
-    "public/theme-init.js"
+    "public/theme-init.js",
+    "public/pwa-init.js",
+    "public/share-receiver.js",
+    "waku.config.ts",
+    "tests/setup/*.tsx"
   ],
   "project": [
     "app/**/*.{ts,tsx,css}",
-    "tests/**/*.ts",
+    "tests/**/*.{ts,tsx}",
     "scripts/**/*.{js,mjs,ts}",
     "public/**/*.js"
   ],
-  "ignoreDependencies": ["@biomejs/biome", "cloudflare"],
-  "ignoreBinaries": ["mise"],
+  "ignoreDependencies": ["cloudflare"],
+  "ignoreBinaries": ["actionlint", "pinact"],
   "tags": ["-lintignore"]
 }

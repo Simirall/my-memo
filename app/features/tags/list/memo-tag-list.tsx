@@ -1,3 +1,4 @@
+import { AppLink } from "@/components/app-link";
 import {
   type MemoListQuery,
   replaceMemoListTag,
@@ -21,12 +22,12 @@ export const MemoTagList = ({
     <ul className="flex flex-wrap items-center gap-2">
       {sortedTags.map((tag) => (
         <li key={tag.id}>
-          <a
+          <AppLink
             className="badge badge-soft badge-info hover:underline"
             href={replaceMemoListTag(listPath, query, tag.id)}
           >
             #{tag.name}
-          </a>
+          </AppLink>
         </li>
       ))}
     </ul>

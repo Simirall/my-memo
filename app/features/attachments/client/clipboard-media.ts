@@ -17,7 +17,9 @@ export type ClipboardMediaSelection = {
   rejected: ReadonlyArray<ClipboardRejection>;
 };
 
-export function getClipboardFiles(event: ClipboardEvent): File[] {
+export function getClipboardFiles(
+  event: Pick<ClipboardEvent, "clipboardData">,
+): File[] {
   return Array.from(event.clipboardData?.items ?? [])
     .filter((item) => item.kind === "file")
     .map((item) => item.getAsFile())
@@ -74,7 +76,7 @@ export function selectClipboardMedia(
 }
 
 export function shouldCaptureClipboardPaste(
-  event: ClipboardEvent,
+  event: Pick<ClipboardEvent, "clipboardData" | "target">,
   contentElement: HTMLTextAreaElement | null,
 ): boolean {
   const isEditable = (element: Element | null) =>

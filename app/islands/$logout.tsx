@@ -1,3 +1,5 @@
+"use client";
+
 import { authClient } from "@/auth/auth-client";
 
 export const LogoutButton = () => {
@@ -12,7 +14,7 @@ export const LogoutButton = () => {
   };
 
   return (
-    <button class="btn mx-auto" onClick={handleLogout} type="button">
+    <button className="btn mx-auto" onClick={handleLogout} type="button">
       ログアウト
     </button>
   );

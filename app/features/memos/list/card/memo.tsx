@@ -1,5 +1,6 @@
 import pencilSimpleIcon from "@phosphor-icons/core/assets/regular/pencil-simple.svg?raw";
 import type z from "zod";
+import { AppLink } from "@/components/app-link";
 import { FolderOpenIcon } from "@/components/folder-open-icon";
 import { PhosphorIcon } from "@/components/phosphor-icon";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
@@ -53,14 +54,14 @@ export const Memo = ({
       <div className="grid content-start gap-4">
         <div className="grid content-start gap-2">
           {memo.url && isSafeMemoUrl(memo.url) ? (
-            <a
+            <AppLink
               className="card-title break-all text-info text-xl hover:underline"
               href={memo.url}
               rel="noopener noreferrer"
               target="_blank"
             >
               {memo.title}
-            </a>
+            </AppLink>
           ) : (
             <h2 className="card-title text-xl">{memo.title}</h2>
           )}
@@ -70,7 +71,7 @@ export const Memo = ({
           {((showCategory && memo.category) || memo.isAiSummary === 1) && (
             <div className="flex flex-wrap items-center gap-2">
               {showCategory && memo.category && (
-                <a
+                <AppLink
                   className="badge badge-soft badge-primary flex w-fit items-center gap-1"
                   href={buildMemoListUrl(`/categories/${memo.category.id}`, {
                     ...query,
@@ -79,7 +80,7 @@ export const Memo = ({
                 >
                   <FolderOpenIcon />
                   {memo.category.name}
-                </a>
+                </AppLink>
               )}
               {memo.isAiSummary === 1 && <div className="badge">✨ AI要約</div>}
             </div>
@@ -114,6 +115,7 @@ export const Memo = ({
           {memo.content !== null && (
             <div className="*:space-y-4 [&_a]:text-info [&_h1,&_h2]:font-bold [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_img]:max-h-[70vh] [&_img]:max-w-full [&_img]:object-contain [&_ol]:list-inside [&_ol]:list-decimal [&_p]:whitespace-pre-wrap [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_ul]:list-inside [&_ul]:list-disc">
               <div
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: renderMarkdown disables HTML and validates URL schemes.
                 dangerouslySetInnerHTML={{
                   __html: renderMarkdown(memo.content),
                 }}
@@ -129,14 +131,14 @@ export const Memo = ({
         </div>
       </div>
       <div className="flex w-full gap-2">
-        <a
+        <AppLink
           className="btn btn-soft btn-accent grow"
           href={`/memos/${encodeURIComponent(memo.id)}/edit?returnTo=${encodeURIComponent(
             returnTo,
           )}`}
         >
           編集
-        </a>
+        </AppLink>
         <DeleteButton
           action={`/api/memos/delete/${memo.id}?returnTo=${encodeURIComponent(
             returnTo,

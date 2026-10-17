@@ -1,4 +1,5 @@
 import trashIcon from "@phosphor-icons/core/assets/regular/trash.svg?raw";
+import { AppLink } from "@/components/app-link";
 import { PhosphorIcon } from "@/components/phosphor-icon";
 
 export const FileDetailDialog = () => (
@@ -58,9 +59,9 @@ export const FileDetailDialog = () => (
           className="whitespace-pre-wrap text-base-content/80"
           data-file-dialog-memo-excerpt
         />
-        <a className="link link-info" data-file-dialog-memo-link href="/">
+        <AppLink className="link link-info" data-file-dialog-memo-link href="/">
           メモを開く
-        </a>
+        </AppLink>
       </section>
       <div className="modal-action">
         <button

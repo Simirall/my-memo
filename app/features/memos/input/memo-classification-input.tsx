@@ -1,4 +1,6 @@
-import { useState } from "hono/jsx";
+"use client";
+
+import { useState } from "react";
 import { useClassificationSuggestion } from "@/features/memos/input/classification-suggestion-button";
 import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
 import { TagInput } from "@/features/tags/input/tag-input";

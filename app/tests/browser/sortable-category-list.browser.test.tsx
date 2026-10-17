@@ -1,8 +1,7 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { SortableCategoryList } from "@/islands/$sortable-category-list";
+import { render } from "@/tests/browser/render";
 
 const categories = [
   { id: "first", name: "先頭", excludeFromAll: false },

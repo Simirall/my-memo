@@ -23,16 +23,6 @@ export const readPendingShare = (): PendingShare | undefined => {
   }
 };
 
-export const writePendingShare = (pendingShare: PendingShare) => {
-  window.sessionStorage.setItem(
-    SHARE_STORAGE_KEY,
-    JSON.stringify({
-      ...pendingShare,
-      receivedAt: Date.now(),
-    }),
-  );
-};
-
 export const clearPendingShare = () => {
   window.sessionStorage.removeItem(SHARE_STORAGE_KEY);
 };

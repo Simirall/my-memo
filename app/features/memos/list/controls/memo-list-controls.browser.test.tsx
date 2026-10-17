@@ -1,10 +1,8 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
+import { render } from "@/tests/browser/render";
 import MemoListControls from "./$memo-list-controls";
 import { MEMO_LIST_CONTROLS_OPEN_COOKIE } from "./memo-list-controls-state";
-import { addMemoListTagOptions } from "./memo-list-dom";
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -33,17 +31,6 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
       />,
       container,
     );
-
-    for (const [selectId, value] of [
-      ["memo-sort", "asc"],
-      ["memo-type", "ai"],
-      ["memo-attachment", "with"],
-      ["memo-tag", "tag-1"],
-    ]) {
-      expect(
-        container.querySelector(`#${selectId} option[value="${value}"]`),
-      ).toHaveAttribute("selected");
-    }
 
     await page.getByText("並べ替え・絞り込み").click();
     await expect.element(page.getByLabelText("作成時間")).toHaveValue("asc");
@@ -132,7 +119,18 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
       container,
     );
 
-    addMemoListTagOptions([{ id: "tag-ab", name: "ab" }]);
+    render(
+      <MemoListControls
+        action="/"
+        initialOpen
+        query={{ sort: "desc", page: 1 }}
+        tags={[
+          { id: "tag-a", name: "a" },
+          { id: "tag-ab", name: "ab" },
+        ]}
+      />,
+      container,
+    );
 
     expect(
       document.querySelector('#memo-tag option[value="tag-ab"]')?.textContent,

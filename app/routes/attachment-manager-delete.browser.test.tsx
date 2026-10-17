@@ -1,8 +1,7 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import AttachmentManager from "@/features/memos/list/attachments/$attachment-manager";
+import { render } from "@/tests/browser/render";
 
 const attachment = {
   id: "attachment-1",

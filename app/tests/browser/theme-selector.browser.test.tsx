@@ -1,8 +1,7 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { ThemeSelector } from "@/islands/$theme-selector";
+import { render } from "@/tests/browser/render";
 
 const renderThemeSelector = () => {
   const container = document.createElement("div");

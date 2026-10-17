@@ -1,7 +1,7 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
+import { render } from "@/tests/browser/render";
+import { navigation } from "../../../../../tests/setup/navigation";
 import FileListController from "./$file-list-controller";
 import { FileDetailDialog } from "./file-detail-dialog";
 
@@ -80,11 +80,16 @@ describe("ファイル一覧", () => {
       'form[action="/settings/files"]',
     );
     form?.addEventListener("submit", (event) => event.preventDefault());
-    const requestSubmitSpy = vi.spyOn(form as HTMLFormElement, "requestSubmit");
+    const _requestSubmitSpy = vi.spyOn(
+      form as HTMLFormElement,
+      "requestSubmit",
+    );
 
     await page.getByLabelText("カテゴリー").selectOptions("category-1");
 
-    expect(requestSubmitSpy).toHaveBeenCalledOnce();
+    expect(navigation.push).toHaveBeenCalledWith(
+      "/settings/files?category=category-1",
+    );
     await expect
       .element(page.getByRole("button", { name: "絞り込む" }))
       .not.toBeInTheDocument();
@@ -152,9 +157,7 @@ describe("ファイル一覧", () => {
 
     const status = page.getByText("ファイルを削除しました。");
     await expect.element(status).toBeVisible();
-    await expect
-      .element(page.getByRole("button", { name: "詳細" }))
-      .not.toBeInTheDocument();
+    await expect.poll(() => navigation.reload.mock.calls.length).toBe(1);
     await expect.element(status).not.toBeInTheDocument();
     expect(window.fetch).toHaveBeenCalledWith(
       "/api/attachments/file-1",
@@ -189,9 +192,7 @@ describe("ファイル一覧", () => {
       .element(page.getByText("ファイルを削除しました。"))
       .toBeVisible();
     expect(document.querySelector("dialog")?.hasAttribute("open")).toBe(false);
-    await expect
-      .element(page.getByRole("button", { name: "詳細" }))
-      .not.toBeInTheDocument();
+    await expect.poll(() => navigation.reload.mock.calls.length).toBe(1);
   });
 
   it("削除APIが失敗した場合はカードを残してエラーを表示する", async () => {

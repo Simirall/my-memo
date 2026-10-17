@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { afterDialogCloseAnimation } from "./dialog-close";
 
 export type ConfirmDialogProps = {
@@ -74,7 +76,7 @@ export const ConfirmDialog = ({
       aria-label={content.title}
       className="modal modal-middle"
       closedby="any"
-      onCancel={(event: Event) => {
+      onCancel={(event) => {
         event.preventDefault();
         onCancel();
       }}

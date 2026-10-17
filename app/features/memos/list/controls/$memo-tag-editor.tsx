@@ -1,12 +1,11 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { afterDialogCloseAnimation } from "@/components/dialog-close";
-import {
-  type MemoListQuery,
-  replaceMemoListTag,
-} from "@/features/memos/list/query/memo-list-query";
+import { useAppRouter } from "@/components/navigation";
+import type { MemoListQuery } from "@/features/memos/list/query/memo-list-query";
 import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
 import { TagInput } from "@/features/tags/input/tag-input";
-import { addMemoListTagOptions, removeMemoCardFromList } from "./memo-list-dom";
 
 type MemoTagTarget = {
   categoryId?: string;
@@ -26,54 +25,10 @@ const mergeTags = (...groups: ReadonlyArray<ReadonlyArray<Tag>>): Tag[] => {
   return sortTags([...tagsByName.values()]);
 };
 
-const updateMemoTags = (
-  memoId: string,
-  tags: ReadonlyArray<Tag>,
-  listPath: string,
-  query: MemoListQuery,
-) => {
-  const selector = `[data-memo-card="${CSS.escape(memoId)}"], [data-memo-list-row="${CSS.escape(memoId)}"]`;
-  for (const item of document.querySelectorAll<HTMLElement>(selector)) {
-    const list = item.querySelector<HTMLElement>("[data-memo-tag-list]");
-    if (!list) continue;
-    const editButton = item.querySelector<HTMLButtonElement>(
-      "[data-memo-tag-edit]",
-    );
-    if (editButton) editButton.dataset.memoTags = JSON.stringify(tags);
-
-    const tagList = list.querySelector("ul");
-    if (!tagList) continue;
-    const limit = Number(list.dataset.memoTagsLimit) || tags.length;
-    const visibleTags = sortTags(tags).slice(0, limit);
-    tagList.replaceChildren(
-      ...visibleTags.map((tag) => {
-        const listItem = document.createElement("li");
-        const link = document.createElement("a");
-        listItem.appendChild(link);
-        link.className = "badge badge-soft badge-info hover:underline";
-        link.href = replaceMemoListTag(listPath, query, tag.id);
-        link.textContent = `#${tag.name}`;
-        return listItem;
-      }),
-    );
-    const overflow = list.querySelector<HTMLElement>(
-      "[data-memo-tags-overflow]",
-    );
-    const overflowCount = tags.length - visibleTags.length;
-    if (overflow) {
-      overflow.textContent = overflowCount > 0 ? `+${overflowCount}` : "";
-      overflow.hidden = overflowCount === 0;
-    }
-  }
-};
-
 export default function MemoTagEditor({
-  activeTagId,
   availableTags,
   tagSuggestions,
   suggestedTags = [],
-  listPath = "/",
-  query = { sort: "desc", page: 1 },
 }: {
   activeTagId?: string;
   availableTags: ReadonlyArray<Tag>;
@@ -82,6 +37,7 @@ export default function MemoTagEditor({
   listPath?: string;
   query?: MemoListQuery;
 }) {
+  const router = useAppRouter();
   const [target, setTarget] = useState<MemoTagTarget | null>(null);
   const [draft, setDraft] = useState<Tag[]>([]);
   const [knownTags, setKnownTags] = useState<Tag[]>(sortTags(availableTags));
@@ -94,6 +50,7 @@ export default function MemoTagEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const savedTags = useRef(new Map<string, Tag[]>());
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -114,7 +71,9 @@ export default function MemoTagEditor({
       try {
         const parsed: unknown = JSON.parse(button.dataset.memoTags ?? "[]");
         if (!Array.isArray(parsed)) return;
-        tags = parsed as Tag[];
+        tags =
+          savedTags.current.get(button.dataset.memoId ?? "") ??
+          (parsed as Tag[]);
       } catch {
         return;
       }
@@ -170,8 +129,6 @@ export default function MemoTagEditor({
         return;
       }
 
-      updateMemoTags(target.id, payload.tags, listPath, query);
-      addMemoListTagOptions(payload.tags);
       setKnownTags((currentTags) =>
         mergeTags(currentTags, draft, payload.tags ?? []),
       );
@@ -189,10 +146,14 @@ export default function MemoTagEditor({
           mergeTags(currentTags, payload.tags ?? []),
         );
       }
-      dialogRef.current?.close();
-
-      if (activeTagId && !payload.tags.some((tag) => tag.id === activeTagId)) {
-        removeMemoCardFromList(target.id);
+      savedTags.current.set(target.id, payload.tags);
+      try {
+        await router.reload();
+        dialogRef.current?.close();
+      } catch {
+        setError(
+          "保存済みですが表示を更新できませんでした。ページを再読み込みしてください。",
+        );
       }
     } catch {
       setError("通信に失敗しました。もう一度お試しください。");
@@ -205,7 +166,7 @@ export default function MemoTagEditor({
     <dialog
       aria-labelledby="memo-tags-title"
       className="modal"
-      onClose={(event: Event) => {
+      onClose={(event) => {
         afterDialogCloseAnimation(
           event.currentTarget as HTMLDialogElement,
           () => {
@@ -229,8 +190,8 @@ export default function MemoTagEditor({
             availableTags={knownTags}
             initialTags={draft}
             inputId="edit-memo-tags"
+            key={resetKey}
             onTagsChange={setDraft}
-            resetKey={resetKey}
             suggestedTags={knownSuggestions}
           />
         </label>

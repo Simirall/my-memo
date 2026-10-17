@@ -1,7 +1,9 @@
+"use client";
+
 import desktopIcon from "@phosphor-icons/core/assets/regular/desktop.svg?raw";
 import moonIcon from "@phosphor-icons/core/assets/regular/moon.svg?raw";
 import sunIcon from "@phosphor-icons/core/assets/regular/sun.svg?raw";
-import { useEffect, useState } from "hono/jsx";
+import { useEffect, useState } from "react";
 import { PhosphorIcon } from "../components/phosphor-icon";
 
 const THEME_STORAGE_KEY = "my-memo.theme";

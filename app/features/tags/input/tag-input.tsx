@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { Tag } from "@/features/tags/data/tags";
 import {
   MAX_TAG_NAME_LENGTH,
@@ -47,11 +49,13 @@ export const TagInput = ({
     if (value) setSelected([...value]);
   }, [value]);
 
-  useEffect(() => {
-    if (resetKey === undefined) return;
+  const resetInput = useEffectEvent(() => {
     setSelected([...initialTags]);
     setQuery("");
     setError(undefined);
+  });
+  useEffect(() => {
+    if (resetKey !== undefined) resetInput();
   }, [resetKey]);
 
   const addTag = (rawName: string) => {
@@ -108,7 +112,7 @@ export const TagInput = ({
     <div className="flex flex-col gap-2">
       <div
         className="relative"
-        style={compact ? { "anchor-name": `--${inputId}-anchor` } : undefined}
+        style={compact ? { anchorName: `--${inputId}-anchor` } : undefined}
       >
         <div className="input h-auto min-h-10 w-full flex-wrap gap-2 p-2">
           {selected.map((tag) => (
@@ -160,7 +164,7 @@ export const TagInput = ({
               setError(undefined);
             }}
             onKeyDown={(event) => {
-              if (event.isComposing) return;
+              if (event.nativeEvent.isComposing) return;
               if (event.key !== "Enter") return;
               event.preventDefault();
               if (selected.length >= MAX_TAGS_PER_MEMO) {
@@ -198,11 +202,11 @@ export const TagInput = ({
             style={
               compact
                 ? {
-                    "position-anchor": `--${inputId}-anchor`,
+                    positionAnchor: `--${inputId}-anchor`,
                     inset: "auto",
-                    "position-area": "block-end span-inline-end",
-                    "position-try-fallbacks": "flip-block, flip-inline",
-                    "max-height": "min(15rem, 100%)",
+                    positionArea: "block-end span-inline-end",
+                    positionTryFallbacks: "flip-block, flip-inline",
+                    maxHeight: "min(15rem, 100%)",
                     width: "anchor-size(width)",
                   }
                 : undefined

@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import type z from "zod";
+import { AppLink } from "@/components/app-link";
 import { FolderOpenIcon } from "@/components/folder-open-icon";
 import type { categorySchema } from "@/features/categories/schema/category-schema";
 
@@ -25,7 +28,7 @@ export default function CategoryTabs({
   const [scrollEdges, setScrollEdges] = useState<ScrollEdges>("none");
   const [isDragging, setIsDragging] = useState(false);
 
-  const updateScrollEdges = () => {
+  const updateScrollEdges = useCallback(() => {
     const tabs = tabsRef.current;
     if (!tabs) return;
 
@@ -41,9 +44,10 @@ export default function CategoryTabs({
             ? "right"
             : "none",
     );
-  };
+  }, []);
 
   useEffect(() => {
+    if (activeCategoryId === undefined) return;
     if (CSS.supports("scroll-initial-target", "nearest")) return;
     tabsRef.current
       ?.querySelector<HTMLElement>('[aria-current="page"]')
@@ -58,7 +62,7 @@ export default function CategoryTabs({
     const observer = new ResizeObserver(updateScrollEdges);
     observer.observe(tabs);
     return () => observer.disconnect();
-  }, [categories.length]);
+  }, [updateScrollEdges]);
 
   const maskImage =
     scrollEdges === "both"
@@ -94,7 +98,7 @@ export default function CategoryTabs({
           event.preventDefault();
           event.stopPropagation();
         }}
-        onDragStart={(event: DragEvent) => event.preventDefault()}
+        onDragStart={(event) => event.preventDefault()}
         onPointerCancel={() => {
           suppressClickRef.current = false;
           dragRef.current = null;
@@ -147,7 +151,7 @@ export default function CategoryTabs({
           WebkitMaskImage: maskImage,
         }}
       >
-        <a
+        <AppLink
           aria-current={activeCategoryId === null ? "page" : undefined}
           className={`tab shrink-0 whitespace-nowrap ${
             activeCategoryId === null
@@ -157,12 +161,12 @@ export default function CategoryTabs({
           href="/"
         >
           すべて
-        </a>
+        </AppLink>
         {categories.map((category) => {
           const isActive = category.id === activeCategoryId;
 
           return (
-            <a
+            <AppLink
               aria-current={isActive ? "page" : undefined}
               className={`tab inline-flex shrink-0 items-center gap-1 whitespace-nowrap ${
                 isActive ? "tab-active [scroll-initial-target:nearest]" : ""
@@ -172,7 +176,7 @@ export default function CategoryTabs({
             >
               <FolderOpenIcon />
               {category.name}
-            </a>
+            </AppLink>
           );
         })}
       </nav>
