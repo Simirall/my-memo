@@ -135,7 +135,7 @@ export const generateUrlSummary = async (
   url: string,
   onText: (text: string) => Promise<void>,
 ): Promise<GeneratedUrlSummary> => {
-  const fetchedHtml = await fetchPublicHtml(url);
+  const fetchedHtml = await fetchPublicHtml(url, fetch, true);
   const htmlText = decodeLinkPreviewHtml(
     fetchedHtml.bytes,
     fetchedHtml.headers,

@@ -12,6 +12,34 @@ const htmlResponse = (html: string, init?: ResponseInit) =>
   });
 
 describe("OGP HTML取得", () => {
+  it.each([
+    ["https://example.com/article", null],
+    [
+      "https://x.com/user/status/123456789",
+      "MyMemoBot/1.0 (+https://my-memo.partial.cc)",
+    ],
+  ])(
+    "%sが403ならブラウザUAで再試行してOGPを取得する",
+    async (url, initialAgent) => {
+      const agents: (string | null)[] = [];
+      const fetcher = vi.fn<typeof fetch>(async (_input, init) => {
+        agents.push(new Headers(init?.headers).get("User-Agent"));
+        return agents.length === 1
+          ? new Response(null, { status: 403 })
+          : htmlResponse('<meta property="og:title" content="取得できた記事">');
+      });
+
+      await expect(fetchLinkPreview(url, fetcher)).resolves.toMatchObject({
+        title: "取得できた記事",
+      });
+      expect(agents).toEqual([
+        initialAgent,
+        expect.stringContaining("Mozilla/5.0"),
+      ]);
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    },
+  );
+
   it("XのリンクはそのままにFixupXからOGPを取得する", async () => {
     const fetcher = vi.fn<typeof fetch>(async (input, init) => {
       expect(input.toString()).toBe("https://fixupx.com/user/status/123456789");

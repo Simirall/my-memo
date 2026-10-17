@@ -6,6 +6,8 @@ import {
 export const PUBLIC_HTML_MAX_BYTES = 1024 * 1024;
 export const PUBLIC_HTML_FETCH_TIMEOUT_MS = 8_000;
 const PUBLIC_HTML_MAX_REDIRECTS = 5;
+const BROWSER_USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 export type PublicHtmlFetchErrorCode =
   | "invalid_url"
@@ -73,6 +75,7 @@ const readBoundedBody = async (response: Response) => {
 export const fetchPublicHtml = async (
   inputUrl: string,
   fetcher: typeof fetch = fetch,
+  retryWithBrowserUserAgent = false,
 ) => {
   const normalizedUrl = normalizeLinkPreviewUrl(inputUrl);
   if (!normalizedUrl) {
@@ -85,13 +88,21 @@ export const fetchPublicHtml = async (
     PUBLIC_HTML_FETCH_TIMEOUT_MS,
   );
   let currentUrl = new URL(normalizedUrl);
+  let retried = false;
+  const headers = new Headers({ Accept: "text/html,application/xhtml+xml" });
   try {
-    for (let redirects = 0; ; redirects += 1) {
+    for (let redirects = 0; ; ) {
       const response = await fetcher(currentUrl, {
-        headers: { Accept: "text/html,application/xhtml+xml" },
+        headers,
         redirect: "manual",
         signal: controller.signal,
       });
+      if (response.status === 403 && retryWithBrowserUserAgent && !retried) {
+        await response.body?.cancel();
+        retried = true;
+        headers.set("User-Agent", BROWSER_USER_AGENT);
+        continue;
+      }
       if (isRedirect(response.status)) {
         if (redirects >= PUBLIC_HTML_MAX_REDIRECTS) {
           throw new PublicHtmlFetchError(
@@ -114,6 +125,7 @@ export const fetchPublicHtml = async (
           );
         }
         currentUrl = redirectedUrl;
+        redirects += 1;
         continue;
       }
       if (!response.ok) {
