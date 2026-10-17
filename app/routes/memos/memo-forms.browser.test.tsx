@@ -67,7 +67,7 @@ afterEach(() => {
 });
 
 describe("メモ作成フォーム", () => {
-  it("分類方法を選ばず閉じた初期カテゴリーで保存しAIを呼ばない", async () => {
+  it("初期の手動設定で入力欄を閉じたまま初期カテゴリーを保存しAIを呼ばない", async () => {
     const fetchSpy = vi
       .spyOn(window, "fetch")
       .mockResolvedValue(Response.json({ message: "確認用" }, { status: 500 }));
@@ -89,6 +89,7 @@ describe("メモ作成フォーム", () => {
     const body = fetchSpy.mock.calls[0][1]?.body as FormData;
     expect(body.get("categoryId")).toBe("category-1");
     expect(body.get("tags")).toBe("[]");
+    expect(body.get("classificationMode")).toBe("manual");
   });
 
   it("手動設定のカテゴリー・タグと入力途中の文字を保持して保存する", async () => {
@@ -187,8 +188,25 @@ describe("メモ作成フォーム", () => {
     },
   );
 
-  it.each(["none", "ai", "manual"] as const)(
-    "URL要約で分類方法%sを送信し保存前にAIを呼ばない",
+  it("URL要約を手動設定に切り替え、カテゴリー・タグを付けずに送信する", async () => {
+    const fetchSpy = vi
+      .spyOn(window, "fetch")
+      .mockResolvedValue(Response.json({ message: "確認用" }, { status: 500 }));
+    mount(<UrlSummaryForm categories={categories} />);
+    await page.getByRole("button", { name: "手動で設定する" }).click();
+    await page
+      .getByLabelText("要約するページのURL")
+      .fill("https://example.com/article");
+    await page.getByRole("button", { name: "要約して保存" }).click();
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const body = fetchSpy.mock.calls[0][1]?.body as FormData;
+    expect(body.get("classificationMode")).toBe("manual");
+    expect(body.get("category")).toBe("");
+    expect(body.get("tags")).toBe("[]");
+  });
+
+  it.each(["ai", "manual"] as const)(
+    "URL要約でAI分類を初期選択し、分類方法%sを送信して保存前にAIを呼ばない",
     async (mode) => {
       const fetchSpy = vi
         .spyOn(window, "fetch")
@@ -201,17 +219,14 @@ describe("メモ作成フォーム", () => {
           initialCategoryId="category-1"
         />,
       );
-      if (mode !== "none") {
-        await page.getByRole("button", { name: "AIで自動設定する" }).click();
-        await expect
-          .element(page.getByText("要約後にAIで分類します。"))
-          .toBeVisible();
-        await expect
-          .element(page.getByRole("button", { name: "編集", exact: true }))
-          .not.toBeInTheDocument();
-        if (mode === "manual")
-          await page.getByRole("button", { name: "手動で設定する" }).click();
-      }
+      await expect
+        .element(page.getByText("要約後にAIで分類します。"))
+        .toBeVisible();
+      await expect
+        .element(page.getByRole("button", { name: "編集", exact: true }))
+        .not.toBeInTheDocument();
+      if (mode === "manual")
+        await page.getByRole("button", { name: "手動で設定する" }).click();
       expect(fetchSpy).not.toHaveBeenCalled();
       await page
         .getByLabelText("要約するページのURL")

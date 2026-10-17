@@ -28,8 +28,8 @@ export function MemoClassificationInput({
   disabled?: boolean;
   summary?: boolean;
 }) {
-  const [mode, setMode] = useState<"none" | "manual" | "ai">("none");
-  const isOpen = mode === "manual";
+  const [mode, setMode] = useState<"manual" | "ai">(summary ? "ai" : "manual");
+  const [isOpen, setIsOpen] = useState(false);
   const prefix = summary ? "summary" : "memo";
   const { suggest, isLoading, message, error, rootRef, invalidate } =
     useClassificationSuggestion({
@@ -44,9 +44,11 @@ export function MemoClassificationInput({
   const openManual = () => {
     invalidate();
     setMode("manual");
+    setIsOpen(true);
   };
   const selectAi = () => {
     setMode("ai");
+    setIsOpen(false);
     if (!summary) void suggest();
   };
 
