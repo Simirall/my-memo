@@ -78,23 +78,27 @@ export async function loadMemoListPageData({
 
   if (categoryId !== undefined && !category) return null;
 
-  const [categories, tags, usedTags, tagSuggestions] = await Promise.all([
-    getUserCategories(c.env.MY_MEMO_D1, userId),
-    db
-      .select({ id: schema.tagsTable.id, name: schema.tagsTable.name })
-      .from(schema.tagsTable)
-      .where(eq(schema.tagsTable.userId, userId))
-      .orderBy(asc(schema.tagsTable.name)),
-    getUsedMemoTags(db, userId, category?.id),
-    getTagSuggestions(getAppDb(c.env), userId),
-  ]);
   const searchParams = new URLSearchParams(queryString);
-  const query = parseMemoListQuery(
-    searchParams,
-    new Set(tags.map((tag) => tag.id)),
-  );
+  const [categories, { tags, query, result }, usedTags, tagSuggestions] =
+    await Promise.all([
+      getUserCategories(c.env.MY_MEMO_D1, userId),
+      db
+        .select({ id: schema.tagsTable.id, name: schema.tagsTable.name })
+        .from(schema.tagsTable)
+        .where(eq(schema.tagsTable.userId, userId))
+        .orderBy(asc(schema.tagsTable.name))
+        .then(async (tags) => {
+          const query = parseMemoListQuery(
+            searchParams,
+            new Set(tags.map((tag) => tag.id)),
+          );
+          const result = await getMemoList(db, userId, query, category?.id);
+          return { tags, query, result };
+        }),
+      getUsedMemoTags(db, userId, category?.id),
+      getTagSuggestions(getAppDb(c.env), userId),
+    ]);
   const notice = searchParams.get("notice");
-  const result = await getMemoList(db, userId, query, category?.id);
   scheduleBackgroundTask(
     () => c.executionCtx,
     () =>

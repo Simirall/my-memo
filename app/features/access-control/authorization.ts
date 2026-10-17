@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import {
   memoAttachmentsTable,
@@ -120,21 +120,34 @@ export async function getUsage(
 }
 
 export async function getPlanUsage(db: AppDb, userId: string) {
-  const memo = await getEntitlement(db, userId, PLAN_METRICS.memoTotal);
-  const aiSummary = await getEntitlement(
-    db,
-    userId,
-    PLAN_METRICS.aiSummaryMonthly,
+  const entitlements = await db
+    .select({
+      metric: planLimitsTable.metric,
+      planId: plansTable.id,
+      planCode: plansTable.code,
+      planName: plansTable.name,
+      limit: planLimitsTable.limitValue,
+    })
+    .from(userTable)
+    .innerJoin(plansTable, eq(plansTable.id, userTable.planId))
+    .innerJoin(planLimitsTable, eq(planLimitsTable.planId, plansTable.id))
+    .where(
+      and(
+        eq(userTable.id, userId),
+        inArray(planLimitsTable.metric, Object.values(PLAN_METRICS)),
+      ),
+    );
+  const memo = entitlements.find(
+    ({ metric }) => metric === PLAN_METRICS.memoTotal,
   );
-  const aiSuggestion = await getEntitlement(
-    db,
-    userId,
-    PLAN_METRICS.aiSuggestionMonthly,
+  const aiSummary = entitlements.find(
+    ({ metric }) => metric === PLAN_METRICS.aiSummaryMonthly,
   );
-  const attachmentStorage = await getEntitlement(
-    db,
-    userId,
-    PLAN_METRICS.attachmentStorageBytes,
+  const aiSuggestion = entitlements.find(
+    ({ metric }) => metric === PLAN_METRICS.aiSuggestionMonthly,
+  );
+  const attachmentStorage = entitlements.find(
+    ({ metric }) => metric === PLAN_METRICS.attachmentStorageBytes,
   );
 
   if (!memo || !aiSummary || !aiSuggestion || !attachmentStorage) return null;

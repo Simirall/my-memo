@@ -46,6 +46,66 @@ beforeEach(async () => {
 });
 
 describe("リンクプレビューキャッシュ", () => {
+  it("参照日時は24時間ごとに更新し、取得済みメタデータと有効期限を保持する", async () => {
+    const url = "https://example.com/article";
+    const db = getLinkPreviewDb(d1);
+    await refreshLinkPreviewCache(d1, url, {
+      now: new Date("2026-08-11T00:00:00.000Z"),
+      fetcher: vi.fn<typeof fetch>(async () => response("保存済み")),
+    });
+    const readRow = () =>
+      d1
+        .prepare(
+          "SELECT last_referenced_at, updated_at, expires_at FROM link_preview_cache WHERE normalized_url = ?",
+        )
+        .bind(url)
+        .first();
+    const original = await readRow();
+
+    const cached = await getLinkPreviewsForList(
+      db,
+      [url],
+      new Date("2026-08-11T23:59:59.999Z"),
+    );
+    expect(cached.previews.get(url)).toMatchObject({ title: "保存済み" });
+    expect(cached.urlsToRefresh).toEqual([]);
+    expect(await readRow()).toEqual(original);
+
+    const nextDay = await getLinkPreviewsForList(
+      db,
+      [url],
+      new Date("2026-08-12T00:00:00.000Z"),
+    );
+    expect(nextDay.previews.get(url)).toMatchObject({ title: "保存済み" });
+    expect(nextDay.urlsToRefresh).toEqual([]);
+    expect(await readRow()).toEqual({
+      last_referenced_at: "2026-08-12T00:00:00.000Z",
+      updated_at: "2026-08-12T00:00:00.000Z",
+      expires_at: "2026-08-18T00:00:00.000Z",
+    });
+  });
+
+  it("参照日時の更新後も取得リースと再試行待ちを尊重する", async () => {
+    await run(`INSERT INTO link_preview_cache (normalized_url, lease_until, retry_after, last_referenced_at)
+      VALUES
+        ('https://example.com/leased', '2026-08-12T00:01:00.000Z', NULL, '2026-08-01T00:00:00.000Z'),
+        ('https://example.com/failed', NULL, '2026-08-12T01:00:00.000Z', '2026-08-01T00:00:00.000Z')`);
+    const result = await getLinkPreviewsForList(
+      getLinkPreviewDb(d1),
+      ["https://example.com/leased", "https://example.com/failed"],
+      new Date("2026-08-12T00:00:00.000Z"),
+    );
+    expect(result.urlsToRefresh).toEqual([]);
+    const afterWait = await getLinkPreviewsForList(
+      getLinkPreviewDb(d1),
+      ["https://example.com/leased", "https://example.com/failed"],
+      new Date("2026-08-12T01:00:00.000Z"),
+    );
+    expect(new Set(afterWait.urlsToRefresh)).toEqual(
+      new Set(["https://example.com/leased", "https://example.com/failed"]),
+    );
+  });
+
   it("同じ正規化URLを共有し未取得URLだけを更新対象にする", async () => {
     const db = getLinkPreviewDb(d1);
     const result = await getLinkPreviewsForList(

@@ -110,6 +110,35 @@ beforeEach(async () => {
 });
 
 describe("プラン設定", () => {
+  it("利用量取得でゼロと無制限を区別し、必須上限が一つでも欠ければ設定不備とする", async () => {
+    await addPlan("custom", 0, null);
+    await run(
+      "INSERT INTO plan_limits (plan_id, metric, limit_value) VALUES ('custom', 'ai_suggestion.monthly', 7), ('custom', 'attachment.storage_bytes', NULL)",
+    );
+    await addUser("custom-user", { planId: "custom" });
+    const appDb = getAppDb(env);
+    expect(await getPlanUsage(appDb, "custom-user")).toMatchObject({
+      planCode: "custom",
+      memo: { used: 0, limit: 0 },
+      aiSummary: { used: 0, limit: null },
+      aiSuggestion: { used: 0, limit: 7 },
+      attachmentStorage: { used: 0, limit: null },
+    });
+    expect(await getPlanUsage(appDb, "missing-user")).toBeNull();
+
+    for (const metric of Object.values(PLAN_METRICS)) {
+      await run(
+        "DELETE FROM plan_limits WHERE plan_id = 'custom' AND metric = ?",
+        metric,
+      );
+      expect(await getPlanUsage(appDb, "custom-user")).toBeNull();
+      await run(
+        "INSERT INTO plan_limits (plan_id, metric, limit_value) VALUES ('custom', ?, NULL)",
+        metric,
+      );
+    }
+  });
+
   it("上限が未定義の機能は利用不可とし、NULLの上限は無制限として扱う", async () => {
     await addPlan("missing", undefined, 1);
     await addPlan("unlimited", null, null);
