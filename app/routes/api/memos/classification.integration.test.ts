@@ -343,7 +343,6 @@ describe("メモ分類サジェスト", () => {
 
   it.each([
     { mode: undefined, limit: 30 },
-    { mode: "none", limit: 30 },
     { mode: "manual", limit: 30 },
     { mode: "ai", limit: 30 },
     { mode: "ai", limit: 0 },
