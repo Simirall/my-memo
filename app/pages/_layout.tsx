@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Header } from "@/components/header";
 import { RootLayout } from "@/components/root-layout";
 import { getRequestContext } from "@/server/request-context";
 
@@ -11,6 +12,13 @@ export default function Layout({ children }: { children: ReactNode }) {
         role: (user as { role?: string }).role,
       }
     : null;
-  return <RootLayout user={displayUser}>{children}</RootLayout>;
+  return (
+    <RootLayout
+      header={<Header user={displayUser} />}
+      isAuthenticated={Boolean(user)}
+    >
+      {children}
+    </RootLayout>
+  );
 }
 export const getConfig = () => ({ render: "dynamic" as const });

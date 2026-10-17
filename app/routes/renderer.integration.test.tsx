@@ -1,6 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { Header } from "@/components/header";
 import Root, { JAVASCRIPT_REQUIRED_MESSAGE } from "@/pages/_root";
 
 vi.mock("@/components/app-link", () => ({
@@ -52,13 +51,5 @@ describe("JavaScript必須の共通レンダラー", () => {
     expect(html).not.toContain("favicon.ico");
     expect(html).toContain(script);
     expect(html).toContain('src="/pwa-init.js"');
-  });
-
-  it("設定ページで設定メニューを開く操作を提供する", () => {
-    const html = renderToStaticMarkup(
-      <Header path="/settings/account" user={null} />,
-    );
-    expect(html).toContain('aria-label="設定メニューを開く"');
-    expect(html).toContain('for="settings-drawer"');
   });
 });

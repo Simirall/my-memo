@@ -1,22 +1,52 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { type Link, useRouter } from "waku/router/client";
 
 type Href = Extract<Parameters<typeof Link>[0]["to"], string>;
-const FAILURE_EVENT = "my-memo:navigation-failed";
+type Retry = () => Promise<void>;
+const NavigationContext = createContext<((retry: Retry) => void) | null>(null);
+
+export function NavigationProvider({ children }: { children: ReactNode }) {
+  const [retry, setRetry] = useState<Retry>();
+  const reportFailure = useCallback(
+    (retry: Retry) => setRetry(() => retry),
+    [],
+  );
+  return (
+    <NavigationContext value={reportFailure}>
+      {children}
+      {retry && (
+        <NavigationFailure
+          onResolved={() => setRetry(undefined)}
+          retry={retry}
+        />
+      )}
+    </NavigationContext>
+  );
+}
 
 export function useAppRouter() {
   const router = useRouter();
+  const reportFailure = useContext(NavigationContext);
+  if (!reportFailure) throw new Error("Missing NavigationProvider");
   const navigate = useCallback(
     (to: string, replace: boolean) => {
       const retry = () =>
         replace ? router.replace(to as Href) : router.push(to as Href);
       return retry().catch(() => {
-        window.dispatchEvent(new CustomEvent(FAILURE_EVENT, { detail: retry }));
+        reportFailure(retry);
       });
     },
-    [router.push, router.replace],
+    [router.push, router.replace, reportFailure],
   );
   const push = useCallback((to: string) => navigate(to, false), [navigate]);
   const replace = useCallback((to: string) => navigate(to, true), [navigate]);
@@ -27,21 +57,18 @@ export function useAppRouter() {
   };
 }
 
-export function NavigationFailure() {
-  const [retry, setRetry] = useState<() => Promise<void>>();
+function NavigationFailure({
+  retry,
+  onResolved,
+}: {
+  retry: Retry;
+  onResolved: () => void;
+}) {
   const [busy, setBusy] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    const onFailure = (event: Event) => {
-      setRetry(() => (event as CustomEvent<() => Promise<void>>).detail);
-    };
-    window.addEventListener(FAILURE_EVENT, onFailure);
-    return () => window.removeEventListener(FAILURE_EVENT, onFailure);
+    dialog.current?.showModal();
   }, []);
-  useEffect(() => {
-    if (retry) dialog.current?.showModal();
-    else dialog.current?.close();
-  }, [retry]);
   return (
     <dialog
       aria-label="画面更新の再試行"
@@ -57,11 +84,10 @@ export function NavigationFailure() {
           className="btn"
           disabled={busy}
           onClick={async () => {
-            if (!retry) return;
             setBusy(true);
             try {
               await retry();
-              setRetry(undefined);
+              onResolved();
             } catch {
             } finally {
               setBusy(false);

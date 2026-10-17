@@ -2,7 +2,6 @@ import { AppLink } from "@/components/app-link";
 import { getAccountDeletionStatusForUser } from "@/features/account-deletion/server/account-deletion";
 import AccountDeletion from "@/islands/$account-deletion";
 import InstallPrompt from "@/islands/$install-prompt";
-import { SettingsLayout } from "@/routes/settings/-components/settings-layout";
 import { getRequestContext, redirect } from "@/server/request-context";
 
 export default async function Page() {
@@ -16,10 +15,10 @@ export default async function Page() {
   );
   if (deletion) {
     return (
-      <SettingsLayout activeSection="account">
+      <>
         <title>退会処理中 | My Memo</title>
         <AccountDeletion initialStatus={deletion.status} />
-      </SettingsLayout>
+      </>
     );
   }
 
@@ -34,7 +33,7 @@ export default async function Page() {
   );
 
   return (
-    <SettingsLayout activeSection="account">
+    <>
       <title>アカウント | My Memo</title>
       <div className="space-y-6">
         <div>
@@ -87,7 +86,7 @@ export default async function Page() {
         <div className="divider" />
         <AccountDeletion initialStatus={null} />
       </div>
-    </SettingsLayout>
+    </>
   );
 }
 

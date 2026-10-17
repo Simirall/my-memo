@@ -1,25 +1,25 @@
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import type { PageProps } from "waku/router";
 import { getAppDb } from "@/features/access-control/authorization";
 import { getUserCategories } from "@/features/categories/data/categories";
 import { getSafeMemoListReturnTo } from "@/features/memos/list/query/memo-list-query";
 import { getTagSuggestions, getUserTags } from "@/features/tags/data/tags";
 import EditMemoForm from "@/routes/memos/[id]/edit/-components/$edit-memo-form";
 import * as schema from "@/schema";
-import type { PageProps } from "@/server/request-context";
 import {
   getRequestContext,
   notFound,
   redirect,
 } from "@/server/request-context";
 
-export default async function Page(props: PageProps) {
+export default async function Page(props: PageProps<"/memos/[id]/edit">) {
   const c = getRequestContext();
   const searchParams = new URLSearchParams(props.query);
   const user = c.get("user");
   if (!user) return redirect("/login");
 
-  const memoId = props.id ?? "";
+  const memoId = props.id;
   const db = drizzle(c.env.MY_MEMO_D1, { schema });
   const appDb = getAppDb(c.env);
   const [categories, availableTags, tagSuggestions, memo] = await Promise.all([

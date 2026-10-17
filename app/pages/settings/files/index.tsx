@@ -2,6 +2,7 @@ import fileIcon from "@phosphor-icons/core/assets/regular/file.svg?raw";
 import speakerHighIcon from "@phosphor-icons/core/assets/regular/speaker-high.svg?raw";
 import trashIcon from "@phosphor-icons/core/assets/regular/trash.svg?raw";
 import videoCameraIcon from "@phosphor-icons/core/assets/regular/video-camera.svg?raw";
+import type { PageProps } from "waku/router";
 import { AppLink } from "@/components/app-link";
 import { PhosphorIcon } from "@/components/phosphor-icon";
 import { getAppDb } from "@/features/access-control/authorization";
@@ -9,7 +10,6 @@ import {
   formatAttachmentSize,
   getAttachmentPreviewKind,
 } from "@/features/attachments/model/attachment-constants";
-import { SettingsLayout } from "@/routes/settings/-components/settings-layout";
 import FileListController from "@/routes/settings/files/-components/$file-list-controller";
 import {
   buildFileListUrl,
@@ -19,7 +19,6 @@ import {
   getMemoExcerpt,
   parseFileListQuery,
 } from "@/routes/settings/files/-logic/file-list";
-import type { PageProps } from "@/server/request-context";
 import { getRequestContext, redirect } from "@/server/request-context";
 
 const getPreviewLabel = (kind: ReturnType<typeof getAttachmentPreviewKind>) => {
@@ -35,7 +34,7 @@ const getPreviewIcon = (kind: ReturnType<typeof getAttachmentPreviewKind>) => {
   return fileIcon;
 };
 
-export default async function Page(props: PageProps) {
+export default async function Page(props: PageProps<"/settings/files">) {
   const c = getRequestContext();
   const searchParams = new URLSearchParams(props.query);
   const user = c.get("user");
@@ -58,7 +57,7 @@ export default async function Page(props: PageProps) {
   const returnTo = buildFileListUrl(props.path, query);
 
   return (
-    <SettingsLayout activeSection="files">
+    <>
       <title>ファイル | My Memo</title>
       <FileListController
         files={result.items.map((file) => ({
@@ -233,7 +232,7 @@ export default async function Page(props: PageProps) {
           )}
         </div>
       </FileListController>
-    </SettingsLayout>
+    </>
   );
 }
 

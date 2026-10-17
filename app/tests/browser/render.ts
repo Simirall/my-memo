@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach } from "vitest";
+import { NavigationProvider } from "@/components/navigation";
 
 const roots = new Map<Element, Root>();
 afterEach(() => {
@@ -16,5 +17,5 @@ export function render(node: ReactNode, container: Element) {
     root = createRoot(container);
     roots.set(container, root);
   }
-  flushSync(() => root.render(node));
+  flushSync(() => root.render(createElement(NavigationProvider, null, node)));
 }

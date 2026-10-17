@@ -3,7 +3,6 @@ import {
   getPlanUsage,
 } from "@/features/access-control/authorization";
 import { formatAttachmentSize } from "@/features/attachments/model/attachment-constants";
-import { SettingsLayout } from "@/routes/settings/-components/settings-layout";
 import { getRequestContext, redirect } from "@/server/request-context";
 
 const formatLimit = (limit: number | null) =>
@@ -22,7 +21,7 @@ export default async function Page() {
   }
 
   return (
-    <SettingsLayout activeSection="plan">
+    <>
       <title>プラン | My Memo</title>
       <div className="space-y-6">
         <div>
@@ -71,7 +70,7 @@ export default async function Page() {
           </div>
         </div>
       </div>
-    </SettingsLayout>
+    </>
   );
 }
 

@@ -2,10 +2,12 @@ import { expect, it } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "@/tests/browser/render";
 import { navigation } from "../../tests/setup/navigation";
-import { NavigationFailure, useAppRouter } from "./navigation";
+import { useAppRouter } from "./navigation";
 
 it("保存後の遷移失敗では入力を残し、画面取得だけを再試行する", async () => {
-  navigation.push.mockRejectedValueOnce(new Error("offline"));
+  navigation.push
+    .mockRejectedValueOnce(new Error("offline"))
+    .mockRejectedValueOnce(new Error("still offline"));
   let saves = 0;
   function Form() {
     const router = useAppRouter();
@@ -21,7 +23,6 @@ it("保存後の遷移失敗では入力を残し、画面取得だけを再試�
         >
           保存
         </button>
-        <NavigationFailure />
       </>
     );
   }
@@ -34,8 +35,15 @@ it("保存後の遷移失敗では入力を残し、画面取得だけを再試�
     .toBeVisible();
   await expect.element(page.getByLabelText("本文")).toHaveValue("保存する本文");
   await page.getByRole("button", { name: "画面を再取得" }).click();
-  await expect.poll(() => container.querySelector("dialog")?.open).toBe(false);
+  await expect
+    .element(page.getByRole("dialog", { name: "画面更新の再試行" }))
+    .toBeVisible();
+  await expect.element(page.getByLabelText("本文")).toHaveValue("保存する本文");
+  await page.getByRole("button", { name: "画面を再取得" }).click();
+  await expect
+    .element(page.getByRole("dialog", { name: "画面更新の再試行" }))
+    .not.toBeInTheDocument();
   expect(saves).toBe(1);
-  expect(navigation.push).toHaveBeenCalledTimes(2);
+  expect(navigation.push).toHaveBeenCalledTimes(3);
   await expect.element(page.getByLabelText("本文")).toHaveValue("保存する本文");
 });

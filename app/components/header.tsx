@@ -1,36 +1,22 @@
 import gearIcon from "@phosphor-icons/core/assets/regular/gear.svg?raw";
-import hamburgerIcon from "@phosphor-icons/core/assets/regular/hamburger.svg?raw";
 import usersThreeIcon from "@phosphor-icons/core/assets/regular/users-three.svg?raw";
 import type { User } from "better-auth";
 import { AppLink } from "@/components/app-link";
 import { LogoutButton } from "../islands/$logout";
 import { ThemeSelector } from "../islands/$theme-selector";
 import { PhosphorIcon } from "./phosphor-icon";
+import SettingsMenuButton from "./settings-menu-button";
 
 export const Header = ({
   user,
-  path,
 }: {
   user: (Pick<User, "name" | "image"> & { role?: string }) | null;
-  path: string;
 }) => {
-  const isSettingsPage = path.startsWith("/settings");
   const userRole = user ? (user as { role?: string }).role : undefined;
 
   return (
     <header className="navbar sticky top-0 z-20 bg-base-200 shadow-sm">
-      {isSettingsPage && (
-        <label
-          aria-label="設定メニューを開く"
-          className="btn btn-ghost btn-circle drawer-button lg:hidden"
-          htmlFor="settings-drawer"
-        >
-          <PhosphorIcon
-            className="inline-flex [&_svg]:size-6"
-            svg={hamburgerIcon}
-          />
-        </label>
-      )}
+      <SettingsMenuButton />
       <div className="flex-1">
         <AppLink className="btn btn-ghost text-xl" href="/">
           My Memo

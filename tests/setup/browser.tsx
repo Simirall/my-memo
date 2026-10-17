@@ -13,7 +13,24 @@ vi.mock("waku/router/client", async () => {
       to: string;
       children: ReactNode;
     }) => (
-      <a {...props} href={to}>
+      <a
+        {...props}
+        href={to}
+        onClick={(event) => {
+          props.onClick?.(event);
+          if (
+            event.defaultPrevented ||
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+          )
+            return;
+          event.preventDefault();
+          void navigation.push(to);
+        }}
+      >
         {children}
       </a>
     ),

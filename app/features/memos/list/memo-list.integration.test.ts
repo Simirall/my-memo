@@ -1,6 +1,8 @@
 import { env } from "cloudflare:workers";
+import { Hono } from "hono";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getAppDb } from "@/features/access-control/authorization";
+import { MEMO_LIST_CONTROLS_OPEN_COOKIE } from "@/features/memos/list/controls/memo-list-controls-state";
 import { getTagSuggestions } from "@/features/tags/data/tags";
 import {
   getMemoList,
@@ -9,6 +11,7 @@ import {
   includeSelectedMemoListTag,
   MEMO_LIST_PAGE_SIZE,
 } from "./memo-list";
+import { loadMemoListPageData } from "./memo-list-page-data";
 
 const d1 = env.MY_MEMO_D1;
 
@@ -55,6 +58,97 @@ const addMemo = (
 
 const memoIds = (result: Awaited<ReturnType<typeof getMemoList>>) =>
   result.items.map((memo) => memo.id);
+
+const pageAppForUser = (userId: string) => {
+  const app = new Hono<{ Bindings: CloudflareBindings }>();
+  app.get("*", async (c) => {
+    const url = new URL(c.req.url);
+    const categoryId = url.pathname.startsWith("/categories/")
+      ? url.pathname.slice("/categories/".length)
+      : undefined;
+    const loaderInput = {
+      c,
+      path: url.pathname,
+      queryString: url.search.slice(1),
+      userId,
+    };
+    const data =
+      categoryId === undefined
+        ? await loadMemoListPageData(loaderInput)
+        : await loadMemoListPageData({ ...loaderInput, categoryId });
+    return c.json(
+      data
+        ? {
+            category: data.category,
+            emptyPageRedirect: data.emptyPageRedirect ?? null,
+            initialControlsOpen: data.initialControlsOpen,
+            itemIds: data.result.items.map((memo) => memo.id),
+            notice: data.notice,
+            query: data.query,
+          }
+        : null,
+    );
+  });
+  return app;
+};
+
+describe("メモ一覧ページloader", () => {
+  it("カテゴリ所有者・検索条件・Cookie・空ページredirectを同じ契約で扱う", async () => {
+    await addUser("owner");
+    await addUser("other");
+    await run(
+      "INSERT INTO categories (id, user_id, name) VALUES ('owner-category', 'owner', '仕事'), ('other-category', 'other', '他人')",
+    );
+    await run(
+      "INSERT INTO tags (id, user_id, name) VALUES ('owner-tag', 'owner', '重要')",
+    );
+    await addMemo("owner-memo", "owner", "2026-08-08 00:00:00", {
+      categoryId: "owner-category",
+    });
+    await run(
+      "INSERT INTO memo_tags (memo_id, tag_id) VALUES ('owner-memo', 'owner-tag')",
+    );
+
+    const app = pageAppForUser("owner");
+    const emptyPage = await app.fetch(
+      new Request("https://example.test/?sort=asc&page=2&notice=保存しました", {
+        headers: {
+          Cookie: `${MEMO_LIST_CONTROLS_OPEN_COOKIE}=1`,
+        },
+      }),
+      env,
+    );
+    expect(emptyPage.status).toBe(200);
+    expect(await emptyPage.json()).toEqual({
+      category: null,
+      emptyPageRedirect: "/?sort=asc",
+      initialControlsOpen: true,
+      itemIds: [],
+      notice: "保存しました",
+      query: { page: 2, sort: "asc" },
+    });
+
+    const categoryPage = await app.fetch(
+      new Request(
+        "https://example.test/categories/owner-category?sort=asc&tag=owner-tag",
+      ),
+      env,
+    );
+    expect(await categoryPage.json()).toMatchObject({
+      category: { id: "owner-category", name: "仕事" },
+      emptyPageRedirect: null,
+      initialControlsOpen: false,
+      itemIds: ["owner-memo"],
+      query: { page: 1, sort: "asc", tag: "owner-tag" },
+    });
+
+    const otherCategory = await app.fetch(
+      new Request("https://example.test/categories/other-category"),
+      env,
+    );
+    expect(await otherCategory.json()).toBeNull();
+  });
+});
 
 beforeEach(async () => {
   await d1.batch([

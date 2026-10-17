@@ -146,7 +146,33 @@ test("SSRとRSCの所有者分離を維持し、nonce付きCSPで内部遷移で
   await page.evaluate(() => {
     Object.assign(window, { migrationDocument: "preserved" });
   });
-  await page.getByRole("link", { name: "編集", exact: true }).click();
+  let resumeNavigation = () => {};
+  const navigationGate = new Promise<void>((resolve) => {
+    resumeNavigation = resolve;
+  });
+  await page.route("**/RSC/**", async (route) => {
+    if (route.request().url().includes("owner-ssr")) await navigationGate;
+    await route.continue();
+  });
+  const navigationRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return (
+      url.pathname.startsWith("/RSC/") && url.pathname.includes("owner-ssr")
+    );
+  });
+  try {
+    await page.getByRole("link", { name: "編集", exact: true }).click();
+    await navigationRequest;
+    await expect(
+      page.getByRole("heading", { name: "所有者だけのメモ" }),
+    ).toBeVisible();
+    await expect(page).toHaveURL(`${appUrl}/`);
+    await expect(
+      page.getByRole("textbox", { name: "タイトル", exact: true }),
+    ).not.toBeVisible();
+  } finally {
+    resumeNavigation();
+  }
   await expect(
     page.getByRole("textbox", { name: "タイトル", exact: true }),
   ).toHaveValue("所有者だけのメモ");
@@ -193,6 +219,43 @@ test("SSRとRSCの所有者分離を維持し、nonce付きCSPで内部遷移で
   expect(
     await page.evaluate(() => Reflect.get(window, "migrationCspViolations")),
   ).toEqual([]);
+});
+
+test("設定内の遷移で現在地を更新し、モバイルメニューを閉じる", async ({
+  page,
+  appUrl,
+  isMobile,
+}) => {
+  await page.goto(`${appUrl}/settings/categories`);
+  await page.evaluate(() =>
+    Object.assign(window, { settingsDocument: "preserved" }),
+  );
+  if (isMobile) await page.getByLabel("設定メニューを開く").click();
+  await page
+    .getByRole("navigation", { name: "設定", exact: true })
+    .getByRole("link", { name: "タグ", exact: true })
+    .click();
+  await expect(page).toHaveURL(`${appUrl}/settings/tags`);
+  await expect(
+    page.getByRole("heading", { name: "タグ", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("#settings-drawer")).not.toBeChecked();
+  if (isMobile) await page.getByLabel("設定メニューを開く").click();
+  const menu = page.getByRole("navigation", { name: "設定", exact: true });
+  await expect(
+    menu.getByRole("link", { name: "タグ", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    menu.getByRole("link", { name: "カテゴリー", exact: true }),
+  ).not.toHaveAttribute("aria-current", "page");
+  await menu.getByRole("link", { name: "カテゴリー", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "カテゴリー", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("#settings-drawer")).not.toBeChecked();
+  expect(
+    await page.evaluate(() => Reflect.get(window, "settingsDocument")),
+  ).toBe("preserved");
 });
 
 test("退会処理中の画面制限はHTTPとRSC遷移の両方で適用する", async ({

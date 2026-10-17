@@ -1,12 +1,12 @@
+import type { PageProps } from "waku/router";
 import { getAppDb } from "@/features/access-control/authorization";
 import { getUserCategories } from "@/features/categories/data/categories";
 import { getShareIntake } from "@/features/sharing/intake/share-intake";
 import { getTagSuggestions, getUserTags } from "@/features/tags/data/tags";
 import CreateMemoForm from "@/routes/memos/create/-components/$create-memo-form";
-import type { PageProps } from "@/server/request-context";
 import { getRequestContext, redirect } from "@/server/request-context";
 
-export default async function Page(props: PageProps) {
+export default async function Page(props: PageProps<"/memos/create">) {
   const c = getRequestContext();
   const searchParams = new URLSearchParams(props.query);
   const user = c.get("user");

@@ -1,9 +1,9 @@
+import type { PageProps } from "waku/router";
 import AccountDeletionComplete from "@/islands/$account-deletion-complete";
 import { LoginButton } from "@/routes/(auth)/login/-components/$login-button";
-import type { PageProps } from "@/server/request-context";
 import { getRequestContext } from "@/server/request-context";
 
-export default function Page(props: PageProps) {
+export default function Page(props: PageProps<"/login">) {
   const _c = getRequestContext();
   const searchParams = new URLSearchParams(props.query);
   const callbackURL = searchParams.get("callbackURL") ?? undefined;

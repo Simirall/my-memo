@@ -1,11 +1,10 @@
+import type { PageProps } from "waku/router";
 import { getUserCategories } from "@/features/categories/data/categories";
 import { SortableCategoryList } from "@/islands/$sortable-category-list";
-import { SettingsLayout } from "@/routes/settings/-components/settings-layout";
 import { CreateCategoryForm } from "@/routes/settings/categories/-components/$create-category-form";
-import type { PageProps } from "@/server/request-context";
 import { getRequestContext, redirect } from "@/server/request-context";
 
-export default async function Page(props: PageProps) {
+export default async function Page(props: PageProps<"/settings/categories">) {
   const c = getRequestContext();
   const searchParams = new URLSearchParams(props.query);
   const user = c.get("user");
@@ -14,7 +13,7 @@ export default async function Page(props: PageProps) {
   const result = await getUserCategories(c.env.MY_MEMO_D1, user.id);
 
   return (
-    <SettingsLayout activeSection="categories">
+    <>
       <title>カテゴリー | My Memo</title>
       <div className="space-y-6">
         <div>
@@ -44,7 +43,7 @@ export default async function Page(props: PageProps) {
           )}
         </section>
       </div>
-    </SettingsLayout>
+    </>
   );
 }
 

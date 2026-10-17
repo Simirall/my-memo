@@ -7,7 +7,6 @@ export const notFound = () => unstable_notFound();
 export const redirect = (to: string) =>
   unstable_redirect(to as Parameters<typeof unstable_redirect>[0]);
 
-export type PageProps = { path: string; query?: string; id?: string };
 export const getRequestContext = () =>
   getContext<{ Bindings: CloudflareBindings }>();
 

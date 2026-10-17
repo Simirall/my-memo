@@ -1,7 +1,6 @@
 import { getAppDb } from "@/features/access-control/authorization";
 import { getUserTags } from "@/features/tags/data/tags";
 import { TagList } from "@/islands/$tag-list";
-import { SettingsLayout } from "@/routes/settings/-components/settings-layout";
 import { getRequestContext, redirect } from "@/server/request-context";
 
 export default async function Page() {
@@ -12,7 +11,7 @@ export default async function Page() {
   const tags = await getUserTags(getAppDb(c.env), user.id);
 
   return (
-    <SettingsLayout activeSection="tags">
+    <>
       <title>タグ | My Memo</title>
       <div className="space-y-6">
         <div>
@@ -33,7 +32,7 @@ export default async function Page() {
           )}
         </section>
       </div>
-    </SettingsLayout>
+    </>
   );
 }
 
