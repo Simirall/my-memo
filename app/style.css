@@ -21,6 +21,14 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}
+
 :where(body, body *) {
   font-feature-settings: "palt";
 }

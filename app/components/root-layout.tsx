@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode as Child } from "react";
+import { type ReactNode as Child, ViewTransition } from "react";
 import { useRouter } from "waku/router/client";
 import InstallPrompt from "../islands/$install-prompt";
 import LegalConsentDialog from "../islands/$legal-consent-dialog";
@@ -26,15 +26,17 @@ export const RootLayout = ({
     <NavigationProvider>
       {header}
       {isAuthenticated && !isSettingsPage && <InstallPrompt mode="banner" />}
-      <main
-        className={
-          isSettingsPage
-            ? "h-[calc(100dvh-4rem)] overflow-y-auto p-4"
-            : "min-h-[calc(100svh-4rem)] p-4"
-        }
-      >
-        {children}
-      </main>
+      <ViewTransition>
+        <main
+          className={
+            isSettingsPage
+              ? "h-[calc(100dvh-4rem)] overflow-y-auto p-4"
+              : "min-h-[calc(100svh-4rem)] p-4"
+          }
+        >
+          {children}
+        </main>
+      </ViewTransition>
       {!isLoginPage && <ScrollToTopButton showBackButton={!isTopPage} />}
       {isAuthenticated && !isLegalPage && <LegalConsentDialog />}
     </NavigationProvider>
