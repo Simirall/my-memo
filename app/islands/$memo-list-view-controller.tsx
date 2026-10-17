@@ -111,7 +111,8 @@ export default function MemoListViewController({
       <dialog
         aria-label="メモ詳細"
         className="modal"
-        onClose={() => {
+        onClose={(event) => {
+          if (event.target !== event.currentTarget) return;
           setSelectedId(undefined);
           triggerRef.current?.focus();
         }}

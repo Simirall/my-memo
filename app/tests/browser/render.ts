@@ -12,6 +12,13 @@ afterEach(() => {
   roots.clear();
 });
 export function render(node: ReactNode, container: Element) {
+  flushSync(() => {
+    for (const [element, root] of roots) {
+      if (element.isConnected) continue;
+      root.unmount();
+      roots.delete(element);
+    }
+  });
   let root = roots.get(container);
   if (!root) {
     root = createRoot(container);

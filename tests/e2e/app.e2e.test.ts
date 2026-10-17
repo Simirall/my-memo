@@ -221,6 +221,69 @@ test("SSRとRSCの所有者分離を維持し、nonce付きCSPで内部遷移で
   ).toEqual([]);
 });
 
+test("未保存編集では内部リンクと履歴移動の取り消しを保持し、保存後は確認せず戻る", async ({
+  env,
+  page,
+  appUrl,
+}) => {
+  await env.MY_MEMO_D1.prepare(
+    "INSERT INTO memos (id,user_id,title,content) VALUES ('dirty-memo','owner','離脱確認のメモ','保存済みの本文')",
+  ).run();
+  await page.goto(`${appUrl}/`);
+  await page.getByRole("link", { name: "編集", exact: true }).click();
+  const title = page.getByRole("textbox", { name: "タイトル", exact: true });
+  await expect(title).toHaveValue("離脱確認のメモ");
+  const editUrl = page.url();
+  await page.getByRole("link", { name: "My Memo", exact: true }).click();
+  await expect(page).toHaveURL(`${appUrl}/`);
+  await page.goBack();
+  await expect(page).toHaveURL(editUrl);
+  await title.fill("未保存のタイトル");
+  const dismissConfirmation = () =>
+    new Promise<void>((resolve) => {
+      page.once("dialog", async (dialog) => {
+        expect(dialog.type()).toBe("confirm");
+        await dialog.dismiss();
+        resolve();
+      });
+    });
+  let dismissed = dismissConfirmation();
+  await page.getByRole("link", { name: "My Memo", exact: true }).click();
+  await dismissed;
+  await expect(page).toHaveURL(editUrl);
+  await expect(title).toHaveValue("未保存のタイトル");
+
+  for (const direction of ["back", "forward", "back"] as const) {
+    dismissed = dismissConfirmation();
+    await page.evaluate((direction) => history[direction](), direction);
+    await dismissed;
+    await expect(page).toHaveURL(editUrl);
+    await expect(title).toHaveValue("未保存のタイトル");
+  }
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.evaluate(() => history.back());
+  await expect(page).toHaveURL(`${appUrl}/`);
+  await expect(
+    page.getByRole("heading", { name: "離脱確認のメモ", exact: true }),
+  ).toBeVisible();
+  await page.goForward();
+  await expect(title).toHaveValue("離脱確認のメモ");
+  await title.fill("保存するタイトル");
+
+  const unexpectedDialogs: string[] = [];
+  page.on("dialog", async (dialog) => {
+    unexpectedDialogs.push(dialog.message());
+    await dialog.dismiss();
+  });
+  await page.getByRole("button", { name: "更新", exact: true }).click();
+  await expect(page).toHaveURL(`${appUrl}/`);
+  await expect(
+    page.getByRole("heading", { name: "保存するタイトル", exact: true }),
+  ).toBeVisible();
+  expect(unexpectedDialogs).toEqual([]);
+});
+
 test("設定内の遷移で現在地を更新し、モバイルメニューを閉じる", async ({
   page,
   appUrl,

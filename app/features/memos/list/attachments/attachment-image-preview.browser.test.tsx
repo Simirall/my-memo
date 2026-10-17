@@ -202,13 +202,14 @@ describe("メモ一覧の画像拡大プレビュー", () => {
       "[data-attachment-preview-image]",
     );
 
-    viewport?.dispatchEvent(
-      new WheelEvent("wheel", {
-        bubbles: true,
-        cancelable: true,
-        deltaY: -100,
-      }),
-    );
+    const wheel = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+      deltaY: -100,
+    });
+    viewport?.dispatchEvent(wheel);
+    expect(wheel.defaultPrevented).toBe(true);
     await expect.poll(() => image?.style.transform).toContain("scale(1.2)");
 
     viewport?.dispatchEvent(pointer("pointerdown", { x: 100, y: 100 }));

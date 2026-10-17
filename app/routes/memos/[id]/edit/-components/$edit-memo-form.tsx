@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type z from "zod";
 import { AppLink } from "@/components/app-link";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { useAppRouter } from "@/components/navigation";
+import { useAppRouter, useNavigationBlocker } from "@/components/navigation";
 import {
   getAttachmentUploadBody,
   type PendingAttachmentUpload,
@@ -96,7 +96,7 @@ export default function EditMemoForm({
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isRegenerateConfirmOpen, setIsRegenerateConfirmOpen] = useState(false);
   const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
-  const isLeavingAfterSave = useRef(false);
+  const isLeaving = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const clipboardPasteBusyRef = useRef(false);
@@ -128,15 +128,7 @@ export default function EditMemoForm({
     deletedAttachmentIds.length > 0 ||
     files.length > 0;
 
-  useEffect(() => {
-    const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (!isDirty || isLeavingAfterSave.current) return;
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [isDirty]);
+  useNavigationBlocker(() => isDirty && !isLeaving.current);
 
   const readQuota = async () => {
     const response = await fetch("/api/attachments/quota", {
@@ -388,7 +380,7 @@ export default function EditMemoForm({
         setError(payload.message ?? "メモを更新できませんでした。");
         return;
       }
-      isLeavingAfterSave.current = true;
+      isLeaving.current = true;
       void router.push(returnTo);
     } catch (cause) {
       setError(
@@ -707,6 +699,7 @@ export default function EditMemoForm({
         onCancel={() => setIsDiscardConfirmOpen(false)}
         onConfirm={() => {
           setIsDiscardConfirmOpen(false);
+          isLeaving.current = true;
           void router.push(returnTo);
         }}
         open={isDiscardConfirmOpen}

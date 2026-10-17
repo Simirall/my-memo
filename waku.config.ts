@@ -21,6 +21,8 @@ export default defineConfig({
     plugins: [
       tailwindcss(),
       cloudflare({
+        // ビルド末尾のpreview Workerも、CIでは外部認証を不要にする。
+        remoteBindings: process.env.CI ? false : undefined,
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
         inspectorPort: false,
       }),

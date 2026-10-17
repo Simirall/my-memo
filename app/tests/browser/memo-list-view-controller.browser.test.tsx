@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
+import { DeleteButton } from "@/islands/$delete-button";
 import MemoListViewController from "@/islands/$memo-list-view-controller";
 import { render } from "@/tests/browser/render";
 
@@ -11,7 +12,15 @@ const mount = (listPath: string) => {
       cards={[
         {
           id: "memo-1",
-          content: <article data-memo-card="memo-1">カード本文</article>,
+          content: (
+            <article data-memo-card="memo-1">
+              カード本文
+              <DeleteButton
+                action="/api/memos/delete/memo-1"
+                confirmMessage="メモを削除しますか？"
+              />
+            </article>
+          ),
         },
       ]}
       controls={null}
@@ -66,7 +75,7 @@ describe("メモ一覧の表示切り替え", () => {
     await trigger.click();
     const dialog = document.querySelector<HTMLDialogElement>("dialog");
     expect(dialog?.open).toBe(true);
-    expect(dialog?.querySelector("[data-memo-card]")?.textContent).toBe(
+    expect(dialog?.querySelector("[data-memo-card]")?.textContent).toContain(
       "カード本文",
     );
 
@@ -75,5 +84,21 @@ describe("メモ一覧の表示切り替え", () => {
     expect(document.activeElement).toBe(
       document.querySelector('[data-memo-detail="memo-1"]'),
     );
+  });
+
+  it("詳細内の削除確認を閉じてもメモ詳細を保持する", async () => {
+    localStorage.setItem("my-memo.memo-list-view:/", "list");
+    mount("/");
+    await page.getByRole("button", { name: "詳細を開く" }).click();
+    const detail = page.getByRole("dialog", { name: "メモ詳細", exact: true });
+    await detail.getByRole("button", { name: "削除", exact: true }).click();
+    await page
+      .getByRole("dialog", { name: "削除の確認" })
+      .getByRole("button", { name: "キャンセル", exact: true })
+      .click();
+    await expect.element(detail).toBeVisible();
+    await expect
+      .element(detail.getByRole("button", { name: "削除", exact: true }))
+      .toHaveFocus();
   });
 });

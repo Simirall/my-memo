@@ -179,14 +179,22 @@ export default function AttachmentImagePreview({
     };
   }, [resetView, currentIndex]);
 
-  const onWheel = (event: React.WheelEvent<HTMLElement>) => {
+  const onWheel = useEffectEvent((event: WheelEvent) => {
     event.preventDefault();
     const scale = clampPreviewScale(
       transform.scale + (event.deltaY < 0 ? 0.2 : -0.2),
     );
     setGestureOffset({ x: 0, y: 0 });
     setTransform(constrain({ ...transform, scale }));
-  };
+  });
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport || !current) return;
+    const handleWheel = (event: WheelEvent) => onWheel(event);
+    viewport.addEventListener("wheel", handleWheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", handleWheel);
+  }, [current]);
 
   const onPointerDown = (event: React.PointerEvent<HTMLElement>) => {
     event.preventDefault();
@@ -358,7 +366,6 @@ export default function AttachmentImagePreview({
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={finishPointer}
-          onWheel={onWheel}
           ref={viewportRef}
         >
           {imageStatus === "loading" && (
