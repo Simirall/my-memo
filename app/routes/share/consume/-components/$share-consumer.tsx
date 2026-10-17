@@ -1,4 +1,7 @@
-import { useEffect, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useAppRouter } from "@/components/navigation";
 import {
   clearPendingShare,
   readPendingShare,
@@ -18,6 +21,7 @@ type ShareConsumerProps = {
 };
 
 export default function ShareConsumer({ quota }: ShareConsumerProps) {
+  const router = useAppRouter();
   const [error, setError] = useState<string>();
   const [destination, setDestination] = useState<ShareDestination>();
 
@@ -40,12 +44,12 @@ export default function ShareConsumer({ quota }: ShareConsumerProps) {
       return;
     }
 
-    window.location.replace("/memos/create?shared=1");
-  }, []);
+    void router.replace("/memos/create?shared=1");
+  }, [router.replace]);
 
   const discard = () => {
     clearPendingShare();
-    window.location.replace("/");
+    void router.replace("/");
   };
 
   const memoAvailable =
@@ -111,7 +115,7 @@ export default function ShareConsumer({ quota }: ShareConsumerProps) {
                 className="btn btn-primary btn-block"
                 disabled={!aiSummaryAvailable}
                 onClick={() =>
-                  window.location.replace("/memos/url-summary?shared=1")
+                  void router.replace("/memos/url-summary?shared=1")
                 }
                 type="button"
               >
@@ -120,9 +124,7 @@ export default function ShareConsumer({ quota }: ShareConsumerProps) {
               <button
                 className="btn btn-secondary btn-soft btn-block"
                 disabled={!memoAvailable}
-                onClick={() =>
-                  window.location.replace("/memos/create?shared=1")
-                }
+                onClick={() => void router.replace("/memos/create?shared=1")}
                 type="button"
               >
                 メモを作成

@@ -1,5 +1,6 @@
 import magnifyingGlassIcon from "@phosphor-icons/core/assets/regular/magnifying-glass.svg?raw";
 import pencilSimpleIcon from "@phosphor-icons/core/assets/regular/pencil-simple.svg?raw";
+import { AppLink } from "@/components/app-link";
 import { PhosphorIcon } from "@/components/phosphor-icon";
 import { DeleteButton } from "@/islands/$delete-button";
 import { isSafeMemoUrl } from "../../model/memo-url";
@@ -22,7 +23,7 @@ export function MemoListTable({
   showCategory: boolean;
 }) {
   return (
-    <div className="overflow-x-auto py-4" data-memo-list-view="list" hidden>
+    <div className="overflow-x-auto py-4" data-memo-list-view="list">
       <table className="table-sm table min-w-5xl">
         <thead>
           <tr>
@@ -48,14 +49,14 @@ export function MemoListTable({
               <tr data-memo-list-row={memo.id} key={memo.id}>
                 <th className="max-w-56 whitespace-normal break-all">
                   {memo.url && isSafeMemoUrl(memo.url) ? (
-                    <a
+                    <AppLink
                       className="text-info hover:underline"
                       href={memo.url}
                       rel="noopener noreferrer"
                       target="_blank"
                     >
                       {memo.title}
-                    </a>
+                    </AppLink>
                   ) : (
                     memo.title
                   )}
@@ -70,7 +71,7 @@ export function MemoListTable({
                 {showCategory && (
                   <td>
                     {memo.category && (
-                      <a
+                      <AppLink
                         className="badge badge-soft badge-primary whitespace-nowrap"
                         href={buildMemoListUrl(
                           `/categories/${memo.category.id}`,
@@ -78,7 +79,7 @@ export function MemoListTable({
                         )}
                       >
                         {memo.category.name}
-                      </a>
+                      </AppLink>
                     )}
                   </td>
                 )}
@@ -87,12 +88,12 @@ export function MemoListTable({
                     <ul className="flex min-w-48 flex-wrap gap-1">
                       {visibleTags.map((tag) => (
                         <li key={tag.id}>
-                          <a
+                          <AppLink
                             className="badge badge-soft badge-info hover:underline"
                             href={replaceMemoListTag(listPath, query, tag.id)}
                           >
                             #{tag.name}
-                          </a>
+                          </AppLink>
                         </li>
                       ))}
                     </ul>
@@ -120,13 +121,13 @@ export function MemoListTable({
                     >
                       <PhosphorIcon svg={magnifyingGlassIcon} />
                     </button>
-                    <a
+                    <AppLink
                       aria-label={`編集: ${memo.title}`}
                       className="btn btn-square btn-sm"
                       href={`/memos/${encodeURIComponent(memo.id)}/edit?returnTo=${encodeURIComponent(returnTo)}`}
                     >
                       <PhosphorIcon svg={pencilSimpleIcon} />
-                    </a>
+                    </AppLink>
                     <DeleteButton
                       action={`/api/memos/delete/${memo.id}?returnTo=${encodeURIComponent(returnTo)}`}
                       className="btn btn-error btn-soft btn-square btn-sm"

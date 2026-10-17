@@ -1,35 +1,26 @@
 import gearIcon from "@phosphor-icons/core/assets/regular/gear.svg?raw";
-import hamburgerIcon from "@phosphor-icons/core/assets/regular/hamburger.svg?raw";
 import usersThreeIcon from "@phosphor-icons/core/assets/regular/users-three.svg?raw";
-import { useRequestContext } from "hono/jsx-renderer";
+import type { User } from "better-auth";
+import { AppLink } from "@/components/app-link";
 import { LogoutButton } from "../islands/$logout";
 import { ThemeSelector } from "../islands/$theme-selector";
 import { PhosphorIcon } from "./phosphor-icon";
+import SettingsMenuButton from "./settings-menu-button";
 
-export const Header = () => {
-  const c = useRequestContext();
-  const user = c.get("user");
-  const isSettingsPage = c.req.path.startsWith("/settings");
+export const Header = ({
+  user,
+}: {
+  user: (Pick<User, "name" | "image"> & { role?: string }) | null;
+}) => {
   const userRole = user ? (user as { role?: string }).role : undefined;
 
   return (
     <header className="navbar sticky top-0 z-20 bg-base-200 shadow-sm">
-      {isSettingsPage && (
-        <label
-          aria-label="設定メニューを開く"
-          className="btn btn-ghost btn-circle drawer-button lg:hidden"
-          htmlFor="settings-drawer"
-        >
-          <PhosphorIcon
-            className="inline-flex [&_svg]:size-6"
-            svg={hamburgerIcon}
-          />
-        </label>
-      )}
+      <SettingsMenuButton />
       <div className="flex-1">
-        <a className="btn btn-ghost text-xl" href="/">
+        <AppLink className="btn btn-ghost text-xl" href="/">
           My Memo
-        </a>
+        </AppLink>
       </div>
       <div className="flex-none">
         {user && (
@@ -37,8 +28,8 @@ export const Header = () => {
             <button
               aria-label="ユーザーメニューを開く"
               className="btn btn-ghost btn-circle avatar"
-              popovertarget="user-menu"
-              style="anchor-name: --user-menu-anchor"
+              popoverTarget="user-menu"
+              style={{ anchorName: "--user-menu-anchor" }}
               type="button"
             >
               <div className="w-10 rounded-full">
@@ -51,16 +42,15 @@ export const Header = () => {
                 )}
               </div>
             </button>
-            {/* HonoX wraps LogoutButton in honox-island. Make that wrapper full-width so mx-auto can center the button. */}
             <ul
-              className="dropdown dropdown-end menu mt-3 w-52 flex-col items-stretch space-y-2 rounded-box bg-base-300 p-2 shadow-lg [&>honox-island]:flex [&>honox-island]:w-full [&>honox-island]:justify-center"
+              className="dropdown dropdown-end menu mt-3 w-52 flex-col items-stretch space-y-2 rounded-box bg-base-300 p-2 shadow-lg"
               id="user-menu"
               popover="auto"
-              style="position-anchor: --user-menu-anchor"
+              style={{ positionAnchor: "--user-menu-anchor" }}
               tabIndex={-1}
             >
               <li className="w-full">
-                <a
+                <AppLink
                   className="flex min-h-12 w-full items-center justify-start gap-2 px-4 text-base"
                   href="/settings/account"
                 >
@@ -69,11 +59,11 @@ export const Header = () => {
                     svg={gearIcon}
                   />
                   設定
-                </a>
+                </AppLink>
               </li>
               {userRole === "admin" && (
                 <li className="w-full">
-                  <a
+                  <AppLink
                     className="flex min-h-12 w-full items-center justify-start gap-2 px-4 text-base"
                     href="/admin/users"
                   >
@@ -82,7 +72,7 @@ export const Header = () => {
                       svg={usersThreeIcon}
                     />
                     ユーザー管理
-                  </a>
+                  </AppLink>
                 </li>
               )}
               <ThemeSelector />

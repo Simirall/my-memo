@@ -1,9 +1,8 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import AccountDeletion from "@/islands/$account-deletion";
 import AccountDeletionComplete from "@/islands/$account-deletion-complete";
+import { render } from "@/tests/browser/render";
 
 const mount = (initialStatus: "processing" | "failed" | null = null) => {
   const container = document.createElement("div");

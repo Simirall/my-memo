@@ -1,11 +1,10 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import AttachmentManager from "@/features/memos/list/attachments/$attachment-manager";
 import { SHARE_STORAGE_KEY } from "@/features/sharing/model/share";
 import CreateMemoForm from "@/routes/memos/create/-components/$create-memo-form";
 import UrlSummaryForm from "@/routes/memos/url-summary/-components/$url-summary-form";
+import { render } from "@/tests/browser/render";
 
 const categories = [
   {
@@ -1003,7 +1002,7 @@ describe("添付ファイル管理", () => {
     transfer.items.add(new File(["abc"], "sample.mp3", { type: "audio/mpeg" }));
     if (input) {
       input.files = transfer.files;
-      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
     await expect

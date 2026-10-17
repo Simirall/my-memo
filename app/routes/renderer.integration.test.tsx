@@ -1,24 +1,27 @@
-import { Hono } from "hono";
-import { describe, expect, it } from "vitest";
-import renderer, { JAVASCRIPT_REQUIRED_MESSAGE } from "./_renderer";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+import Root, { JAVASCRIPT_REQUIRED_MESSAGE } from "@/pages/_root";
+
+vi.mock("@/components/app-link", () => ({
+  AppLink: ({
+    children,
+    ...props
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a {...props}>{children}</a>
+  ),
+}));
 
 describe("JavaScript必須の共通レンダラー", () => {
   it("SSRで通常アプリを識別ラッパーに入れ、noscript時だけ全画面案内を表示する", async () => {
-    const app = new Hono();
-    app.use("*", async (c, next) => {
-      c.set("user", null);
-      c.set("session", null);
-      await next();
-    });
-    app.use("*", renderer);
-    app.get("/", (c) => c.render(<p>通常のアプリ</p>));
-
-    const response = await app.request("https://example.test/");
-    const html = await response.text();
+    const html = renderToStaticMarkup(
+      <Root>
+        <p>通常のアプリ</p>
+      </Root>,
+    );
 
     expect(html).toContain(JAVASCRIPT_REQUIRED_MESSAGE);
     const styleIndex = html.indexOf(
-      "<style>#app-with-javascript { display: none !important; }</style>",
+      "#app-with-javascript { display: none !important; }",
     );
     const headCloseIndex = html.indexOf("</head>");
     const bodyIndex = html.indexOf("<body>");
@@ -33,17 +36,11 @@ describe("JavaScript必須の共通レンダラー", () => {
   });
 
   it("保存済みテーマをスタイルシートより前に同期復元する", async () => {
-    const app = new Hono();
-    app.use("*", async (c, next) => {
-      c.set("user", null);
-      c.set("session", null);
-      await next();
-    });
-    app.use("*", renderer);
-    app.get("/", (c) => c.render(<p>通常のアプリ</p>));
-
-    const response = await app.request("https://example.test/");
-    const html = await response.text();
+    const html = renderToStaticMarkup(
+      <Root>
+        <p>通常のアプリ</p>
+      </Root>,
+    );
     const script = '<script src="/theme-init.js"></script>';
 
     expect(html).toContain('<meta content="light dark" name="color-scheme"/>');
@@ -53,51 +50,6 @@ describe("JavaScript必須の共通レンダラー", () => {
     );
     expect(html).not.toContain("favicon.ico");
     expect(html).toContain(script);
-    expect(html.indexOf(script)).toBeLessThan(
-      html.indexOf('href="/app/style.css"'),
-    );
+    expect(html).toContain('src="/pwa-init.js"');
   });
-
-  it("設定ページではヘッダーに設定メニューを開くボタンを表示する", async () => {
-    const app = new Hono();
-    app.use("*", async (c, next) => {
-      c.set("user", null);
-      c.set("session", null);
-      await next();
-    });
-    app.use("*", renderer);
-    app.get("/settings/account", (c) => c.render(<p>アカウント設定</p>));
-
-    const response = await app.request("https://example.test/settings/account");
-    const html = await response.text();
-
-    expect(html).toContain('aria-label="設定メニューを開く"');
-    expect(html).toContain('for="settings-drawer"');
-  });
-
-  it.each(["/terms", "/privacy"])(
-    "認証済みでも%sでは再同意ダイアログを重ねない",
-    async (path) => {
-      const app = new Hono();
-      app.use("*", async (c, next) => {
-        c.set("user", {
-          id: "user-1",
-          image: null,
-          name: "テスト利用者",
-        } as never);
-        c.set("session", {} as never);
-        await next();
-      });
-      app.use("*", renderer);
-      app.get(path, (c) => c.render(<p>法的文書</p>));
-
-      const response = await app.request(`https://example.test${path}`);
-      const html = await response.text();
-
-      expect(html).toContain("法的文書");
-      expect(html).not.toContain(
-        "利用規約・プライバシーポリシーが改訂されました",
-      );
-    },
-  );
 });

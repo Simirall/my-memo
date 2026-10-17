@@ -1,12 +1,10 @@
-/** @jsxImportSource hono/jsx/dom */
-
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
 import {
   LEGAL_CONSENT_STORAGE_KEY,
   LEGAL_EFFECTIVE_AT,
 } from "@/features/legal/consent";
+import { render } from "@/tests/browser/render";
 import { LoginButton } from "./-components/$login-button";
 
 const consentLabel = "利用規約に同意し、プライバシーポリシーを確認しました";

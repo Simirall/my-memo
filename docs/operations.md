@@ -91,6 +91,11 @@ API Tokenは対象Accountと`partial.cc` Zoneに限定し、`Workers Scripts Edi
 `BETTER_AUTH_URL`、`BETTER_AUTH_SECRET`、`GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET`はWorker SecretとしてCloudflareに残します。
 通常のWorker変数も維持するため、デプロイでは`wrangler deploy --keep-vars`を使用します。
 
+Wakuのビルドは`dist/server/wrangler.json`と`dist/public`を生成します。
+Cloudflare Vite pluginが生成する`.wrangler/deploy/config.json`によって、通常の`wrangler deploy`もビルド済み設定を使用します。
+生成設定には元のBindings、cron、ドメイン、observabilityが残っていることを確認します。
+本番Secretは出力へ保存せず、既存WorkerのSecretを継続します。
+
 デプロイはD1 migration、Worker、`https://my-memo.partial.cc/login`の疎通確認の順です。
 疎通確認に失敗した場合は自動でrollbackせず、適用済みmigrationとの互換性を確認してCloudflareのdeployment履歴から手動で戻します。
 

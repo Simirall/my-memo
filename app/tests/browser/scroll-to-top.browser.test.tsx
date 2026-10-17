@@ -1,8 +1,7 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import ScrollToTopButton from "@/islands/$scroll-to-top";
+import { render } from "@/tests/browser/render";
 
 function mount(showBackButton = false) {
   const container = document.createElement("div");

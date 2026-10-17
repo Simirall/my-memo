@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type z from "zod";
+import { useAppRouter } from "@/components/navigation";
 import {
   getAttachmentUploadBody,
   type PendingAttachmentUpload,
@@ -35,7 +38,7 @@ import {
   getShareDestination,
   type SharedMemoPrefill,
 } from "@/features/sharing/model/share";
-import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
+import type { Tag, TagSuggestions } from "@/features/tags/model/tags";
 
 type AttachmentQuota = {
   used: number;
@@ -69,6 +72,7 @@ export default function CreateMemoForm({
   shareIntake?: ShareIntake;
   tagSuggestions?: TagSuggestions;
 }) {
+  const router = useAppRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(initialError);
   const [title, setTitle] = useState(initialValues?.title ?? "");
@@ -109,7 +113,13 @@ export default function CreateMemoForm({
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const clipboardPasteBusyRef = useRef(false);
   const clipboardPasteHandlerRef = useRef<
-    ((event: ClipboardEvent) => Promise<void>) | undefined
+    | ((
+        event: Pick<
+          ClipboardEvent,
+          "clipboardData" | "target" | "preventDefault" | "defaultPrevented"
+        >,
+      ) => Promise<void>)
+    | undefined
   >(undefined);
 
   useFormSubmitShortcut(
@@ -227,9 +237,12 @@ export default function CreateMemoForm({
     }
   };
 
-  useEffect(() => {
-    if (!shareIntake) return;
+  const analyzeSharedMediaEffect = useEffectEvent(() => {
     void analyzeSharedMedia();
+  });
+  useEffect(() => {
+    if (!shareIntake?.id || !sharedFiles) return;
+    analyzeSharedMediaEffect();
     return () => {
       sharedMediaAnalysisGeneration.current =
         (sharedMediaAnalysisGeneration.current ?? 0) + 1;
@@ -246,7 +259,12 @@ export default function CreateMemoForm({
     return quota;
   };
 
-  const handleClipboardPaste = async (event: ClipboardEvent) => {
+  const handleClipboardPaste = async (
+    event: Pick<
+      ClipboardEvent,
+      "clipboardData" | "target" | "preventDefault" | "defaultPrevented"
+    >,
+  ) => {
     if (
       shareIntake ||
       createdMemoId ||
@@ -328,9 +346,9 @@ export default function CreateMemoForm({
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [Boolean(shareIntake)]);
+  }, [shareIntake]);
 
-  const selectFiles = async (event: Event) => {
+  const selectFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget as HTMLInputElement;
     const selected = Array.from(input.files ?? []);
     input.value = "";
@@ -484,7 +502,7 @@ export default function CreateMemoForm({
           payload.message ?? "共有内容をキャンセルできませんでした。",
         );
       }
-      window.location.assign("/");
+      void router.push("/");
     } catch (cause) {
       setAttachmentError(
         cause instanceof Error
@@ -508,12 +526,12 @@ export default function CreateMemoForm({
       );
       return;
     }
-    window.location.assign(
+    void router.push(
       getCreatedMemoListPath(createdMemoCategoryId, initialCategoryId),
     );
   };
 
-  const submit = async (event: Event) => {
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (createdMemoId || isCheckingAttachments || isCheckingSharedMedia) return;
     if (attachmentError) return;
@@ -553,7 +571,7 @@ export default function CreateMemoForm({
           },
         );
         if (response.ok) {
-          window.location.assign("/");
+          void router.push("/");
           return;
         }
         const payload = (await response.json().catch(() => ({}))) as {
@@ -572,7 +590,7 @@ export default function CreateMemoForm({
         const payload = (await response.json()) as { memoId?: string };
         if (!payload.memoId) throw new Error("メモIDを取得できませんでした。");
         if (files.length === 0) {
-          window.location.assign(
+          void router.push(
             getCreatedMemoListPath(createdCategoryId, initialCategoryId),
           );
           return;
@@ -592,7 +610,7 @@ export default function CreateMemoForm({
           );
           return;
         }
-        window.location.assign(
+        void router.push(
           getCreatedMemoListPath(createdCategoryId, initialCategoryId),
         );
         return;

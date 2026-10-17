@@ -1,8 +1,7 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
 import { CreateCategoryForm } from "@/routes/settings/categories/-components/$create-category-form";
+import { render } from "@/tests/browser/render";
 
 const mount = (props: { created?: boolean; error?: string }) => {
   const container = document.createElement("div");

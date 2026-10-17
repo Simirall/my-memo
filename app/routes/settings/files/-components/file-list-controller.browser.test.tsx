@@ -1,15 +1,34 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
+import { render } from "@/tests/browser/render";
+import { navigation } from "../../../../../tests/setup/navigation";
 import FileListController from "./$file-list-controller";
-import { FileDetailDialog } from "./file-detail-dialog";
 
 const mount = (previewKind: "image" | "audio" | "video" = "image") => {
   const container = document.createElement("div");
   document.body.appendChild(container);
   render(
-    <>
+    <FileListController
+      files={[
+        {
+          id: "file-1",
+          fileName: "photo.png",
+          contentType:
+            previewKind === "image"
+              ? "image/png"
+              : previewKind === "audio"
+                ? "audio/mpeg"
+                : "video/mp4",
+          sizeBytes: 10,
+          mediaHeight: 100,
+          mediaWidth: 200,
+          categoryName: "仕事",
+          memoExcerpt: "メモの本文",
+          memoHref: "/memos/memo-1/edit?returnTo=%2Fsettings%2Ffiles",
+          memoTitle: "仕事メモ",
+        },
+      ]}
+    >
       <form action="/settings/files" method="get">
         <label htmlFor="file-category-filter">
           カテゴリー
@@ -26,44 +45,16 @@ const mount = (previewKind: "image" | "audio" | "video" = "image") => {
       <ul data-file-grid>
         <li data-file-card="file-1">
           <article>
-            <button
-              data-category-name="仕事"
-              data-content-type={
-                previewKind === "image"
-                  ? "image/png"
-                  : previewKind === "audio"
-                    ? "audio/mpeg"
-                    : "video/mp4"
-              }
-              data-endpoint="/api/attachments/file-1"
-              data-file-id="file-1"
-              data-file-name="photo.png"
-              data-file-open="true"
-              data-file-size="10 B"
-              data-media-height="100"
-              data-media-width="200"
-              data-memo-excerpt="メモの本文"
-              data-memo-href="/memos/memo-1/edit?returnTo=%2Fsettings%2Ffiles"
-              data-memo-title="仕事メモ"
-              data-preview-kind={previewKind}
-              type="button"
-            >
+            <button data-file-id="file-1" data-file-open="true" type="button">
               詳細
             </button>
-            <button
-              data-file-delete="true"
-              data-file-id="file-1"
-              data-file-name="photo.png"
-              type="button"
-            >
+            <button data-file-delete="true" data-file-id="file-1" type="button">
               削除
             </button>
           </article>
         </li>
       </ul>
-      <FileDetailDialog />
-      <FileListController />
-    </>,
+    </FileListController>,
     container,
   );
 };
@@ -80,11 +71,16 @@ describe("ファイル一覧", () => {
       'form[action="/settings/files"]',
     );
     form?.addEventListener("submit", (event) => event.preventDefault());
-    const requestSubmitSpy = vi.spyOn(form as HTMLFormElement, "requestSubmit");
+    const _requestSubmitSpy = vi.spyOn(
+      form as HTMLFormElement,
+      "requestSubmit",
+    );
 
     await page.getByLabelText("カテゴリー").selectOptions("category-1");
 
-    expect(requestSubmitSpy).toHaveBeenCalledOnce();
+    expect(navigation.push).toHaveBeenCalledWith(
+      "/settings/files?category=category-1",
+    );
     await expect
       .element(page.getByRole("button", { name: "絞り込む" }))
       .not.toBeInTheDocument();
@@ -110,6 +106,37 @@ describe("ファイル一覧", () => {
       .first()
       .click();
     expect(document.querySelector("dialog")?.hasAttribute("open")).toBe(false);
+  });
+
+  it("詳細から添付元のメモへ遷移し、一覧への戻り先を保持する", async () => {
+    mount();
+    await page.getByRole("button", { name: "詳細" }).click();
+    await page.getByRole("link", { name: "メモを開く" }).click();
+    expect(navigation.push).toHaveBeenCalledWith(
+      "/memos/memo-1/edit?returnTo=%2Fsettings%2Ffiles",
+    );
+  });
+
+  it("閉じるアニメーション中でも同じファイルの詳細を再度開ける", async () => {
+    mount();
+    await page.getByRole("button", { name: "詳細" }).click();
+    const modalBox = document.querySelector<HTMLElement>(
+      "#file-detail-dialog .modal-box",
+    );
+    if (!modalBox) throw new Error("詳細が表示されていません。");
+    modalBox.style.transitionDuration = "1s";
+    await page
+      .getByRole("button", { name: "ファイル詳細を閉じる" })
+      .first()
+      .click();
+    await page.getByRole("button", { name: "詳細" }).click();
+    await expect.element(page.getByRole("dialog")).toBeVisible();
+    await expect
+      .element(page.getByRole("link", { name: "メモを開く" }))
+      .toHaveAttribute(
+        "href",
+        "/memos/memo-1/edit?returnTo=%2Fsettings%2Ffiles",
+      );
   });
 
   it.each([
@@ -152,9 +179,7 @@ describe("ファイル一覧", () => {
 
     const status = page.getByText("ファイルを削除しました。");
     await expect.element(status).toBeVisible();
-    await expect
-      .element(page.getByRole("button", { name: "詳細" }))
-      .not.toBeInTheDocument();
+    await expect.poll(() => navigation.reload.mock.calls.length).toBe(1);
     await expect.element(status).not.toBeInTheDocument();
     expect(window.fetch).toHaveBeenCalledWith(
       "/api/attachments/file-1",
@@ -189,30 +214,41 @@ describe("ファイル一覧", () => {
       .element(page.getByText("ファイルを削除しました。"))
       .toBeVisible();
     expect(document.querySelector("dialog")?.hasAttribute("open")).toBe(false);
-    await expect
-      .element(page.getByRole("button", { name: "詳細" }))
-      .not.toBeInTheDocument();
+    await expect.poll(() => navigation.reload.mock.calls.length).toBe(1);
   });
 
-  it("削除APIが失敗した場合はカードを残してエラーを表示する", async () => {
-    mount();
-    vi.spyOn(window, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ message: "削除に失敗しました。" }), {
-        status: 502,
-      }),
-    );
+  it.each(["一覧", "詳細"])(
+    "%sからの削除APIが失敗した場合はカードを残してエラーを表示する",
+    async (source) => {
+      mount();
+      vi.spyOn(window, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ message: "削除に失敗しました。" }), {
+          status: 502,
+        }),
+      );
 
-    await page.getByRole("button", { name: "削除" }).click();
-    await page
-      .getByRole("dialog", { name: "削除の確認" })
-      .getByRole("button", { name: "削除", exact: true })
-      .click();
+      if (source === "詳細") {
+        await page.getByRole("button", { name: "詳細" }).click();
+        await page
+          .getByRole("button", { name: "ファイル「photo.png」を削除" })
+          .click();
+      } else {
+        await page.getByRole("button", { name: "削除", exact: true }).click();
+      }
+      await page
+        .getByRole("dialog", { name: "削除の確認" })
+        .getByRole("button", { name: "削除", exact: true })
+        .click();
 
-    await expect.element(page.getByText("削除に失敗しました。")).toBeVisible();
-    await expect
-      .element(page.getByRole("button", { name: "詳細" }))
-      .toBeInTheDocument();
-  });
+      await expect
+        .element(page.getByText("削除に失敗しました。"))
+        .toBeVisible();
+      await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+      await expect
+        .element(page.getByRole("button", { name: "詳細" }))
+        .toBeInTheDocument();
+    },
+  );
 
   it("詳細からの削除確認をキャンセルすると詳細へ戻る", async () => {
     const fetchMock = vi.spyOn(window, "fetch");

@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import type { AccountDeletionStatus } from "@/features/account-deletion/server/account-deletion";
 

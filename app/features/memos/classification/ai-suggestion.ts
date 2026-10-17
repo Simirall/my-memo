@@ -2,7 +2,7 @@ import z from "zod";
 import {
   MAX_TAGS_PER_MEMO,
   normalizeTagNames,
-} from "@/features/tags/data/tags";
+} from "@/features/tags/model/tags";
 
 const CATEGORY_LIMIT = 254;
 const TAG_LIMIT = 100;

@@ -1,5 +1,7 @@
+"use client";
+
 import infoIcon from "@phosphor-icons/core/assets/regular/info.svg?raw";
-import { useEffect, useState } from "hono/jsx";
+import { useEffect, useState } from "react";
 import { PhosphorIcon } from "../components/phosphor-icon";
 
 type InstallMode = "banner" | "settings";

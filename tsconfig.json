@@ -13,11 +13,10 @@
       "vite/client",
       "vitest/importMeta",
       "@types/node",
-      "@cloudflare/vitest-pool-workers/types",
+      "@cloudflare/vitest-plugin/types",
       "./worker-configuration.d.ts"
     ],
-    "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
+    "jsx": "react-jsx"
   },
   "include": ["**/*.ts", "**/*.tsx"]
 }

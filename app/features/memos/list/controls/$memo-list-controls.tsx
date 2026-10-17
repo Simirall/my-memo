@@ -1,5 +1,9 @@
+"use client";
+import { AppLink } from "@/components/app-link";
+import { useAppRouter } from "@/components/navigation";
+
 import type { MemoListQuery } from "@/features/memos/list/query/memo-list-query";
-import type { Tag } from "@/features/tags/data/tags";
+import type { Tag } from "@/features/tags/model/tags";
 import { MEMO_LIST_CONTROLS_OPEN_COOKIE } from "./memo-list-controls-state";
 
 export default function MemoListControls({
@@ -13,13 +17,16 @@ export default function MemoListControls({
   query: MemoListQuery;
   tags: ReadonlyArray<Tag>;
 }) {
-  const persistOpenState = (event: Event) => {
+  const router = useAppRouter();
+  const persistOpenState = (
+    event: React.SyntheticEvent<HTMLDetailsElement>,
+  ) => {
     const details = event.currentTarget as HTMLDetailsElement;
     // biome-ignore lint/suspicious/noDocumentCookie: 次のGETより前に同期的にSSR用の状態を保存する。
     document.cookie = `${MEMO_LIST_CONTROLS_OPEN_COOKIE}=${details.open ? "1" : "0"}; Path=/; SameSite=Lax`;
   };
 
-  const submit = (event: Event) => {
+  const submit = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const select = event.currentTarget as HTMLSelectElement;
     const form = select.form;
     if (!form) return;
@@ -35,7 +42,7 @@ export default function MemoListControls({
       }
     });
     const search = searchParams.toString();
-    window.location.assign(search ? `${action}?${search}` : action);
+    void router.push(search ? `${action}?${search}` : action);
   };
 
   return (
@@ -58,13 +65,10 @@ export default function MemoListControls({
                   id="memo-sort"
                   name="sort"
                   onChange={submit}
+                  value={query.sort ?? ""}
                 >
-                  <option selected={query.sort === "desc"} value="desc">
-                    新しい順
-                  </option>
-                  <option selected={query.sort === "asc"} value="asc">
-                    古い順
-                  </option>
+                  <option value="desc">新しい順</option>
+                  <option value="asc">古い順</option>
                 </select>
               </label>
               <label className="fieldset min-w-40 flex-1" htmlFor="memo-type">
@@ -74,19 +78,12 @@ export default function MemoListControls({
                   id="memo-type"
                   name="type"
                   onChange={submit}
+                  value={query.type ?? ""}
                 >
-                  <option selected={!query.type} value="">
-                    指定なし
-                  </option>
-                  <option selected={query.type === "normal"} value="normal">
-                    通常メモ
-                  </option>
-                  <option selected={query.type === "link"} value="link">
-                    リンク付きメモ
-                  </option>
-                  <option selected={query.type === "ai"} value="ai">
-                    AI要約メモ
-                  </option>
+                  <option value="">指定なし</option>
+                  <option value="normal">通常メモ</option>
+                  <option value="link">リンク付きメモ</option>
+                  <option value="ai">AI要約メモ</option>
                 </select>
               </label>
               <label
@@ -99,19 +96,11 @@ export default function MemoListControls({
                   id="memo-attachment"
                   name="attachment"
                   onChange={submit}
+                  value={query.attachment ?? ""}
                 >
-                  <option selected={!query.attachment} value="">
-                    指定なし
-                  </option>
-                  <option selected={query.attachment === "with"} value="with">
-                    あり
-                  </option>
-                  <option
-                    selected={query.attachment === "without"}
-                    value="without"
-                  >
-                    なし
-                  </option>
+                  <option value="">指定なし</option>
+                  <option value="with">あり</option>
+                  <option value="without">なし</option>
                 </select>
               </label>
               <label className="fieldset min-w-40 flex-1" htmlFor="memo-tag">
@@ -121,25 +110,23 @@ export default function MemoListControls({
                   id="memo-tag"
                   name="tag"
                   onChange={submit}
+                  value={query.tag ?? ""}
                 >
-                  <option selected={!query.tag} value="">
-                    指定なし
-                  </option>
+                  <option value="">指定なし</option>
                   {tags.map((tag) => (
-                    <option
-                      key={tag.id}
-                      selected={query.tag === tag.id}
-                      value={tag.id}
-                    >
+                    <option key={tag.id} value={tag.id}>
                       #{tag.name}
                     </option>
                   ))}
                 </select>
               </label>
               <div>
-                <a className="btn btn-soft btn-warning mb-1" href={action}>
+                <AppLink
+                  className="btn btn-soft btn-warning mb-1"
+                  href={action}
+                >
                   すべて解除
-                </a>
+                </AppLink>
               </div>
             </div>
           </fieldset>

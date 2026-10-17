@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { authClient } from "@/auth/auth-client";
+import { AppLink } from "@/components/app-link";
 import {
   hasStoredCurrentLegalConsent,
   LEGAL_CONSENT_STORAGE_KEY,
@@ -49,40 +52,40 @@ const LegalConsentDialog = () => {
   return (
     <dialog
       aria-labelledby="legal-consent-dialog-title"
-      class="modal modal-middle"
+      className="modal modal-middle"
       closedby="none"
-      onCancel={(event: Event) => event.preventDefault()}
+      onCancel={(event) => event.preventDefault()}
       ref={dialogRef}
     >
-      <div class="modal-box">
-        <h2 class="font-bold text-lg" id="legal-consent-dialog-title">
-          <a
-            class="link"
+      <div className="modal-box">
+        <h2 className="font-bold text-lg" id="legal-consent-dialog-title">
+          <AppLink
+            className="link"
             href="/terms"
             rel="noopener noreferrer"
             target="_blank"
           >
             利用規約
-          </a>
+          </AppLink>
           ・
-          <a
-            class="link"
+          <AppLink
+            className="link"
             href="/privacy"
             rel="noopener noreferrer"
             target="_blank"
           >
             プライバシーポリシー
-          </a>
+          </AppLink>
           が改訂されました
         </h2>
         {storageError && (
-          <p class="mt-3 text-error text-sm" role="alert">
+          <p className="mt-3 text-error text-sm" role="alert">
             同意状態を保存できませんでした。ブラウザの設定を確認してください。
           </p>
         )}
-        <div class="modal-action">
+        <div className="modal-action">
           <button
-            class="btn"
+            className="btn"
             disabled={isLoggingOut}
             onClick={logout}
             type="button"
@@ -90,7 +93,7 @@ const LegalConsentDialog = () => {
             ログアウト
           </button>
           <button
-            class="btn btn-soft btn-primary"
+            className="btn btn-soft btn-primary"
             onClick={accept}
             type="button"
           >

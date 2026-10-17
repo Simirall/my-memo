@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { MAX_ANONYMOUS_SHARE_BYTES, parseBoundedBody } from "@/routes/share";
+import {
+  MAX_ANONYMOUS_SHARE_BYTES,
+  parseBoundedBody,
+} from "@/routes/share/receive";
 
 describe("共有受信のmultipart本文解析", () => {
   it("WorkersのRequestを再構築してもファイルを解析できる", async () => {

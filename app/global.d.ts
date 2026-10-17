@@ -18,5 +18,6 @@ declare module "hono" {
   interface ContextVariableMap {
     user: User | null;
     session: Session | null;
+    nonce: string;
   }
 }

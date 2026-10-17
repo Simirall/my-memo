@@ -1,8 +1,7 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import AttachmentManager from "@/features/memos/list/attachments/$attachment-manager";
+import { render } from "@/tests/browser/render";
 
 const attachment = {
   id: "attachment-1",
@@ -27,6 +26,37 @@ afterEach(() => {
 });
 
 describe("添付ファイル削除", () => {
+  it("readOnly表示はRSC更新後のpropsを表示する", async () => {
+    const nextAttachment = {
+      ...attachment,
+      id: "attachment-2",
+      fileName: "更新後.txt",
+    };
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    render(
+      <AttachmentManager
+        initialAttachments={[attachment]}
+        memoId="memo-1"
+        readOnly
+      />,
+      container,
+    );
+
+    await expect.element(page.getByText("資料.txt")).toBeInTheDocument();
+    render(
+      <AttachmentManager
+        initialAttachments={[nextAttachment]}
+        memoId="memo-1"
+        readOnly
+      />,
+      container,
+    );
+
+    await expect.element(page.getByText("更新後.txt")).toBeInTheDocument();
+    await expect.element(page.getByText("資料.txt")).not.toBeInTheDocument();
+  });
+
   it("確認前は削除せず、確定後に削除APIを呼び出す", async () => {
     const fetchMock = vi
       .spyOn(window, "fetch")

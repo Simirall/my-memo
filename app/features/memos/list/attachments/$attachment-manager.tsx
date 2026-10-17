@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AppLink } from "@/components/app-link";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   getAttachmentUploadBody,
@@ -50,13 +53,14 @@ export default function AttachmentManager({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewOpenerRef = useRef<HTMLButtonElement | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const visibleAttachments = readOnly ? initialAttachments : attachments;
   const imageAttachments = useMemo(
     () =>
-      attachments.filter(
+      visibleAttachments.filter(
         (attachment) =>
           getAttachmentPreviewKind(attachment.contentType) === "image",
       ),
-    [attachments],
+    [visibleAttachments],
   );
 
   useEffect(() => {
@@ -75,7 +79,7 @@ export default function AttachmentManager({
     return nextQuota;
   };
 
-  const selectFiles = async (event: Event) => {
+  const selectFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget as HTMLInputElement;
     const selected = Array.from(input.files ?? []);
     setFiles([]);
@@ -217,12 +221,12 @@ export default function AttachmentManager({
 
   return (
     <section className="mt-4 space-y-3" data-attachment-manager={memoId}>
-      {(!readOnly || attachments.length > 0) && (
+      {(!readOnly || visibleAttachments.length > 0) && (
         <h3 className="font-semibold">添付ファイル</h3>
       )}
-      {attachments.length > 0 && (
+      {visibleAttachments.length > 0 && (
         <ul className="space-y-3">
-          {attachments.map((attachment) => {
+          {visibleAttachments.map((attachment) => {
             const previewKind = getAttachmentPreviewKind(
               attachment.contentType,
             );
@@ -230,13 +234,13 @@ export default function AttachmentManager({
             return (
               <li className="rounded-box bg-base-100 p-3" key={attachment.id}>
                 <div className="flex items-start justify-between gap-2">
-                  <a
+                  <AppLink
                     className="link min-w-0 break-all"
                     download
                     href={endpoint}
                   >
                     {attachment.fileName}
-                  </a>
+                  </AppLink>
                   {!readOnly && (
                     <button
                       className="btn btn-ghost btn-xs"

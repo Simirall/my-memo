@@ -12,6 +12,7 @@ import { fetchLinkPreview } from "./fetch-link-preview";
 const SUCCESS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const LEASE_MS = 30 * 1000;
 const UNUSED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const REFERENCE_UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const CLEANUP_BATCH_SIZE = 10;
 const UPSERT_BATCH_SIZE = 10;
 
@@ -46,15 +47,23 @@ export const getLinkPreviewsForList = async (
   }
 
   const timestamp = toTimestamp(now);
-  for (
-    let index = 0;
-    index < normalizedUrls.length;
-    index += UPSERT_BATCH_SIZE
-  ) {
+  const rows = await db
+    .select()
+    .from(schema.linkPreviewCacheTable)
+    .where(inArray(schema.linkPreviewCacheTable.normalizedUrl, normalizedUrls));
+  const rowsByUrl = new Map(rows.map((row) => [row.normalizedUrl, row]));
+  const referenceCutoff = toTimestamp(
+    new Date(now.getTime() - REFERENCE_UPDATE_INTERVAL_MS),
+  );
+  const urlsToTouch = normalizedUrls.filter((url) => {
+    const row = rowsByUrl.get(url);
+    return !row || row.lastReferencedAt <= referenceCutoff;
+  });
+  for (let index = 0; index < urlsToTouch.length; index += UPSERT_BATCH_SIZE) {
     await db
       .insert(schema.linkPreviewCacheTable)
       .values(
-        normalizedUrls
+        urlsToTouch
           .slice(index, index + UPSERT_BATCH_SIZE)
           .map((normalizedUrl) => ({
             normalizedUrl,
@@ -65,15 +74,15 @@ export const getLinkPreviewsForList = async (
       .onConflictDoUpdate({
         target: schema.linkPreviewCacheTable.normalizedUrl,
         set: { lastReferencedAt: timestamp, updatedAt: timestamp },
+        setWhere: lte(
+          schema.linkPreviewCacheTable.lastReferencedAt,
+          referenceCutoff,
+        ),
       });
   }
 
-  const rows = await db
-    .select()
-    .from(schema.linkPreviewCacheTable)
-    .where(inArray(schema.linkPreviewCacheTable.normalizedUrl, normalizedUrls));
   const previews = new Map<string, LinkPreview>();
-  const urlsToRefresh: string[] = [];
+  const urlsToRefresh = normalizedUrls.filter((url) => !rowsByUrl.has(url));
   for (const row of rows) {
     if (row.title && row.cardType) {
       previews.set(row.normalizedUrl, {

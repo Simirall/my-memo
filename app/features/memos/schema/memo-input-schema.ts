@@ -1,6 +1,6 @@
 import z from "zod";
 import { isSafeMemoUrl } from "@/features/memos/model/memo-url";
-import { parseTagNamesField } from "@/features/tags/data/tags";
+import { parseTagNamesField } from "@/features/tags/model/tags";
 
 export const tagNamesField = z.preprocess((value) => {
   const result = parseTagNamesField(value);

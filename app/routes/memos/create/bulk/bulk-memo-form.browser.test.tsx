@@ -1,9 +1,8 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { goToMemoList } from "@/features/memos/input/memo-create-navigation";
-import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
+import type { Tag, TagSuggestions } from "@/features/tags/model/tags";
+import { render } from "@/tests/browser/render";
 import BulkMemoForm from "./-components/$bulk-memo-form";
 
 vi.mock("@/features/memos/input/memo-create-navigation", () => ({

@@ -18,13 +18,21 @@ const CONTENT_SECURITY_POLICY = [
 ].join("; ");
 
 export const htmlSecurityHeaders: MiddlewareHandler = async (c, next) => {
+  const nonce = crypto.randomUUID().replaceAll("-", "");
+  c.set("nonce", nonce);
   await next();
+  if (c.get("user")) c.header("Cache-Control", "private, no-store");
   const contentType = c.res.headers.get("Content-Type") ?? "";
   if (!contentType.toLowerCase().startsWith("text/html")) return;
 
   c.header("X-Content-Type-Options", "nosniff");
-  c.header("Content-Security-Policy", CONTENT_SECURITY_POLICY);
-  if (c.get("user")) c.header("Cache-Control", "private, no-store");
+  c.header(
+    "Content-Security-Policy",
+    CONTENT_SECURITY_POLICY.replace(
+      "script-src 'self'",
+      `script-src 'self' 'nonce-${nonce}'`,
+    ),
+  );
 };
 
 export const sameOriginMutationProtection: MiddlewareHandler = async (

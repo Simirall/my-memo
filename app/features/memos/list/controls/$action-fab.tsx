@@ -1,8 +1,11 @@
+"use client";
+
 import globeIcon from "@phosphor-icons/core/assets/regular/globe.svg?raw";
 import notePencilIcon from "@phosphor-icons/core/assets/regular/note-pencil.svg?raw";
 import plusIcon from "@phosphor-icons/core/assets/regular/plus.svg?raw";
 import tableIcon from "@phosphor-icons/core/assets/regular/table.svg?raw";
 import xIcon from "@phosphor-icons/core/assets/regular/x.svg?raw";
+import { AppLink } from "@/components/app-link";
 import { PhosphorIcon } from "@/components/phosphor-icon";
 
 const fabLabelClassName =
@@ -25,9 +28,9 @@ const FabAction = ({
 }) => (
   <div>
     <span className={fabLabelClassName}>{label}</span>
-    <a aria-label={label} className={fabActionClassName} href={href}>
+    <AppLink aria-label={label} className={fabActionClassName} href={href}>
       <FabIcon svg={svg} />
-    </a>
+    </AppLink>
   </div>
 );
 

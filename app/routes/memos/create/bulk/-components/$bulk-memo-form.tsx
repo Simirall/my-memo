@@ -1,9 +1,13 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import z from "zod";
+import { AppLink } from "@/components/app-link";
+import { useAppRouter } from "@/components/navigation";
 import { goToMemoList } from "@/features/memos/input/memo-create-navigation";
 import { memoBulkSchema } from "@/features/memos/schema/memo-input-schema";
-import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
 import { TagInput } from "@/features/tags/input/tag-input";
+import type { Tag, TagSuggestions } from "@/features/tags/model/tags";
 
 type Row = {
   id: string;
@@ -46,6 +50,7 @@ export default function BulkMemoForm({
   tags: ReadonlyArray<Tag>;
   tagSuggestions: TagSuggestions;
 }) {
+  const router = useAppRouter();
   const [rows, setRows] = useState<Row[]>([newRow(initialMemoId)]);
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
@@ -160,7 +165,7 @@ export default function BulkMemoForm({
       failures.length === 0 &&
       currentRows.current.some((row) => row.state === "saved")
     )
-      goToMemoList();
+      await goToMemoList(router);
   };
 
   return (
@@ -362,9 +367,9 @@ export default function BulkMemoForm({
         </table>
       </div>
       <div className="flex flex-wrap justify-end gap-2">
-        <a className="btn mr-auto" href="/">
+        <AppLink className="btn mr-auto" href="/">
           メモ一覧へ
-        </a>
+        </AppLink>
         <button
           className="btn"
           disabled={!ready || busy || rows.length >= 30}

@@ -1,7 +1,6 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
+import { render } from "@/tests/browser/render";
 import UserAccessForm from "./$user-access-form";
 
 const user = { id: "target", role: "user", planId: "free" };

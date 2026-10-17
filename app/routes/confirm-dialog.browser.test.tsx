@@ -1,10 +1,8 @@
-/** @jsxImportSource hono/jsx/dom */
-
-import { useState } from "hono/jsx";
-import { render } from "hono/jsx/dom";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { render } from "@/tests/browser/render";
 
 const mount = (onConfirm = vi.fn()) => {
   const container = document.createElement("div");

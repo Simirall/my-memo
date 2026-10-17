@@ -1,7 +1,9 @@
+"use client";
+
 import pencilSimpleIcon from "@phosphor-icons/core/assets/regular/pencil-simple.svg?raw";
-import { useEffect, useRef, useState } from "hono/jsx";
+import { useEffect, useRef, useState } from "react";
 import { PhosphorIcon } from "@/components/phosphor-icon";
-import { MAX_TAG_NAME_LENGTH, type Tag } from "@/features/tags/data/tags";
+import { MAX_TAG_NAME_LENGTH, type Tag } from "@/features/tags/model/tags";
 import { DeleteButton } from "./$delete-button";
 
 export const TagList = ({
@@ -74,7 +76,7 @@ export const TagList = ({
         aria-label="タグ名を変更"
         className="modal modal-middle"
         closedby="any"
-        onCancel={(event: Event) => {
+        onCancel={(event) => {
           event.preventDefault();
           closeEditor();
         }}

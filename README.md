@@ -3,6 +3,7 @@
 ![My Memo](./docs/toppage.png)
 
 My Memoは、GitHubアカウントで利用する個人向けメモアプリです。
+WakuとReactでSSRとRSC遷移を行い、Hono APIとCloudflare WorkersのD1、R2、AIを利用します。
 通常のメモ、WebページのAI要約、ファイル添付、カテゴリー、タグ、端末の共有メニューからの取り込みに対応します。
 
 ## ローカル開発
@@ -37,3 +38,4 @@ pnpm run knip
 - [製品判断](docs/product-decisions.md)
 - [運用とデータ変更](docs/operations.md)
 - [Route配置規約](app/routes/-README.md)
+- [Waku移行の検証と切替手順](docs/waku-migration.md)

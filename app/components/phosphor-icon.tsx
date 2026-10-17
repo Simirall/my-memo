@@ -8,6 +8,7 @@ export const PhosphorIcon = ({
   <span
     aria-hidden="true"
     className={className}
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: SVG comes from bundled Phosphor assets.
     dangerouslySetInnerHTML={{ __html: svg }}
   />
 );

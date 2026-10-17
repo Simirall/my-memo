@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import type z from "zod";
+import { AppLink } from "@/components/app-link";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { useAppRouter, useNavigationBlocker } from "@/components/navigation";
 import {
   getAttachmentUploadBody,
   type PendingAttachmentUpload,
@@ -23,8 +27,8 @@ import type { AttachmentQuota } from "@/features/attachments/server/attachments"
 import type { categorySchema } from "@/features/categories/schema/category-schema";
 import { ClassificationSuggestionButton } from "@/features/memos/input/classification-suggestion-button";
 import { useFormSubmitShortcut } from "@/features/memos/input/use-form-submit-shortcut";
-import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
 import { TagInput } from "@/features/tags/input/tag-input";
+import type { Tag, TagSuggestions } from "@/features/tags/model/tags";
 import type { memoAttachmentsTable } from "@/schema";
 
 type MemoAttachment = typeof memoAttachmentsTable.$inferSelect;
@@ -72,6 +76,7 @@ export default function EditMemoForm({
   tagSuggestions?: TagSuggestions;
   returnTo: string;
 }) {
+  const router = useAppRouter();
   const [title, setTitle] = useState(memo.title);
   const [savedContent, setSavedContent] = useState(memo.content ?? "");
   const [content, setContent] = useState(savedContent);
@@ -91,12 +96,18 @@ export default function EditMemoForm({
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isRegenerateConfirmOpen, setIsRegenerateConfirmOpen] = useState(false);
   const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
-  const isLeavingAfterSave = useRef(false);
+  const isLeaving = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const clipboardPasteBusyRef = useRef(false);
   const clipboardPasteHandlerRef = useRef<
-    ((event: ClipboardEvent) => Promise<void>) | undefined
+    | ((
+        event: Pick<
+          ClipboardEvent,
+          "clipboardData" | "target" | "preventDefault" | "defaultPrevented"
+        >,
+      ) => Promise<void>)
+    | undefined
   >(undefined);
 
   useFormSubmitShortcut(formRef, isSaving || isCheckingFiles || isRegenerating);
@@ -117,15 +128,7 @@ export default function EditMemoForm({
     deletedAttachmentIds.length > 0 ||
     files.length > 0;
 
-  useEffect(() => {
-    const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (!isDirty || isLeavingAfterSave.current) return;
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [isDirty]);
+  useNavigationBlocker(() => isDirty && !isLeaving.current);
 
   const readQuota = async () => {
     const response = await fetch("/api/attachments/quota", {
@@ -137,7 +140,12 @@ export default function EditMemoForm({
     return nextQuota;
   };
 
-  const handleClipboardPaste = async (event: ClipboardEvent) => {
+  const handleClipboardPaste = async (
+    event: Pick<
+      ClipboardEvent,
+      "clipboardData" | "target" | "preventDefault" | "defaultPrevented"
+    >,
+  ) => {
     if (
       isSaving ||
       clipboardPasteBusyRef.current ||
@@ -223,7 +231,7 @@ export default function EditMemoForm({
     return () => window.removeEventListener("paste", onPaste);
   }, []);
 
-  const selectFiles = async (event: Event) => {
+  const selectFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget as HTMLInputElement;
     const selected = Array.from(input.files ?? []);
     input.value = "";
@@ -341,7 +349,7 @@ export default function EditMemoForm({
     return staged;
   };
 
-  const submit = async (event: Event) => {
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSaving || isCheckingFiles) return;
     setError(undefined);
@@ -372,8 +380,8 @@ export default function EditMemoForm({
         setError(payload.message ?? "メモを更新できませんでした。");
         return;
       }
-      isLeavingAfterSave.current = true;
-      window.location.assign(returnTo);
+      isLeaving.current = true;
+      void router.push(returnTo);
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -385,7 +393,7 @@ export default function EditMemoForm({
     }
   };
 
-  const cancel = (event: MouseEvent) => {
+  const cancel = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (!isDirty) return;
     event.preventDefault();
     setIsDiscardConfirmOpen(true);
@@ -501,9 +509,7 @@ export default function EditMemoForm({
           placeholder="メモの内容を入力"
           ref={contentRef}
           value={content}
-        >
-          {content}
-        </textarea>
+        />
         <p className="label" id="edit-memo-content-help">
           Markdownで入力できます。
         </p>
@@ -588,13 +594,13 @@ export default function EditMemoForm({
                     key={attachment.id}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <a
+                      <AppLink
                         className="link min-w-0 break-all"
                         download
                         href={`/api/attachments/${attachment.id}`}
                       >
                         {attachment.fileName}
-                      </a>
+                      </AppLink>
                       <button
                         className="btn btn-ghost btn-xs"
                         disabled={isSaving}
@@ -667,9 +673,9 @@ export default function EditMemoForm({
         )}
       </section>
       <div className="flex gap-2">
-        <a className="btn flex-1" href={returnTo} onClick={cancel}>
+        <AppLink className="btn flex-1" href={returnTo} onClick={cancel}>
           キャンセル
-        </a>
+        </AppLink>
         <button
           className="btn btn-primary flex-1"
           disabled={isSaving || isCheckingFiles || isRegenerating}
@@ -693,7 +699,8 @@ export default function EditMemoForm({
         onCancel={() => setIsDiscardConfirmOpen(false)}
         onConfirm={() => {
           setIsDiscardConfirmOpen(false);
-          window.location.assign(returnTo);
+          isLeaving.current = true;
+          void router.push(returnTo);
         }}
         open={isDiscardConfirmOpen}
         title="変更破棄の確認"

@@ -1,5 +1,8 @@
-import { useEffect, useState } from "hono/jsx";
+"use client";
+
+import { useEffect, useState } from "react";
 import { authClient } from "@/auth/auth-client";
+import { AppLink } from "@/components/app-link";
 import {
   hasStoredCurrentLegalConsent,
   LEGAL_CONSENT_STORAGE_KEY,
@@ -20,7 +23,7 @@ export const LoginButton = ({ callbackURL }: { callbackURL?: string }) => {
     });
   };
 
-  const handleConsentChange = (event: Event) => {
+  const handleConsentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const checked = (event.currentTarget as HTMLInputElement).checked;
 
     try {
@@ -41,41 +44,49 @@ export const LoginButton = ({ callbackURL }: { callbackURL?: string }) => {
   };
 
   return (
-    <div class="mx-auto grid w-full gap-4 text-left">
+    <div className="mx-auto grid w-full gap-4 text-left">
       <button
-        class="btn mx-auto"
+        className="btn mx-auto"
         disabled={!hasConsent}
         onClick={handleLogin}
         type="button"
       >
         GitHubでログイン
       </button>
-      <label class="flex cursor-pointer items-start gap-3" for="legal-consent">
+      <label
+        className="flex cursor-pointer items-start gap-3"
+        htmlFor="legal-consent"
+      >
         <input
           checked={hasConsent}
-          class="checkbox mt-0.5"
+          className="checkbox mt-0.5"
           id="legal-consent"
           onChange={handleConsentChange}
           type="checkbox"
         />
         <span>利用規約に同意し、プライバシーポリシーを確認しました</span>
       </label>
-      <p class="text-center text-base-content/70 text-sm">
-        <a class="link" href="/terms" rel="noopener noreferrer" target="_blank">
+      <p className="text-center text-base-content/70 text-sm">
+        <AppLink
+          className="link"
+          href="/terms"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
           利用規約
-        </a>
+        </AppLink>
         <span aria-hidden="true"> ／ </span>
-        <a
-          class="link"
+        <AppLink
+          className="link"
           href="/privacy"
           rel="noopener noreferrer"
           target="_blank"
         >
           プライバシーポリシー
-        </a>
+        </AppLink>
       </p>
       {storageError && (
-        <p class="text-error text-sm" role="alert">
+        <p className="text-error text-sm" role="alert">
           同意状態を保存できませんでした。ブラウザの設定を確認してください。
         </p>
       )}

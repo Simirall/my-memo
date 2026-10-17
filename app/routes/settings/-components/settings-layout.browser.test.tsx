@@ -1,18 +1,21 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
+import { render } from "@/tests/browser/render";
+import { navigation } from "../../../../tests/setup/navigation";
 import { SettingsLayout } from "./settings-layout";
 
-function mount(activeSection: "categories" | "tags" | "files") {
+function mount(
+  path: "/settings/categories" | "/settings/tags" | "/settings/files",
+) {
+  navigation.path = path;
   const container = document.createElement("div");
   document.body.appendChild(container);
   render(
-    <SettingsLayout activeSection={activeSection}>
+    <SettingsLayout>
       <h1>
-        {activeSection === "categories"
+        {path === "/settings/categories"
           ? "カテゴリー"
-          : activeSection === "tags"
+          : path === "/settings/tags"
             ? "タグ"
             : "ファイル"}
       </h1>
@@ -22,12 +25,13 @@ function mount(activeSection: "categories" | "tags" | "files") {
 }
 
 afterEach(() => {
+  navigation.path = "/";
   document.body.replaceChildren();
 });
 
 describe("設定レイアウト", () => {
   it("設定メニューをURLリンクとして表示し現在地を示す", async () => {
-    mount("categories");
+    mount("/settings/categories");
 
     await expect
       .element(page.getByRole("link", { name: "アカウント" }))
@@ -47,7 +51,7 @@ describe("設定レイアウト", () => {
   });
 
   it("タグ設定ではタグの現在地を示す", async () => {
-    mount("tags");
+    mount("/settings/tags");
 
     await expect
       .element(page.getByRole("link", { name: "タグ" }))
@@ -55,10 +59,21 @@ describe("設定レイアウト", () => {
   });
 
   it("ファイル設定ではファイルの現在地を示す", async () => {
-    mount("files");
+    mount("/settings/files");
 
     await expect
       .element(page.getByRole("link", { name: "ファイル" }))
       .toHaveAttribute("aria-current", "page");
+  });
+
+  it("設定内の遷移でモバイルメニューを閉じる", async () => {
+    mount("/settings/categories");
+    const drawer = document.querySelector<HTMLInputElement>("#settings-drawer");
+    if (!drawer) throw new Error("settings drawer is missing");
+    drawer.checked = true;
+
+    await page.getByRole("link", { name: "タグ" }).click();
+
+    expect(drawer.checked).toBe(false);
   });
 });

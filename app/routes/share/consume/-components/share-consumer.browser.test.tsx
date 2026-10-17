@@ -1,11 +1,10 @@
-/** @jsxImportSource hono/jsx/dom */
-import { render } from "hono/jsx/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { SHARE_STORAGE_KEY } from "@/features/sharing/model/share";
 import ShareConsumer, {
   type ShareQuota,
 } from "@/routes/share/consume/-components/$share-consumer";
+import { render } from "@/tests/browser/render";
 
 function mount(quota: ShareQuota | null) {
   const container = document.createElement("div");
