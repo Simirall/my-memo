@@ -38,7 +38,9 @@ const withFixupXUserAgent =
     if (url.hostname !== "fixupx.com") return fetcher(input, init);
 
     const headers = new Headers(init?.headers);
-    headers.set("User-Agent", FIXUPX_USER_AGENT);
+    if (!headers.has("User-Agent")) {
+      headers.set("User-Agent", FIXUPX_USER_AGENT);
+    }
     return fetcher(input, { ...init, headers });
   };
 
@@ -66,6 +68,7 @@ export const fetchLinkPreview = async (
     const result = await fetchPublicHtml(
       getOgpSourceUrl(inputUrl),
       withFixupXUserAgent(fetcher),
+      true,
     );
     const html = decodeLinkPreviewHtml(result.bytes, result.headers);
     const metadata = parseLinkPreviewMetadata(html, result.finalUrl);
