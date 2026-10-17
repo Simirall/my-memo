@@ -3,7 +3,7 @@ import { AppLink } from "@/components/app-link";
 import { useAppRouter } from "@/components/navigation";
 
 import type { MemoListQuery } from "@/features/memos/list/query/memo-list-query";
-import type { Tag } from "@/features/tags/data/tags";
+import type { Tag } from "@/features/tags/model/tags";
 import { MEMO_LIST_CONTROLS_OPEN_COOKIE } from "./memo-list-controls-state";
 
 export default function MemoListControls({

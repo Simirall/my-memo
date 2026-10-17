@@ -3,7 +3,7 @@
 import pencilSimpleIcon from "@phosphor-icons/core/assets/regular/pencil-simple.svg?raw";
 import { useEffect, useRef, useState } from "react";
 import { PhosphorIcon } from "@/components/phosphor-icon";
-import { MAX_TAG_NAME_LENGTH, type Tag } from "@/features/tags/data/tags";
+import { MAX_TAG_NAME_LENGTH, type Tag } from "@/features/tags/model/tags";
 import { DeleteButton } from "./$delete-button";
 
 export const TagList = ({

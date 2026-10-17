@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import type { Tag } from "@/features/tags/data/tags";
+import type { Tag } from "@/features/tags/model/tags";
 import {
   MAX_TAG_NAME_LENGTH,
   MAX_TAGS_PER_MEMO,
   normalizeTagNames,
-} from "@/features/tags/data/tags";
+} from "@/features/tags/model/tags";
 
 export const TagInput = ({
   availableTags,

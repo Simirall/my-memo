@@ -6,8 +6,8 @@ import { AppLink } from "@/components/app-link";
 import { useAppRouter } from "@/components/navigation";
 import { goToMemoList } from "@/features/memos/input/memo-create-navigation";
 import { memoBulkSchema } from "@/features/memos/schema/memo-input-schema";
-import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
 import { TagInput } from "@/features/tags/input/tag-input";
+import type { Tag, TagSuggestions } from "@/features/tags/model/tags";
 
 type Row = {
   id: string;

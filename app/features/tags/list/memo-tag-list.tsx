@@ -3,7 +3,7 @@ import {
   type MemoListQuery,
   replaceMemoListTag,
 } from "@/features/memos/list/query/memo-list-query";
-import type { Tag } from "@/features/tags/data/tags";
+import type { Tag } from "@/features/tags/model/tags";
 
 export const MemoTagList = ({
   listPath = "/",

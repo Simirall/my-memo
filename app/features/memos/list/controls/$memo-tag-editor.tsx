@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { afterDialogCloseAnimation } from "@/components/dialog-close";
 import { useAppRouter } from "@/components/navigation";
 import type { MemoListQuery } from "@/features/memos/list/query/memo-list-query";
-import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
 import { TagInput } from "@/features/tags/input/tag-input";
+import type { Tag, TagSuggestions } from "@/features/tags/model/tags";
 
 type MemoTagTarget = {
   categoryId?: string;
@@ -40,18 +40,24 @@ export default function MemoTagEditor({
   const router = useAppRouter();
   const [target, setTarget] = useState<MemoTagTarget | null>(null);
   const [draft, setDraft] = useState<Tag[]>([]);
-  const [knownTags, setKnownTags] = useState<Tag[]>(sortTags(availableTags));
-  const [knownSuggestions, setKnownSuggestions] = useState<Tag[]>(
-    sortTags(suggestedTags),
-  );
-  const [knownTagSuggestions, setKnownTagSuggestions] =
-    useState(tagSuggestions);
+  const [localTags, setLocalTags] = useState<Tag[]>([]);
+  const [localSuggestedTags, setLocalSuggestedTags] = useState<Tag[]>([]);
+  const [localTagSuggestions, setLocalTagSuggestions] =
+    useState<TagSuggestions>();
   const [error, setError] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const savedTags = useRef(new Map<string, Tag[]>());
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const knownTags = mergeTags(availableTags, localTags);
+  const effectiveTagSuggestions = localTagSuggestions ?? tagSuggestions;
+  const baseSuggestions = target?.categoryId
+    ? effectiveTagSuggestions
+      ? (effectiveTagSuggestions.byCategory[target.categoryId] ?? [])
+      : suggestedTags
+    : (effectiveTagSuggestions?.all ?? suggestedTags);
+  const knownSuggestions = mergeTags(baseSuggestions, localSuggestedTags);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -89,22 +95,12 @@ export default function MemoTagEditor({
       setDraft(tags);
       setError(undefined);
       setResetKey((value) => value + 1);
-      setKnownTags((currentTags) => mergeTags(currentTags, tags));
-      if (knownTagSuggestions) {
-        setKnownSuggestions(
-          sortTags(
-            nextTarget.categoryId
-              ? (knownTagSuggestions.byCategory[nextTarget.categoryId] ?? [])
-              : knownTagSuggestions.all,
-          ),
-        );
-      }
       triggerRef.current = button;
     };
 
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
-  }, [knownTagSuggestions]);
+  }, []);
 
   const save = async () => {
     if (!target) return;
@@ -129,26 +125,24 @@ export default function MemoTagEditor({
         return;
       }
 
-      setKnownTags((currentTags) =>
+      setLocalTags((currentTags) =>
         mergeTags(currentTags, draft, payload.tags ?? []),
       );
       if (payload.tagSuggestions) {
-        setKnownTagSuggestions(payload.tagSuggestions);
-        setKnownSuggestions(
-          sortTags(
-            target.categoryId
-              ? (payload.tagSuggestions.byCategory[target.categoryId] ?? [])
-              : payload.tagSuggestions.all,
-          ),
-        );
+        setLocalTagSuggestions(payload.tagSuggestions);
+        setLocalSuggestedTags([]);
       } else {
-        setKnownSuggestions((currentTags) =>
+        setLocalSuggestedTags((currentTags) =>
           mergeTags(currentTags, payload.tags ?? []),
         );
       }
       savedTags.current.set(target.id, payload.tags);
       try {
         await router.reload();
+        setLocalTags([]);
+        setLocalSuggestedTags([]);
+        setLocalTagSuggestions(undefined);
+        savedTags.current.clear();
         dialogRef.current?.close();
       } catch {
         setError(

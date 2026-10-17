@@ -3,11 +3,8 @@ import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { getAppDb } from "@/features/access-control/authorization";
 import { tagUpdateSchema } from "@/features/memos/schema/memo-schema";
-import {
-  getTagSuggestions,
-  normalizeTagNames,
-  replaceMemoTags,
-} from "@/features/tags/data/tags";
+import { getTagSuggestions, replaceMemoTags } from "@/features/tags/data/tags";
+import { normalizeTagNames } from "@/features/tags/model/tags";
 import { memosTable, memoTagsTable, tagsTable } from "@/schema";
 
 const tagsRoute = new Hono<{ Bindings: CloudflareBindings }>();

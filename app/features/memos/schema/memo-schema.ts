@@ -7,7 +7,7 @@ import {
   optionalMemoUrlField,
   tagNamesField,
 } from "@/features/memos/schema/memo-input-schema";
-import { normalizeTagNames } from "@/features/tags/data/tags";
+import { normalizeTagNames } from "@/features/tags/model/tags";
 import { memosTable } from "@/schema";
 
 const memoReadSchema = createSelectSchema(memosTable);

@@ -27,8 +27,8 @@ import type { AttachmentQuota } from "@/features/attachments/server/attachments"
 import type { categorySchema } from "@/features/categories/schema/category-schema";
 import { ClassificationSuggestionButton } from "@/features/memos/input/classification-suggestion-button";
 import { useFormSubmitShortcut } from "@/features/memos/input/use-form-submit-shortcut";
-import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
 import { TagInput } from "@/features/tags/input/tag-input";
+import type { Tag, TagSuggestions } from "@/features/tags/model/tags";
 import type { memoAttachmentsTable } from "@/schema";
 
 type MemoAttachment = typeof memoAttachmentsTable.$inferSelect;

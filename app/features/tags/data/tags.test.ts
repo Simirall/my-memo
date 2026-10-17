@@ -3,7 +3,7 @@ import {
   MAX_TAGS_PER_MEMO,
   normalizeTagNames,
   parseTagNamesField,
-} from "./tags";
+} from "@/features/tags/model/tags";
 
 describe("タグ入力の検証", () => {
   it("前後空白を除去し、完全一致の重複をまとめる", () => {

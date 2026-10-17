@@ -211,6 +211,63 @@ describe("タグUI", () => {
       .toBeVisible();
   });
 
+  it("RSC更新後はタグ辞書と推奨タグを最新propsへ切り替える", async () => {
+    const oldAvailable = { id: "tag-old-available", name: "古い辞書" };
+    const oldSuggestion = { id: "tag-old-suggestion", name: "古い推奨" };
+    const newAvailable = { id: "tag-new-available", name: "新しい辞書" };
+    const newSuggestion = { id: "tag-new-suggestion", name: "新しい推奨" };
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const renderEditor = (
+      availableTags: (typeof oldAvailable)[],
+      suggestedTags: (typeof oldSuggestion)[],
+    ) => {
+      render(
+        <div>
+          <button
+            data-memo-id="memo-props-refresh"
+            data-memo-tag-edit
+            data-memo-tags="[]"
+            data-memo-title="props更新"
+            type="button"
+          >
+            編集
+          </button>
+          <MemoTagEditor
+            availableTags={availableTags}
+            suggestedTags={suggestedTags}
+            tagSuggestions={{ all: suggestedTags, byCategory: {} }}
+          />
+        </div>,
+        container,
+      );
+    };
+
+    renderEditor([oldAvailable], [oldSuggestion]);
+    await page.getByRole("button", { name: "編集" }).click();
+    await page.getByRole("dialog").getByRole("combobox").click();
+    await expect
+      .element(page.getByRole("option", { name: "#古い推奨" }))
+      .toBeVisible();
+    await page.getByRole("option", { name: "#古い推奨" }).click();
+    await expect.element(page.getByText("#古い推奨")).toBeInTheDocument();
+
+    renderEditor([newAvailable], [newSuggestion]);
+    await page.getByRole("dialog").getByRole("combobox").click();
+    await expect.element(page.getByText("#古い推奨")).toBeInTheDocument();
+    await expect
+      .element(page.getByRole("option", { name: "#新しい推奨" }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("option", { name: "#古い推奨" }))
+      .not.toBeInTheDocument();
+    await page.getByRole("combobox").fill("新しい辞書");
+    await expect
+      .element(page.getByRole("option", { name: "#新しい辞書" }))
+      .toBeVisible();
+    await page.getByRole("button", { name: "キャンセル" }).click();
+  });
+
   it("カードのタグバッジは現在の一覧条件を維持し、編集モーダルは一括保存する", async () => {
     const fetchMock = vi.spyOn(window, "fetch").mockResolvedValue(
       Response.json({
@@ -218,32 +275,50 @@ describe("タグUI", () => {
         tagSuggestions: { all: [], byCategory: {} },
       }),
     );
-    mount(
-      <div>
-        <Memo
-          listPath="/categories/category-1"
-          memo={{
-            id: "memo-1",
-            userId: "user-1",
-            title: "テストメモ",
-            content: "本文",
-            url: null,
-            categoryId: null,
-            isAiSummary: 0,
-            createdAt: "2026-08-03 00:00:00",
-            updatedAt: "2026-08-03 00:00:00",
-            tags: [tag],
-          }}
-          query={{ sort: "asc", page: 3, type: "link" }}
-        />
-        <MemoTagEditor
-          availableTags={[tag, { id: "tag-2", name: "あとで" }]}
-          listPath="/categories/category-1"
-          query={{ sort: "asc", page: 3, type: "link" }}
-          suggestedTags={[tag, { id: "tag-2", name: "あとで" }]}
-        />
-      </div>,
-    );
+    const tag2 = { id: "tag-2", name: "あとで" };
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const renderPage = (
+      memoTags: (typeof tag)[],
+      suggestedTags: (typeof tag)[],
+      tagSuggestions: {
+        all: (typeof tag)[];
+        byCategory: Record<string, (typeof tag)[]>;
+      },
+    ) =>
+      render(
+        <div>
+          <Memo
+            listPath="/categories/category-1"
+            memo={{
+              id: "memo-1",
+              userId: "user-1",
+              title: "テストメモ",
+              content: "本文",
+              url: null,
+              categoryId: null,
+              isAiSummary: 0,
+              createdAt: "2026-08-03 00:00:00",
+              updatedAt: "2026-08-03 00:00:00",
+              tags: memoTags,
+            }}
+            query={{ sort: "asc", page: 3, type: "link" }}
+          />
+          <MemoTagEditor
+            availableTags={[tag, tag2]}
+            listPath="/categories/category-1"
+            query={{ sort: "asc", page: 3, type: "link" }}
+            suggestedTags={suggestedTags}
+            tagSuggestions={tagSuggestions}
+          />
+        </div>,
+        container,
+      );
+
+    renderPage([tag], [tag, tag2], {
+      all: [tag, tag2],
+      byCategory: {},
+    });
 
     await expect
       .element(page.getByRole("link", { name: "#仕事" }))
@@ -261,7 +336,7 @@ describe("タグUI", () => {
     // 候補を閉じる際のレイアウト変化が保存クリックに重ならないようにする。
     await page.getByRole("heading", { name: "タグを編集" }).click();
     await expect.element(page.getByRole("listbox")).not.toBeInTheDocument();
-    await page.getByRole("button", { name: "保存" }).click();
+    await page.getByRole("button", { name: "保存", exact: true }).click();
 
     await expect.poll(() => fetchMock.mock.calls.length).toBe(1);
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
@@ -271,6 +346,7 @@ describe("タグUI", () => {
     await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
     await expect.poll(() => navigation.reload.mock.calls.length).toBe(1);
 
+    renderPage([], [], { all: [], byCategory: {} });
     await page.getByRole("button", { name: "タグを編集: テストメモ" }).click();
     await page.getByRole("dialog").getByRole("combobox").click();
     await expect.element(page.getByRole("listbox")).not.toBeInTheDocument();
@@ -346,7 +422,7 @@ describe("タグUI", () => {
       .getByRole("option", { name: "#windowsを新しいタグとして追加" })
       .click();
     await expect.element(page.getByText("#windows")).toBeInTheDocument();
-    await page.getByRole("button", { name: "保存" }).click();
+    await page.getByRole("button", { name: "保存", exact: true }).click();
 
     await expect.poll(() => fetchMock.mock.calls.length).toBe(1);
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
@@ -361,31 +437,37 @@ describe("タグUI", () => {
     const fetchMock = vi
       .spyOn(window, "fetch")
       .mockResolvedValue(Response.json({ tags: [tagA, tagAb] }));
-    mount(
-      <div>
-        <MemoListControls
-          action="/"
-          initialOpen
-          query={{ sort: "desc", page: 1 }}
-          tags={[tagA]}
-        />
-        <Memo
-          memo={{
-            id: "memo-new-tag",
-            userId: "user-1",
-            title: "候補更新テスト",
-            content: "本文",
-            url: null,
-            categoryId: null,
-            isAiSummary: 0,
-            createdAt: "2026-08-03 00:00:00",
-            updatedAt: "2026-08-03 00:00:00",
-            tags: [tagA],
-          }}
-        />
-        <MemoTagEditor availableTags={[tagA]} />
-      </div>,
-    );
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const renderPage = (tags: (typeof tagA)[]) =>
+      render(
+        <div>
+          <MemoListControls
+            action="/"
+            initialOpen
+            query={{ sort: "desc", page: 1 }}
+            tags={[tagA]}
+          />
+          <Memo
+            memo={{
+              id: "memo-new-tag",
+              userId: "user-1",
+              title: "候補更新テスト",
+              content: "本文",
+              url: null,
+              categoryId: null,
+              isAiSummary: 0,
+              createdAt: "2026-08-03 00:00:00",
+              updatedAt: "2026-08-03 00:00:00",
+              tags,
+            }}
+          />
+          <MemoTagEditor availableTags={tags} />
+        </div>,
+        container,
+      );
+
+    renderPage([tagA]);
 
     await page
       .getByRole("button", { name: "タグを編集: 候補更新テスト" })
@@ -394,10 +476,11 @@ describe("タグUI", () => {
     await page
       .getByRole("option", { name: "#abを新しいタグとして追加" })
       .click();
-    await page.getByRole("button", { name: "保存" }).click();
+    await page.getByRole("button", { name: "保存", exact: true }).click();
     await expect.poll(() => fetchMock.mock.calls.length).toBe(1);
     await expect.poll(() => navigation.reload.mock.calls.length).toBe(1);
 
+    renderPage([tagA, tagAb]);
     await page
       .getByRole("button", { name: "タグを編集: 候補更新テスト" })
       .click();
@@ -419,6 +502,108 @@ describe("タグUI", () => {
           .getByRole("option", { name: "#ab", exact: true }),
       )
       .toBeInTheDocument();
+  });
+
+  it("タグ保存後にRSCが更新されれば保存結果の一時キャッシュを破棄する", async () => {
+    const savedTag = { id: "tag-saved", name: "保存時のタグ" };
+    const serverTag = { id: "tag-server", name: "再取得したタグ" };
+    const fetchMock = vi
+      .spyOn(window, "fetch")
+      .mockResolvedValue(Response.json({ tags: [savedTag] }));
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const renderMemo = (tags: (typeof serverTag)[]) =>
+      render(
+        <div>
+          <Memo
+            memo={{
+              id: "memo-cache-clear",
+              userId: "user-1",
+              title: "キャッシュ破棄テスト",
+              content: "本文",
+              url: null,
+              categoryId: null,
+              isAiSummary: 0,
+              createdAt: "2026-08-03 00:00:00",
+              updatedAt: "2026-08-03 00:00:00",
+              tags,
+            }}
+          />
+          <MemoTagEditor availableTags={[...tags]} />
+        </div>,
+        container,
+      );
+
+    renderMemo([]);
+    await page
+      .getByRole("button", { name: "タグを編集: キャッシュ破棄テスト" })
+      .click();
+    await page.getByRole("combobox").fill("保存時のタグ");
+    await page
+      .getByRole("option", { name: "#保存時のタグを新しいタグとして追加" })
+      .click();
+    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await expect.poll(() => fetchMock.mock.calls.length).toBe(1);
+    await expect.poll(() => navigation.reload.mock.calls.length).toBe(1);
+    await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+
+    renderMemo([serverTag]);
+    await page
+      .getByRole("button", { name: "タグを編集: キャッシュ破棄テスト" })
+      .click();
+    await expect
+      .element(page.getByRole("dialog").getByText("#再取得したタグ"))
+      .toBeInTheDocument();
+    await expect
+      .element(page.getByRole("dialog").getByText("#保存時のタグ"))
+      .not.toBeInTheDocument();
+  });
+
+  it("タグ保存後のRSC更新に失敗しても保存済みタグを再表示できる", async () => {
+    const savedTag = { id: "tag-saved-failure", name: "保存済みタグ" };
+    const fetchMock = vi
+      .spyOn(window, "fetch")
+      .mockResolvedValue(Response.json({ tags: [savedTag] }));
+    navigation.reload.mockRejectedValueOnce(new Error("reload failed"));
+    mount(
+      <div>
+        <Memo
+          memo={{
+            id: "memo-cache-failure",
+            userId: "user-1",
+            title: "キャッシュ保持テスト",
+            content: "本文",
+            url: null,
+            categoryId: null,
+            isAiSummary: 0,
+            createdAt: "2026-08-03 00:00:00",
+            updatedAt: "2026-08-03 00:00:00",
+            tags: [],
+          }}
+        />
+        <MemoTagEditor availableTags={[]} />
+      </div>,
+    );
+
+    await page
+      .getByRole("button", { name: "タグを編集: キャッシュ保持テスト" })
+      .click();
+    await page.getByRole("combobox").fill("保存済みタグ");
+    await page
+      .getByRole("option", { name: "#保存済みタグを新しいタグとして追加" })
+      .click();
+    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await expect.poll(() => fetchMock.mock.calls.length).toBe(1);
+    await expect
+      .element(page.getByRole("alert"))
+      .toHaveTextContent("保存済みですが表示を更新できませんでした");
+    await page.getByRole("button", { name: "キャンセル" }).click();
+    await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+
+    await page
+      .getByRole("button", { name: "タグを編集: キャッシュ保持テスト" })
+      .click();
+    await expect.element(page.getByText("#保存済みタグ")).toBeInTheDocument();
   });
 
   it("選択中のタグを外すとカードを除き0件表示へ切り替える", async () => {
@@ -461,7 +646,7 @@ describe("タグUI", () => {
       .getByRole("button", { name: "タグを編集: 絞り込み対象" })
       .click();
     await page.getByRole("button", { name: "仕事を外す" }).click();
-    await page.getByRole("button", { name: "保存" }).click();
+    await page.getByRole("button", { name: "保存", exact: true }).click();
 
     await expect.poll(() => navigation.reload.mock.calls.length).toBe(1);
   });

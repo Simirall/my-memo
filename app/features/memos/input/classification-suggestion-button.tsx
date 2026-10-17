@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Tag } from "@/features/tags/data/tags";
+import type { Tag } from "@/features/tags/model/tags";
 
 type Payload = {
   categoryId: string | null;

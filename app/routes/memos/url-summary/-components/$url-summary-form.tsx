@@ -12,7 +12,7 @@ import {
   readPendingShare,
 } from "@/features/sharing/client/share-client";
 import { getShareDestination } from "@/features/sharing/model/share";
-import type { Tag, TagSuggestions } from "@/features/tags/data/tags";
+import type { Tag, TagSuggestions } from "@/features/tags/model/tags";
 
 export default function UrlSummaryForm({
   categories,

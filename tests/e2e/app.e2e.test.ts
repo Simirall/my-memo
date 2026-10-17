@@ -584,12 +584,15 @@ test("カテゴリー付きメモと添付を作成・再表示・編集・削�
   await expect(
     page.getByRole("dialog").getByRole("heading", { name: "pixel.png" }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "ファイル詳細を閉じる" })
-    .first()
-    .click();
-  await page.getByRole("link", { name: "My Memo", exact: true }).click();
   const editPath = `/memos/${memo?.id}/edit`;
+  await page.getByRole("link", { name: "メモを開く" }).click();
+  await expect(page).toHaveURL(
+    `${appUrl}${editPath}?returnTo=${encodeURIComponent("/settings/files")}`,
+  );
+  await expect(
+    page.getByRole("textbox", { name: "タイトル", exact: true }),
+  ).toHaveValue("通しテストのメモ");
+  await page.getByRole("link", { name: "My Memo", exact: true }).click();
   expect(
     (
       await server.fetch(editPath, {
