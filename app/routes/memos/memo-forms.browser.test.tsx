@@ -66,7 +66,26 @@ afterEach(() => {
 });
 
 describe("メモ作成フォーム", () => {
-  it("初期の手動設定で入力欄を閉じたまま初期カテゴリーを保存しAIを呼ばない", async () => {
+  it("タイトルと本文が両方空白ならAI提案を無効にし、どちらかの入力で有効にする", async () => {
+    mount(<CreateMemoForm categories={categories} />);
+    const suggestion = page.getByRole("button", {
+      name: "AIでカテゴリー・タグを提案",
+    });
+    const title = page.getByLabelText("タイトル");
+    const content = page.getByLabelText("本文");
+    await expect.element(suggestion).toBeDisabled();
+    await title.fill("タイトルだけ");
+    await expect.element(suggestion).toBeEnabled();
+    await title.fill(" ");
+    await content.fill("\n ");
+    await expect.element(suggestion).toBeDisabled();
+    await content.fill("本文だけ");
+    await expect.element(suggestion).toBeEnabled();
+    await content.fill("");
+    await expect.element(suggestion).toBeDisabled();
+  });
+
+  it("初期表示から分類を入力でき、初期カテゴリーを保存してAIを呼ばない", async () => {
     const fetchSpy = vi
       .spyOn(window, "fetch")
       .mockResolvedValue(Response.json({ message: "確認用" }, { status: 500 }));
@@ -75,13 +94,10 @@ describe("メモ作成フォーム", () => {
     );
     await expect
       .element(page.getByRole("combobox", { name: "カテゴリー" }))
-      .not.toBeInTheDocument();
+      .toHaveValue("category-1");
     await expect
       .element(page.getByRole("combobox", { name: "タグ" }))
-      .not.toBeInTheDocument();
-    await expect
-      .element(page.getByRole("region", { name: "現在の分類" }))
-      .toHaveTextContent("カテゴリー1");
+      .toBeVisible();
     await page.getByLabelText("タイトル").fill("任意の分類");
     await page.getByRole("button", { name: "メモを作成" }).click();
     expect(fetchSpy).toHaveBeenCalledOnce();
@@ -97,7 +113,6 @@ describe("メモ作成フォーム", () => {
       .mockResolvedValue(Response.json({ message: "確認用" }, { status: 500 }));
     mount(<CreateMemoForm categories={categories} />);
     await page.getByLabelText("タイトル").fill("手動分類");
-    await page.getByRole("button", { name: "手動で設定する" }).click();
     await page.getByLabelText("カテゴリー").selectOptions("category-2");
     const tags = page.getByRole("combobox", { name: "タグ" });
     await tags.fill("手動タグ");
@@ -109,7 +124,6 @@ describe("メモ作成フォーム", () => {
     await expect
       .element(page.getByRole("button", { name: "手動タグを外す" }))
       .toBeVisible();
-    await page.getByRole("button", { name: "手動で設定する" }).click();
     await expect.element(tags).toHaveValue("入力途中");
     await page.getByRole("button", { name: "メモを作成" }).click();
     const body = fetchSpy.mock.calls[0][1]?.body as FormData;
@@ -135,12 +149,13 @@ describe("メモ作成フォーム", () => {
         );
       const container = mount(<CreateMemoForm categories={categories} />);
       await page.getByLabelText("タイトル").fill("待機中");
-      await page.getByRole("button", { name: "AIで自動設定する" }).click();
+      await page
+        .getByRole("button", { name: "AIでカテゴリー・タグを提案" })
+        .click();
       await expect
         .element(page.getByRole("button", { name: "判断しています…" }))
         .toBeDisabled();
       if (operation === "manual") {
-        await page.getByRole("button", { name: "手動で設定する" }).click();
         await page.getByLabelText("カテゴリー").selectOptions("category-1");
       } else if (operation === "save") {
         await page.getByRole("button", { name: "メモを作成" }).click();
@@ -167,13 +182,10 @@ describe("メモ作成フォーム", () => {
           await expect
             .element(page.getByLabelText("カテゴリー"))
             .toHaveValue("category-1");
-          await expect
-            .element(page.getByRole("button", { name: "手動で設定する" }))
-            .toHaveAttribute("aria-expanded", "true");
         } else {
           await expect
-            .element(page.getByRole("region", { name: "現在の分類" }))
-            .toHaveTextContent("カテゴリー：なし");
+            .element(page.getByLabelText("カテゴリー"))
+            .toHaveValue("");
         }
         await expect
           .element(page.getByText("#古いタグ"))
@@ -251,28 +263,25 @@ describe("メモ作成フォーム", () => {
     mount(<CreateMemoForm categories={categories} tags={[suggestedTag]} />);
 
     await page.getByLabelText("タイトル").fill("分類するメモ");
-    await page.getByRole("button", { name: "手動で設定する" }).click();
     const tagInput = page.getByRole("combobox", { name: "タグ" });
     await tagInput.fill("入力途中");
     await page.getByLabelText("タイトル").click();
-    await page.getByRole("button", { name: "AIで自動設定する" }).click();
+    await page
+      .getByRole("button", { name: "AIでカテゴリー・タグを提案" })
+      .click();
 
-    await expect
-      .element(page.getByRole("region", { name: "現在の分類" }))
-      .toHaveTextContent("カテゴリー2");
-    await expect
-      .element(page.getByRole("region", { name: "現在の分類" }))
-      .toHaveTextContent("#AI候補");
-    await page.getByRole("button", { name: "編集", exact: true }).click();
     await expect
       .element(page.getByLabelText("カテゴリー"))
       .toHaveValue("category-2");
+    await expect
+      .element(page.getByRole("button", { name: "AI候補を外す" }))
+      .toBeVisible();
     await expect.element(tagInput).toHaveValue("入力途中");
     await expect.element(page.getByText(/残り29回/)).toBeVisible();
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
-  it("手動からAIへ戻しても既存カテゴリー・タグを保持し再実行できる", async () => {
+  it("AI提案で既存カテゴリー・タグを保持し再実行できる", async () => {
     const fetchSpy = vi.spyOn(window, "fetch").mockImplementation(async () =>
       Response.json({
         categoryId: null,
@@ -285,31 +294,37 @@ describe("メモ作成フォーム", () => {
       <CreateMemoForm categories={categories} initialCategoryId="category-1" />,
     );
     await page.getByLabelText("タイトル").fill("補完のみ");
-    await page.getByRole("button", { name: "手動で設定する" }).click();
     await page.getByRole("combobox", { name: "タグ" }).fill("手動タグ");
     await page
       .getByRole("option", { name: "#手動タグを新しいタグとして追加" })
       .click();
     await page.getByLabelText("タイトル").click();
-    await page.getByRole("button", { name: "AIで自動設定する" }).click();
+    await page
+      .getByRole("button", { name: "AIでカテゴリー・タグを提案" })
+      .click();
     await expect.element(page.getByText(/残り29回/)).toBeVisible();
-    const classification = page.getByRole("region", { name: "現在の分類" });
-    await expect.element(classification).toHaveTextContent("カテゴリー1");
     await expect
-      .element(classification)
-      .toHaveTextContent("#手動タグ、#AI追加");
+      .element(page.getByLabelText("カテゴリー"))
+      .toHaveValue("category-1");
+    await expect
+      .element(page.getByRole("button", { name: "手動タグを外す" }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: "AI追加を外す" }))
+      .toBeVisible();
     expect(JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))).toMatchObject({
       currentCategoryId: "category-1",
       currentTags: ["手動タグ"],
     });
-    await page.getByRole("button", { name: "AIで自動設定する" }).click();
+    await page
+      .getByRole("button", { name: "AIでカテゴリー・タグを提案" })
+      .click();
     await expect.element(page.getByText(/残り28回/)).toBeVisible();
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(JSON.parse(String(fetchSpy.mock.calls[1][1]?.body))).toMatchObject({
       currentCategoryId: "category-1",
       currentTags: ["手動タグ", "AI追加"],
     });
-    await page.getByRole("button", { name: "編集", exact: true }).click();
     await page.getByRole("button", { name: "AI追加を外す" }).click();
     await expect
       .element(page.getByText("#AI追加", { exact: true }))
@@ -327,7 +342,9 @@ describe("メモ作成フォーム", () => {
 
     const title = page.getByLabelText("タイトル");
     await title.fill("変更前");
-    await page.getByRole("button", { name: "AIで自動設定する" }).click();
+    await page
+      .getByRole("button", { name: "AIでカテゴリー・タグを提案" })
+      .click();
     await title.fill("変更後");
     await title.fill("変更前");
     resolveResponse?.(
@@ -342,9 +359,7 @@ describe("メモ作成フォーム", () => {
     await expect
       .element(page.getByText(/古いサジェスト結果は反映しませんでした/))
       .toBeVisible();
-    await expect
-      .element(page.getByRole("region", { name: "現在の分類" }))
-      .toHaveTextContent("カテゴリー：なし");
+    await expect.element(page.getByLabelText("カテゴリー")).toHaveValue("");
   });
 
   it("カテゴリーに応じた未入力タグ候補へ切り替え、選択済みタグを保持する", async () => {
@@ -362,7 +377,6 @@ describe("メモ作成フォーム", () => {
       />,
     );
 
-    await page.getByRole("button", { name: "手動で設定する" }).click();
     await page.getByRole("combobox", { name: "タグ" }).click();
     await page.getByRole("option", { name: "#仕事" }).click();
     await page.getByLabelText("カテゴリー").selectOptions("category-2");
@@ -398,10 +412,6 @@ describe("メモ作成フォーム", () => {
       <CreateMemoForm categories={categories} initialCategoryId="category-1" />,
     );
 
-    await expect
-      .element(page.getByRole("region", { name: "現在の分類" }))
-      .toHaveTextContent("カテゴリー1");
-    await page.getByRole("button", { name: "手動で設定する" }).click();
     const category = page.getByLabelText("カテゴリー");
     await expect.element(category).toHaveValue("category-1");
     await category.selectOptions("category-2");

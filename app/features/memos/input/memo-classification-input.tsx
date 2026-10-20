@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useClassificationSuggestion } from "@/features/memos/input/classification-suggestion-button";
+import { ClassificationSuggestionButton } from "@/features/memos/input/classification-suggestion-button";
 import { TagInput } from "@/features/tags/input/tag-input";
 import type { Tag, TagSuggestions } from "@/features/tags/model/tags";
 
@@ -33,87 +33,47 @@ export function MemoClassificationInput({
   const [mode, setMode] = useState<"manual" | "ai">(summary ? "ai" : "manual");
   const [isOpen, setIsOpen] = useState(false);
   const prefix = summary ? "summary" : "memo";
-  const { suggest, isLoading, message, error, rootRef, invalidate } =
-    useClassificationSuggestion({
-      title,
-      content,
-      categoryId,
-      tags,
-      disabled,
-      onCategory,
-      onTags,
-    });
   const openManual = () => {
-    invalidate();
     setMode("manual");
     setIsOpen(true);
   };
   const selectAi = () => {
     setMode("ai");
     setIsOpen(false);
-    if (!summary) void suggest();
   };
 
   return (
-    <section aria-label="分類設定" className="space-y-3" ref={rootRef}>
+    <section aria-label="分類設定" className="space-y-3">
       <h2 className="font-semibold">カテゴリー・タグ</h2>
       <input name="classificationMode" type="hidden" value={mode} />
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          className={`btn h-auto min-h-12 whitespace-normal px-2 ${mode === "ai" ? "btn-soft btn-primary" : ""}`}
-          disabled={
-            disabled ||
-            isLoading ||
-            (!summary && !title.trim() && !content.trim())
-          }
-          onClick={selectAi}
-          type="button"
-        >
-          {isLoading && <span className="loading loading-spinner loading-sm" />}
-          {isLoading ? "判断しています…" : "AIで自動設定する"}
-        </button>
-        <button
-          aria-controls={`${prefix}-manual-classification`}
-          aria-expanded={isOpen ? "true" : "false"}
-          className={`btn h-auto min-h-12 whitespace-normal px-2 ${mode === "manual" ? "btn-soft btn-primary" : ""}`}
-          disabled={disabled}
-          onClick={openManual}
-          type="button"
-        >
-          手動で設定する
-        </button>
-      </div>
+      {summary && (
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            className={`btn h-auto min-h-12 whitespace-normal px-2 ${mode === "ai" ? "btn-soft btn-primary" : ""}`}
+            disabled={disabled}
+            onClick={selectAi}
+            type="button"
+          >
+            AIで自動設定する
+          </button>
+          <button
+            aria-controls={`${prefix}-manual-classification`}
+            aria-expanded={isOpen ? "true" : "false"}
+            className={`btn h-auto min-h-12 whitespace-normal px-2 ${mode === "manual" ? "btn-soft btn-primary" : ""}`}
+            disabled={disabled}
+            onClick={openManual}
+            type="button"
+          >
+            手動で設定する
+          </button>
+        </div>
+      )}
       {summary && mode === "ai" && (
         <p className="text-base-content/70 text-sm" role="status">
           要約後にAIで分類します。
         </p>
       )}
-      {!summary && !isOpen && (
-        <section aria-label="現在の分類" className="space-y-2">
-          <p>
-            カテゴリー：
-            {categories.find((category) => category.id === categoryId)?.name ??
-              "なし"}
-          </p>
-          <p>
-            タグ：
-            {tags.length
-              ? tags.map((tag) => `#${tag.name}`).join("、")
-              : "なし"}
-          </p>
-          {(categoryId || tags.length > 0 || mode === "ai") && (
-            <button
-              className="btn btn-sm"
-              disabled={disabled}
-              onClick={openManual}
-              type="button"
-            >
-              編集
-            </button>
-          )}
-        </section>
-      )}
-      <div hidden={!isOpen} id={`${prefix}-manual-classification`}>
+      <div hidden={summary && !isOpen} id={`${prefix}-manual-classification`}>
         {categories.length > 0 ? (
           <fieldset className="fieldset">
             <label className="fieldset-legend" htmlFor={`${prefix}-category`}>
@@ -160,19 +120,16 @@ export function MemoClassificationInput({
           />
         </fieldset>
       </div>
-      {message && (
-        <p
-          aria-live="polite"
-          className="text-base-content/70 text-sm"
-          role="status"
-        >
-          {message}
-        </p>
-      )}
-      {error && (
-        <p aria-live="polite" className="text-error text-sm" role="alert">
-          {error}
-        </p>
+      {!summary && (
+        <ClassificationSuggestionButton
+          categoryId={categoryId}
+          content={content}
+          disabled={disabled}
+          onCategory={onCategory}
+          onTags={onTags}
+          tags={tags}
+          title={title}
+        />
       )}
     </section>
   );
