@@ -21,7 +21,7 @@ type SuggestionProps = {
   onTags: (tags: Tag[]) => void;
 };
 
-export function useClassificationSuggestion({
+function useClassificationSuggestion({
   title,
   content,
   categoryId,
