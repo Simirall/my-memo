@@ -66,7 +66,9 @@ export default async function mergeDependabot({
       return;
     verifiedSha = run.head_sha;
   }
-  const expectedSha = pr.head.sha;
+  let expectedSha = pr.head.sha;
+  let awaitingUpdate = false;
+  let rerunCompleted = manual;
   const deadline = now() + 50 * 60 * 1000;
   const pause = async () => {
     if (now() >= deadline)
@@ -76,17 +78,37 @@ export default async function mergeDependabot({
 
   while (now() < deadline) {
     pr = await getPr();
-    if (!eligible(pr) || pr.state !== "open" || pr.head.sha !== expectedSha) {
+    if (!eligible(pr) || pr.state !== "open") {
       core.info(`PR #${number} changed or closed; stopping.`);
+      return;
+    }
+    if (awaitingUpdate) {
+      if (pr.head.sha === expectedSha) {
+        await pause();
+        continue;
+      }
+      expectedSha = pr.head.sha;
+      verifiedSha = null;
+      awaitingUpdate = false;
+      rerunCompleted = false;
+    } else if (pr.head.sha !== expectedSha) {
+      core.info(`PR #${number} changed; stopping.`);
       return;
     }
     if (pr.mergeable == null) {
       await pause();
       continue;
     }
-    if (!pr.mergeable || pr.mergeable_state === "behind") {
+    // PRのbase SHAやmergeable_stateの反映待ちでも、最新mainへの追従を確認する。
+    const { data: comparison } = await github.rest.repos.compareCommits({
+      ...repo,
+      base: "main",
+      head: expectedSha,
+    });
+    const baseSha = comparison.base_commit.sha;
+    if (!pr.mergeable || comparison.behind_by > 0) {
       const command = pr.mergeable ? "rebase" : "recreate";
-      const marker = `<!-- dependabot-${command}:${expectedSha}:${pr.base.sha} -->`;
+      const marker = `<!-- dependabot-${command}:${expectedSha}:${baseSha} -->`;
       const comments = await github.paginate(github.rest.issues.listComments, {
         ...repo,
         issue_number: number,
@@ -100,9 +122,11 @@ export default async function mergeDependabot({
         });
       }
       core.info(
-        `PR #${number}: requested ${command}; waiting for a new PR Verify.`,
+        `PR #${number}: requested ${command}; holding the merge queue until the updated PR is verified.`,
       );
-      return;
+      awaitingUpdate = true;
+      await pause();
+      continue;
     }
     if (verifiedSha !== expectedSha) {
       // workflow_dispatchのチェックはRulesetを満たさない。元のPR実行を再実行する。
@@ -121,14 +145,19 @@ export default async function mergeDependabot({
             run.pull_requests?.some((pull) => pull.number === number),
         )
         .sort((a, b) => b.run_number - a.run_number)[0];
-      if (!previous)
-        throw new Error("No PR Verify found for the current commit.");
+      if (!previous) {
+        if (rerunCompleted)
+          throw new Error("No PR Verify found for the current commit.");
+        await pause();
+        continue;
+      }
       const runId = previous.id;
       let attempt = previous.run_attempt;
-      if (previous.status === "completed") {
+      if (previous.status === "completed" && rerunCompleted) {
         await github.rest.actions.reRunWorkflow({ ...repo, run_id: runId });
         attempt++;
       }
+      rerunCompleted = false;
       while (true) {
         await pause();
         pr = await getPr();
@@ -164,8 +193,15 @@ export default async function mergeDependabot({
       if (!data.merged) throw new Error(data.message || "PR was not merged.");
     } catch (error) {
       // 並行PRのマージでmainが進んだ場合だけ、更新・再検証へ戻る。
-      if (error.status === 405 && (await getPr()).mergeable_state === "behind")
-        continue;
+      if (error.status === 405) {
+        const { data: latest } = await github.rest.repos.compareCommits({
+          ...repo,
+          base: "main",
+          head: expectedSha,
+        });
+        if (latest.base_commit.sha !== baseSha || latest.behind_by > 0)
+          continue;
+      }
       throw error;
     }
     await dispatch("main");

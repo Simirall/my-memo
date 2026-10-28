@@ -5,6 +5,9 @@ import mergeDependabot from "./merge-dependabot.mjs";
 function scenario() {
   let time = 0;
   const state = {
+    mainSha: "base",
+    behindBy: 0,
+    onSleep() {},
     pr: {
       user: { login: "dependabot[bot]" },
       base: { ref: "main", sha: "base" },
@@ -47,6 +50,14 @@ function scenario() {
       return data.workflow_runs ?? data;
     },
     rest: {
+      repos: {
+        compareCommits: async () => ({
+          data: {
+            base_commit: { sha: state.mainSha },
+            behind_by: state.behindBy,
+          },
+        }),
+      },
       pulls: {
         get: async () => ({ data: structuredClone(state.pr) }),
         updateBranch: async (args) => {
@@ -107,9 +118,19 @@ function scenario() {
       now: () => time,
       sleep: async (ms) => {
         time += ms;
+        await state.onSleep();
       },
     });
   return { state, context, github, execute };
+}
+
+function completeUpdate(s, sha = "updated") {
+  s.state.pr.head.sha = sha;
+  s.state.pr.mergeable = true;
+  s.state.pr.mergeable_state = "clean";
+  s.state.behindBy = 0;
+  s.state.rerun = false;
+  s.state.run = { ...s.state.run, id: s.state.run.id + 1, head_sha: sha };
 }
 
 test("成功した現在のSHAだけをマージしmainを明示検証する", async () => {
@@ -122,20 +143,21 @@ test("成功した現在のSHAだけをマージしmainを明示検証する", a
   );
 });
 
-test("古いPRはDependabotへリベースを依頼し次のPR検証に引き継ぐ", async () => {
+test("古いPRはリベース後のPR検証が成功するまでキューを保持してマージする", async () => {
   const s = scenario();
   s.state.pr.mergeable_state = "behind";
-  await s.execute();
+  s.state.behindBy = 1;
+  s.state.onSleep = () => {
+    if (s.state.comments.length && s.state.pr.head.sha === "old")
+      completeUpdate(s);
+  };
   await s.execute();
   assert.deepEqual(s.state.updated, []);
-  assert.deepEqual(s.state.merged, []);
-  assert.deepEqual(s.state.dispatched, []);
+  assert.deepEqual(s.state.merged, ["updated"]);
+  assert.equal(s.state.rerun, false);
   assert.deepEqual(s.state.comments, [
     "@dependabot rebase\n\n<!-- dependabot-rebase:old:base -->",
   ]);
-  s.state.pr.base.sha = "new-base";
-  await s.execute();
-  assert.equal(s.state.comments.length, 2);
 });
 
 test("対象外PR・古いSHA・不成功の実行では変更しない", async () => {
@@ -210,30 +232,102 @@ test("別SHAのPR再検証は成功しても受け入れない", async () => {
   assert.deepEqual(s.state.merged, []);
 });
 
-test("マージ直前にmainが進んだ場合もDependabotの更新へ引き継ぐ", async () => {
+test("マージ直前のmain更新で405となっても更新後の検証までやり直す", async () => {
   const s = scenario();
   const merge = s.github.rest.pulls.merge;
   s.github.rest.pulls.merge = async (args) => {
     if (args.sha === "old") {
-      s.state.pr.mergeable_state = "behind";
+      // GitHubのPR状態がcleanのままでもmainの前進を検出する。
+      s.state.mainSha = "new-base";
+      s.state.behindBy = 1;
       throw Object.assign(new Error("Required verify"), { status: 405 });
     }
     return merge(args);
   };
+  s.state.onSleep = () => {
+    if (s.state.comments.length && s.state.pr.head.sha === "old")
+      completeUpdate(s);
+  };
   await s.execute();
-  assert.deepEqual(s.state.merged, []);
+  assert.deepEqual(s.state.merged, ["updated"]);
   assert.equal(s.state.comments.length, 1);
+  assert.match(s.state.comments[0], /old:new-base/);
 });
 
 test("競合時は同じSHAにつき一度だけDependabotへ再作成を依頼する", async () => {
   const conflict = scenario();
   conflict.state.pr.mergeable = false;
-  await conflict.execute();
-  await conflict.execute();
+  await assert.rejects(conflict.execute(), /timed out/);
+  await assert.rejects(conflict.execute(), /timed out/);
   assert.deepEqual(conflict.state.comments, [
     "@dependabot recreate\n\n<!-- dependabot-recreate:old:base -->",
   ]);
   assert.deepEqual(conflict.state.merged, []);
+});
+
+test("更新後のPR検証がまだ作られていない場合は古い実行を使わず待つ", async () => {
+  const s = scenario();
+  s.state.behindBy = 1;
+  const listRuns = s.github.rest.actions.listWorkflowRuns;
+  let lists = 0;
+  s.github.rest.actions.listWorkflowRuns = async () => {
+    lists++;
+    return lists === 1 ? { data: { workflow_runs: [] } } : listRuns();
+  };
+  s.state.onSleep = () => {
+    if (s.state.comments.length && s.state.pr.head.sha === "old")
+      completeUpdate(s);
+  };
+  await s.execute();
+  assert.ok(lists >= 2);
+  assert.deepEqual(s.state.merged, ["updated"]);
+});
+
+test("更新後のPR検証に失敗した場合はキューを解放しマージしない", async () => {
+  const s = scenario();
+  s.state.pr.mergeable_state = "behind";
+  s.state.behindBy = 1;
+  s.state.onSleep = () => {
+    if (s.state.pr.head.sha !== "old") return;
+    completeUpdate(s);
+    s.state.run.conclusion = "failure";
+  };
+  await assert.rejects(s.execute(), /Verify 11: failure/);
+  assert.deepEqual(s.state.merged, []);
+  assert.deepEqual(s.state.dispatched, []);
+  assert.equal(s.state.rerun, false);
+});
+
+test("更新後の検証中にmainが再び進んだ場合も最新mainまで追従する", async () => {
+  const s = scenario();
+  s.state.pr.mergeable_state = "behind";
+  s.state.behindBy = 1;
+  s.state.onSleep = () => {
+    if (s.state.pr.head.sha === "old") completeUpdate(s, "first");
+    else if (s.state.comments.length === 2 && s.state.pr.head.sha === "first")
+      completeUpdate(s, "second");
+  };
+  const getRun = s.github.rest.actions.getWorkflowRun;
+  s.github.rest.actions.getWorkflowRun = async (args) => {
+    const result = await getRun(args);
+    if (args.run_id === 11) {
+      s.state.mainSha = "new-base";
+      s.state.behindBy = 1;
+    }
+    return result;
+  };
+  await s.execute();
+  assert.deepEqual(s.state.merged, ["second"]);
+  assert.equal(s.state.comments.length, 2);
+  assert.match(s.state.comments[1], /first:new-base/);
+});
+
+test("PR状態がbehindのままでも最新mainを含むheadは不要な更新を依頼しない", async () => {
+  const s = scenario();
+  s.state.pr.mergeable_state = "behind";
+  await s.execute();
+  assert.deepEqual(s.state.comments, []);
+  assert.deepEqual(s.state.merged, ["old"]);
 });
 
 test("他のRuleset違反・待機超過は停止する", async () => {
