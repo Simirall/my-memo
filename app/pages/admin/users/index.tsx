@@ -44,12 +44,12 @@ export default async function Page() {
     <div className="mx-auto max-w-6xl space-y-6">
       <title>ユーザー管理 | My Memo</title>
       <div>
-        <h1 className="font-bold text-2xl">ユーザー管理</h1>
+        <h1 className="text-2xl font-bold">ユーザー管理</h1>
         <p className="text-base-content/70">
           管理者権限と利用プランを変更できます。
         </p>
       </div>
-      <div className="overflow-x-auto rounded-box bg-base-100 shadow">
+      <div className="rounded-box bg-base-100 overflow-x-auto shadow">
         <table className="table">
           <thead>
             <tr>

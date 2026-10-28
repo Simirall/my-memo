@@ -85,7 +85,7 @@ export default function AccountDeletion({
   if (status) {
     return (
       <section aria-labelledby="deletion-status-heading" className="space-y-4">
-        <h1 className="font-bold text-2xl" id="deletion-status-heading">
+        <h1 className="text-2xl font-bold" id="deletion-status-heading">
           退会処理中
         </h1>
         <div className="alert alert-warning alert-soft" role="status">
@@ -122,10 +122,10 @@ export default function AccountDeletion({
   return (
     <section aria-labelledby="withdrawal-heading" className="space-y-4">
       <div>
-        <h2 className="font-bold text-error text-lg" id="withdrawal-heading">
+        <h2 className="text-error text-lg font-bold" id="withdrawal-heading">
           退会
         </h2>
-        <p className="mt-2 text-base-content/80">
+        <p className="text-base-content/80 mt-2">
           メモ、カテゴリー、タグ、添付ファイル、アカウント情報をすべて削除します。開始後は取り消せません。
         </p>
       </div>

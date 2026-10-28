@@ -58,7 +58,7 @@ const LegalConsentDialog = () => {
       ref={dialogRef}
     >
       <div className="modal-box">
-        <h2 className="font-bold text-lg" id="legal-consent-dialog-title">
+        <h2 className="text-lg font-bold" id="legal-consent-dialog-title">
           <AppLink
             className="link"
             href="/terms"
@@ -79,7 +79,7 @@ const LegalConsentDialog = () => {
           が改訂されました
         </h2>
         {storageError && (
-          <p className="mt-3 text-error text-sm" role="alert">
+          <p className="text-error mt-3 text-sm" role="alert">
             同意状態を保存できませんでした。ブラウザの設定を確認してください。
           </p>
         )}

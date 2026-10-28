@@ -76,7 +76,7 @@ export default async function Page(props: PageProps<"/settings/files">) {
       >
         <div className="space-y-6">
           <div>
-            <h1 className="font-bold text-2xl">ファイル</h1>
+            <h1 className="text-2xl font-bold">ファイル</h1>
             <p className="text-base-content/70">
               メモに添付したファイルを一覧・管理します。
             </p>
@@ -113,7 +113,7 @@ export default async function Page(props: PageProps<"/settings/files">) {
 
           {result.items.length === 0 ? (
             <p
-              className="rounded-box bg-base-200 p-6 text-center text-base-content/70"
+              className="rounded-box bg-base-200 text-base-content/70 p-6 text-center"
               data-file-list-empty
             >
               ファイルはまだありません。
@@ -134,7 +134,7 @@ export default async function Page(props: PageProps<"/settings/files">) {
                     data-file-card={file.id}
                     key={file.id}
                   >
-                    <article className="card card-border h-full min-w-0 cursor-pointer bg-base-100 shadow-sm">
+                    <article className="card card-border bg-base-100 h-full min-w-0 cursor-pointer shadow-sm">
                       <button
                         aria-label={`ファイル「${file.fileName}」の詳細を表示`}
                         className="block w-full cursor-pointer text-left"
@@ -142,7 +142,7 @@ export default async function Page(props: PageProps<"/settings/files">) {
                         data-file-open
                         type="button"
                       >
-                        <figure className="aspect-video overflow-hidden bg-base-200">
+                        <figure className="bg-base-200 aspect-video overflow-hidden">
                           {previewKind === "image" ? (
                             <img
                               alt={file.fileName}
@@ -155,7 +155,7 @@ export default async function Page(props: PageProps<"/settings/files">) {
                           ) : (
                             <div
                               aria-label={`${previewLabel}ファイルのプレビュー`}
-                              className="flex h-full w-full items-center justify-center bg-base-300 text-base-content/70"
+                              className="bg-base-300 text-base-content/70 flex h-full w-full items-center justify-center"
                               role="img"
                             >
                               <PhosphorIcon
@@ -166,7 +166,7 @@ export default async function Page(props: PageProps<"/settings/files">) {
                           )}
                         </figure>
                         <div className="card-body gap-2 p-3">
-                          <h2 className="line-clamp-2 break-all font-semibold">
+                          <h2 className="line-clamp-2 font-semibold break-all">
                             {file.fileName}
                           </h2>
                           <p className="text-base-content/70 text-sm">
@@ -214,7 +214,7 @@ export default async function Page(props: PageProps<"/settings/files">) {
               ) : (
                 <span />
               )}
-              <span className="self-center text-base-content/70">
+              <span className="text-base-content/70 self-center">
                 {query.page}ページ
               </span>
               {result.hasNextPage && (

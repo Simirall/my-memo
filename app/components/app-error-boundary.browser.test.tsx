@@ -5,6 +5,7 @@ import { AppErrorBoundary } from "./app-error-boundary";
 
 it("描画失敗時は内部エラーの詳細を出さず再読み込みの操作を提供する", async () => {
   const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  // biome-ignore lint/correctness/noComponentHookFactories: This test fixture is created once and never recreated during rendering.
   function Broken(): never {
     throw new Error("private-error-detail");
   }

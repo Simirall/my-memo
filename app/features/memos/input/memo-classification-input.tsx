@@ -49,7 +49,7 @@ export function MemoClassificationInput({
       {summary && (
         <div className="grid grid-cols-2 gap-2">
           <button
-            className={`btn h-auto min-h-12 whitespace-normal px-2 ${mode === "ai" ? "btn-soft btn-primary" : ""}`}
+            className={`btn h-auto min-h-12 px-2 whitespace-normal ${mode === "ai" ? "btn-soft btn-primary" : ""}`}
             disabled={disabled}
             onClick={selectAi}
             type="button"
@@ -59,7 +59,7 @@ export function MemoClassificationInput({
           <button
             aria-controls={`${prefix}-manual-classification`}
             aria-expanded={isOpen ? "true" : "false"}
-            className={`btn h-auto min-h-12 whitespace-normal px-2 ${mode === "manual" ? "btn-soft btn-primary" : ""}`}
+            className={`btn h-auto min-h-12 px-2 whitespace-normal ${mode === "manual" ? "btn-soft btn-primary" : ""}`}
             disabled={disabled}
             onClick={openManual}
             type="button"

@@ -13,7 +13,7 @@ export default function Page(props: PageProps<"/login">) {
   return (
     <div className="space-y-8 text-center">
       <title>ログイン | My Memo</title>
-      <h1 className="font-bold text-5xl">My Memo</h1>
+      <h1 className="text-5xl font-bold">My Memo</h1>
       {accountDeleted && <AccountDeletionComplete />}
       <LoginButton callbackURL={callbackURL} />
     </div>

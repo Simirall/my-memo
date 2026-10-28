@@ -673,10 +673,10 @@ export default function CreateMemoForm({
             <ul className="flex flex-col gap-2">
               {sharedFiles.map((file) => (
                 <li
-                  className="flex items-center justify-between gap-2 rounded-box bg-base-200 p-3"
+                  className="rounded-box bg-base-200 flex items-center justify-between gap-2 p-3"
                   key={file.id}
                 >
-                  <span className="min-w-0 break-all text-sm">
+                  <span className="min-w-0 text-sm break-all">
                     {file.fileName}・{formatAttachmentSize(file.sizeBytes)}
                   </span>
                   <button
@@ -776,7 +776,7 @@ export default function CreateMemoForm({
         <section className="space-y-3">
           <h2 className="font-semibold">添付ファイル</h2>
           {files.length > 0 && (
-            <div className="space-y-2 rounded-box border border-base-300 bg-base-100 p-3">
+            <div className="rounded-box border-base-300 bg-base-100 space-y-2 border p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-semibold">追加予定</h3>
                 <span className="badge badge-soft badge-info">

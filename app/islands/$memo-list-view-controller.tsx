@@ -101,7 +101,7 @@ export default function MemoListViewController({
         )}
         {cards.length === 0 && (
           <p
-            className="rounded-box bg-base-200 p-6 text-center text-base-content/70"
+            className="rounded-box bg-base-200 text-base-content/70 p-6 text-center"
             data-memo-list-empty
           >
             条件に一致するメモはありません。

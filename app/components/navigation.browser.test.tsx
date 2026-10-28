@@ -10,6 +10,7 @@ afterEach(() => vi.restoreAllMocks());
 
 it("未保存入力があるリンクとプログラム遷移を確認し、保存後は確認を省く", async () => {
   const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  // biome-ignore lint/correctness/noComponentHookFactories: This test fixture is created once and never recreated during rendering.
   function Form() {
     const [value, setValue] = useState("");
     const leaving = useRef(false);
@@ -65,6 +66,7 @@ it("保存後の遷移失敗では入力を残し、画面取得だけを再試�
     .mockRejectedValueOnce(new Error("offline"))
     .mockRejectedValueOnce(new Error("still offline"));
   let saves = 0;
+  // biome-ignore lint/correctness/noComponentHookFactories: This test fixture is created once and never recreated during rendering.
   function Form() {
     const router = useAppRouter();
     return (

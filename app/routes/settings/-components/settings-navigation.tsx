@@ -84,7 +84,7 @@ export function SettingsNavigation() {
 
   return (
     <nav aria-label="設定">
-      <h2 className="mb-3 px-4 font-bold text-lg">設定</h2>
+      <h2 className="mb-3 px-4 text-lg font-bold">設定</h2>
       <ul className="menu w-full">
         {settingsItems.map((item) => {
           const isActive = item.section === activeSection;

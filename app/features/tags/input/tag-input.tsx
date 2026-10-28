@@ -184,7 +184,7 @@ export const TagInput = ({
         </div>
         {isOpen && (
           <div
-            className={`menu ${compact ? "m-0" : "absolute inset-x-0 top-full z-10 mt-1"} max-h-60 overflow-y-auto rounded-box border border-base-300 bg-base-100 p-1 shadow-sm`}
+            className={`menu ${compact ? "m-0" : "absolute inset-x-0 top-full z-10 mt-1"} rounded-box border-base-300 bg-base-100 max-h-60 overflow-y-auto border p-1 shadow-sm`}
             id={`${inputId}-suggestions`}
             onBlur={(event) => {
               const next = event.relatedTarget;

@@ -82,10 +82,10 @@ export default function CategoryTabs({
   };
 
   return (
-    <div className="relative rounded-box bg-base-300/70 shadow backdrop-blur-sm">
+    <div className="rounded-box bg-base-300/70 relative shadow backdrop-blur-sm">
       <nav
         aria-label="メモのカテゴリー"
-        className={`tabs tabs-box flex-nowrap overflow-x-auto bg-transparent shadow-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&_a]:cursor-inherit ${
+        className={`tabs tabs-box [&_a]:cursor-inherit [scrollbar-width:none] flex-nowrap overflow-x-auto bg-transparent shadow-none [&::-webkit-scrollbar]:hidden ${
           scrollEdges === "none"
             ? ""
             : isDragging
