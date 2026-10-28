@@ -360,7 +360,12 @@ test("タグ保存後はRSCで再取得し、絞り込み結果と候補へ反�
     "INSERT INTO memos (id,user_id,title,content) VALUES ('tag-refresh','owner','タグ更新対象','本文')",
   ).run();
   await page.goto(`${appUrl}/`);
-  await page.getByRole("button", { name: "タグを編集: タグ更新対象" }).click();
+  await expect(async () => {
+    await page
+      .getByRole("button", { name: "タグを編集: タグ更新対象" })
+      .click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+  }).toPass();
   await page.getByRole("dialog").getByRole("combobox").fill("新しいタグ");
   await page
     .getByRole("option", { name: "#新しいタグを新しいタグとして追加" })
@@ -370,6 +375,10 @@ test("タグ保存後はRSCで再取得し、絞り込み結果と候補へ反�
     page.getByRole("link", { name: "#新しいタグ", exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: "#新しいタグ", exact: true }).click();
+  await expect(page).toHaveURL(/\?tag=/);
+  await expect(
+    page.getByRole("link", { name: "編集", exact: true }),
+  ).toHaveAttribute("href", /returnTo=%2F%3Ftag%3D/);
   await page.getByRole("button", { name: "タグを編集: タグ更新対象" }).click();
   await page.getByRole("button", { name: "新しいタグを外す" }).click();
   await page.getByRole("button", { name: "保存", exact: true }).click();
