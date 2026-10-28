@@ -132,9 +132,9 @@ export default function UrlSummaryForm({
         </p>
       )}
       {summary && (
-        <div className="rounded-box border border-base-300 bg-base-200 p-4">
-          <p className="mb-2 font-semibold text-sm">生成中の要約</p>
-          <pre className="whitespace-pre-wrap font-sans text-base-content">
+        <div className="rounded-box border-base-300 bg-base-200 border p-4">
+          <p className="mb-2 text-sm font-semibold">生成中の要約</p>
+          <pre className="text-base-content font-sans whitespace-pre-wrap">
             {summary}
           </pre>
         </div>

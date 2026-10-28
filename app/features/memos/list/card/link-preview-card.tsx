@@ -14,7 +14,7 @@ export const LinkPreviewCard = ({
   return (
     <AppLink
       aria-label={`リンクプレビュー: ${preview.title}`}
-      className="flex h-24 min-w-0 overflow-clip rounded border border-base-300 bg-base-100 text-base-content transition-colors hover:bg-base-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+      className="border-base-300 bg-base-100 text-base-content hover:bg-base-300 flex h-24 min-w-0 overflow-clip rounded border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
       data-link-preview
       href={url}
       rel="noopener noreferrer"
@@ -35,7 +35,7 @@ export const LinkPreviewCard = ({
       <span className="flex min-w-0 flex-1 flex-col justify-center gap-1 px-2">
         <span className="truncate font-bold">{preview.title}</span>
         {preview.description && (
-          <span className="line-clamp-3 text-base-content/70 text-xs">
+          <span className="text-base-content/70 line-clamp-3 text-xs">
             {preview.description}
           </span>
         )}

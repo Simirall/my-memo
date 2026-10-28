@@ -16,7 +16,7 @@ export const SettingsLayout = ({ children }: { children: Child }) => {
           className="drawer-overlay"
           htmlFor={drawerId}
         />
-        <aside className="h-full w-72 rounded-lg bg-base-200 p-4 lg:h-auto">
+        <aside className="bg-base-200 h-full w-72 rounded-lg p-4 lg:h-auto">
           <SettingsNavigation />
         </aside>
       </div>

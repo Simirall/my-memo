@@ -47,7 +47,7 @@ export default function MemoListControls({
 
   return (
     <details
-      className="collapse-arrow collapse rounded-box bg-base-200"
+      className="collapse-arrow rounded-box bg-base-200 collapse"
       onToggle={persistOpenState}
       open={initialOpen}
     >

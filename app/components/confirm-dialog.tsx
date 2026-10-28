@@ -94,8 +94,8 @@ export const ConfirmDialog = ({
       ref={dialogRef}
     >
       <div className="modal-box">
-        <h2 className="font-bold text-lg">{content.title}</h2>
-        <p className="mt-3 whitespace-pre-wrap text-base-content/80">
+        <h2 className="text-lg font-bold">{content.title}</h2>
+        <p className="text-base-content/80 mt-3 whitespace-pre-wrap">
           {content.description}
         </p>
         <div className="modal-action">

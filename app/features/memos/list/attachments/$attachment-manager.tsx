@@ -259,7 +259,7 @@ export default function AttachmentManager({
                 {previewKind === "image" && (
                   <button
                     aria-label={`画像「${attachment.fileName}」を拡大表示`}
-                    className="mt-2 block w-full cursor-zoom-in rounded-box focus-visible:outline-2 focus-visible:outline-base-content focus-visible:outline-offset-2"
+                    className="rounded-box focus-visible:outline-base-content mt-2 block w-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2"
                     onClick={(event) => {
                       previewOpenerRef.current =
                         event.currentTarget as HTMLButtonElement;
@@ -273,7 +273,7 @@ export default function AttachmentManager({
                   >
                     <img
                       alt={attachment.fileName}
-                      className="mx-auto block h-auto max-h-[min(60dvh,32rem)] w-full max-w-full rounded-box object-contain"
+                      className="rounded-box mx-auto block h-auto max-h-[min(60dvh,32rem)] w-full max-w-full object-contain"
                       height={attachment.mediaHeight ?? undefined}
                       loading="lazy"
                       src={`${endpoint}?variant=thumbnail`}
@@ -300,7 +300,7 @@ export default function AttachmentManager({
                 )}
                 {previewKind === "video" && (
                   <video
-                    className="mx-auto mt-2 block h-auto max-h-[min(60dvh,32rem)] w-full max-w-full rounded-box object-contain"
+                    className="rounded-box mx-auto mt-2 block h-auto max-h-[min(60dvh,32rem)] w-full max-w-full object-contain"
                     controls
                     height={attachment.mediaHeight ?? undefined}
                     loading="lazy"

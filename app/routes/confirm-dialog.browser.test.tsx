@@ -8,6 +8,7 @@ const mount = (onConfirm = vi.fn()) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
 
+  // biome-ignore lint/correctness/noComponentHookFactories: This test fixture is created once and never recreated during rendering.
   const Example = () => {
     const [open, setOpen] = useState(false);
     return (

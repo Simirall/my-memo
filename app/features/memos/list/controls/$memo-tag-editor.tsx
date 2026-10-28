@@ -172,7 +172,7 @@ export default function MemoTagEditor({
       ref={dialogRef}
     >
       <div className="modal-box overflow-visible">
-        <h2 className="font-bold text-lg" id="memo-tags-title">
+        <h2 className="text-lg font-bold" id="memo-tags-title">
           タグを編集
         </h2>
         <p className="py-2 text-sm">

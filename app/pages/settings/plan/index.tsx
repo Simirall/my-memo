@@ -25,7 +25,7 @@ export default async function Page() {
       <title>プラン | My Memo</title>
       <div className="space-y-6">
         <div>
-          <h1 className="font-bold text-2xl">プラン</h1>
+          <h1 className="text-2xl font-bold">プラン</h1>
           <p className="text-base-content/70">現在の利用プランと使用量</p>
         </div>
         <div className="card bg-base-100 shadow">

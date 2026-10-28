@@ -17,7 +17,7 @@ export default async function Page(props: PageProps<"/settings/categories">) {
       <title>カテゴリー | My Memo</title>
       <div className="space-y-6">
         <div>
-          <h1 className="font-bold text-2xl">カテゴリー</h1>
+          <h1 className="text-2xl font-bold">カテゴリー</h1>
           <p className="text-base-content/70">カテゴリーを作成・管理します。</p>
         </div>
 
@@ -31,11 +31,11 @@ export default async function Page(props: PageProps<"/settings/categories">) {
         />
 
         <section aria-labelledby="category-list-heading" className="space-y-3">
-          <h2 className="font-bold text-lg" id="category-list-heading">
+          <h2 className="text-lg font-bold" id="category-list-heading">
             カテゴリー一覧
           </h2>
           {result.length === 0 ? (
-            <p className="rounded-box bg-base-200 p-6 text-base-content/70">
+            <p className="rounded-box bg-base-200 text-base-content/70 p-6">
               カテゴリーはまだありません。
             </p>
           ) : (

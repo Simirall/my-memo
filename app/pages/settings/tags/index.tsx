@@ -15,16 +15,16 @@ export default async function Page() {
       <title>タグ | My Memo</title>
       <div className="space-y-6">
         <div>
-          <h1 className="font-bold text-2xl">タグ</h1>
+          <h1 className="text-2xl font-bold">タグ</h1>
           <p className="text-base-content/70">タグを一覧・管理します。</p>
         </div>
 
         <section aria-labelledby="tag-list-heading" className="space-y-3">
-          <h2 className="font-bold text-lg" id="tag-list-heading">
+          <h2 className="text-lg font-bold" id="tag-list-heading">
             タグ一覧
           </h2>
           {tags.length === 0 ? (
-            <p className="rounded-box bg-base-200 p-6 text-base-content/70">
+            <p className="rounded-box bg-base-200 text-base-content/70 p-6">
               タグはまだありません。
             </p>
           ) : (

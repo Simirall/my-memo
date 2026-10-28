@@ -14,7 +14,7 @@ export class AppErrorBoundary extends Component<
     if (!this.state.failed) return this.props.children;
     return (
       <main className="space-y-4 p-4 text-center">
-        <h1 className="font-bold text-4xl">エラーが発生しました</h1>
+        <h1 className="text-4xl font-bold">エラーが発生しました</h1>
         <p role="alert">時間をおいて、もう一度お試しください。</p>
         <button
           className="btn"

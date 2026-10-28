@@ -359,7 +359,7 @@ export default function AttachmentImagePreview({
         {/* biome-ignore lint/a11y/useKeyWithClickEvents: Keyboard users can close with Escape or the labeled close buttons. */}
         <section
           aria-label="画像のズーム・移動操作"
-          className="relative min-h-0 flex-1 touch-none overflow-hidden rounded-box bg-base-200"
+          className="rounded-box bg-base-200 relative min-h-0 flex-1 touch-none overflow-hidden"
           data-attachment-preview-viewport
           onClick={onViewportClick}
           onPointerCancel={cancelPointer}
@@ -387,7 +387,7 @@ export default function AttachmentImagePreview({
           )}
           <img
             alt={current.fileName}
-            className={`absolute inset-0 block size-full select-none object-contain ${transitionClass}`}
+            className={`absolute inset-0 block size-full object-contain select-none ${transitionClass}`}
             data-attachment-preview-image
             draggable="false"
             height={current.mediaHeight ?? undefined}

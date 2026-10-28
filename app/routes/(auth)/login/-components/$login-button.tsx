@@ -66,7 +66,7 @@ export const LoginButton = ({ callbackURL }: { callbackURL?: string }) => {
         />
         <span>利用規約に同意し、プライバシーポリシーを確認しました</span>
       </label>
-      <p className="text-center text-base-content/70 text-sm">
+      <p className="text-base-content/70 text-center text-sm">
         <AppLink
           className="link"
           href="/terms"
