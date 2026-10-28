@@ -360,7 +360,10 @@ test("タグ保存後はRSCで再取得し、絞り込み結果と候補へ反�
     "INSERT INTO memos (id,user_id,title,content) VALUES ('tag-refresh','owner','タグ更新対象','本文')",
   ).run();
   await page.goto(`${appUrl}/`);
-  await page.getByRole("button", { name: "タグを編集: タグ更新対象" }).click();
+  await expect(async () => {
+    await page.getByRole("button", { name: "タグを編集: タグ更新対象" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+  }).toPass();
   await page.getByRole("dialog").getByRole("combobox").fill("新しいタグ");
   await page
     .getByRole("option", { name: "#新しいタグを新しいタグとして追加" })
