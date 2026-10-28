@@ -8,6 +8,12 @@ updates:
       cronjob: "0 21 * * *"
     cooldown:
       default-days: 3
+    groups:
+      react:
+        patterns:
+          - react
+          - react-dom
+          - react-server-dom-webpack
   - package-ecosystem: github-actions
     directory: /
     schedule:
