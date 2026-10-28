@@ -13,7 +13,7 @@ export const JavaScriptRequiredStyle = () => (
 
 export const JavaScriptRequiredFallback = () => (
   <noscript>
-    <main className="flex min-h-screen items-center justify-center bg-base-100 p-4 text-base-content">
+    <main className="bg-base-100 text-base-content flex min-h-screen items-center justify-center p-4">
       <div className="alert alert-warning w-fit" role="alert">
         {JAVASCRIPT_REQUIRED_MESSAGE}
       </div>

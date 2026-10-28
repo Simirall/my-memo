@@ -53,9 +53,9 @@ export default async function Page(props: PageProps<"/memos/[id]/edit">) {
   return (
     <div className="flex justify-center p-4 sm:p-8">
       <title>{memo.title}を編集 | My Memo</title>
-      <div className="card w-full max-w-2xl bg-base-100 shadow-sm">
+      <div className="card bg-base-100 w-full max-w-2xl shadow-sm">
         <div className="card-body">
-          <h1 className="font-bold text-2xl">メモを編集</h1>
+          <h1 className="text-2xl font-bold">メモを編集</h1>
           <EditMemoForm
             availableTags={availableTags}
             categories={categories}

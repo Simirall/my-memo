@@ -62,13 +62,13 @@ export default function InstallPrompt({ mode }: { mode: InstallMode }) {
 
   const content = (
     <div className="min-w-0 flex-1">
-      <h3 className="font-bold text-lg">My Memoをアプリとして使う</h3>
+      <h3 className="text-lg font-bold">My Memoをアプリとして使う</h3>
       <p className="text-sm">
         インストールすると、端末の共有メニューからMy
         Memoを選んでメモを作成できます。
       </p>
       {!canPrompt && (
-        <p className="mt-1 text-base-content text-sm">
+        <p className="text-base-content mt-1 text-sm">
           ブラウザのメニューから「アプリをインストール」または「ホーム画面に追加」を選んでください。
         </p>
       )}
@@ -84,12 +84,12 @@ export default function InstallPrompt({ mode }: { mode: InstallMode }) {
   if (mode === "settings") {
     return (
       <section aria-labelledby="install-heading" className="space-y-4">
-        <h2 className="font-bold text-lg" id="install-heading">
+        <h2 className="text-lg font-bold" id="install-heading">
           アプリをインストール
         </h2>
-        <div className="alert alert-info alert-soft alert-vertical sm:alert-horizontal items-center text-base-content">
+        <div className="alert alert-info alert-soft alert-vertical sm:alert-horizontal text-base-content items-center">
           <PhosphorIcon
-            className="inline-flex shrink-0 text-info [&_svg]:size-6"
+            className="text-info inline-flex shrink-0 [&_svg]:size-6"
             svg={infoIcon}
           />
           {content}
@@ -104,7 +104,7 @@ export default function InstallPrompt({ mode }: { mode: InstallMode }) {
       <div className="pointer-events-auto mx-auto max-w-5xl">
         <div className="alert alert-info alert-soft alert-vertical sm:alert-horizontal border-base-300 text-base-content shadow-lg">
           <PhosphorIcon
-            className="inline-flex shrink-0 text-info [&_svg]:size-6"
+            className="text-info inline-flex shrink-0 [&_svg]:size-6"
             svg={infoIcon}
           />
           {content}

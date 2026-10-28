@@ -28,7 +28,7 @@
         "noPrivateImports": "error"
       },
       "nursery": {
-        "useSortedClasses": "error"
+        "useTailwindSortedClasses": "error"
       },
       "performance": {
         "noBarrelFile": "error"

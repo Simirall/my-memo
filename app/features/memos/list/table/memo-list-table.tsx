@@ -47,7 +47,7 @@ export function MemoListTable({
             const visibleTags = tags.slice(0, 3);
             return (
               <tr data-memo-list-row={memo.id} key={memo.id}>
-                <th className="max-w-56 whitespace-normal break-all">
+                <th className="max-w-56 break-all whitespace-normal">
                   {memo.url && isSafeMemoUrl(memo.url) ? (
                     <AppLink
                       className="text-info hover:underline"

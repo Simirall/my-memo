@@ -452,7 +452,7 @@ export default function EditMemoForm({
           </div>
           {!memo.url && (
             <p
-              className="mt-1 text-base-content/70 text-sm"
+              className="text-base-content/70 mt-1 text-sm"
               id="regenerate-url-help"
             >
               再生成には保存済みの関連URLが必要です。
@@ -622,7 +622,7 @@ export default function EditMemoForm({
           </div>
         )}
         {files.length > 0 && (
-          <div className="space-y-2 rounded-box border border-base-300 bg-base-100 p-3">
+          <div className="rounded-box border-base-300 bg-base-100 space-y-2 border p-3">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-semibold">追加予定</h3>
               <span className="badge badge-soft badge-info">

@@ -51,7 +51,7 @@ function FilePreview({ file }: { file: FileDetail }) {
         ) : (
           <img
             alt={file.fileName}
-            className="mx-auto block h-auto max-h-[min(60dvh,32rem)] max-w-full rounded-box object-contain"
+            className="rounded-box mx-auto block h-auto max-h-[min(60dvh,32rem)] max-w-full object-contain"
             height={file.mediaHeight ?? undefined}
             loading="lazy"
             onError={() => setStatus("error")}
@@ -77,7 +77,7 @@ function FilePreview({ file }: { file: FileDetail }) {
     return (
       // biome-ignore lint/a11y/useMediaCaption: User-uploaded media has no caption source.
       <video
-        className="mx-auto block h-auto max-h-[min(65dvh,40rem)] max-w-full rounded-box object-contain"
+        className="rounded-box mx-auto block h-auto max-h-[min(65dvh,40rem)] max-w-full object-contain"
         controls
         height={file.mediaHeight ?? undefined}
         preload="metadata"
@@ -144,10 +144,10 @@ export const FileDetailDialog = ({
       <div className="mt-4" data-file-dialog-media>
         {file && <FilePreview file={file} key={file.id} />}
       </div>
-      <dl className="mt-4 grid gap-2 rounded-box bg-base-200 p-4 sm:grid-cols-3">
+      <dl className="rounded-box bg-base-200 mt-4 grid gap-2 p-4 sm:grid-cols-3">
         <div>
           <dt className="text-base-content/70 text-sm">ファイル名</dt>
-          <dd className="break-all font-semibold">{file?.fileName}</dd>
+          <dd className="font-semibold break-all">{file?.fileName}</dd>
         </div>
         <div>
           <dt className="text-base-content/70 text-sm">種類</dt>
@@ -166,13 +166,13 @@ export const FileDetailDialog = ({
         aria-labelledby="file-detail-memo-heading"
         className="mt-6 space-y-2"
       >
-        <h3 className="font-bold text-lg" id="file-detail-memo-heading">
+        <h3 className="text-lg font-bold" id="file-detail-memo-heading">
           添付されているメモ
         </h3>
         <p className="font-semibold" data-file-dialog-memo-title>
           {file?.memoTitle}
         </p>
-        <p className="whitespace-pre-wrap text-base-content/80">
+        <p className="text-base-content/80 whitespace-pre-wrap">
           {file?.memoExcerpt}
         </p>
         {file && (

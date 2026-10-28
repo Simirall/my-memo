@@ -88,7 +88,7 @@ export const TagList = ({
         ref={dialogRef}
       >
         <div className="modal-box">
-          <h2 className="font-bold text-lg">タグ名を変更</h2>
+          <h2 className="text-lg font-bold">タグ名を変更</h2>
           <form
             className="mt-4 space-y-4"
             onSubmit={async (event) => {

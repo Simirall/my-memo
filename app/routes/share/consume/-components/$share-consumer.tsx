@@ -75,18 +75,18 @@ export default function ShareConsumer({ quota }: ShareConsumerProps) {
 
     return (
       <div className="flex min-h-[50svh] items-center justify-center p-4 sm:p-8">
-        <div className="card w-full max-w-[32rem] bg-base-100 shadow-sm">
+        <div className="card bg-base-100 w-full max-w-[32rem] shadow-sm">
           <div className="card-body gap-5">
             <div>
               <h1 className="card-title">このURLをどう保存しますか？</h1>
-              <p className="mt-2 text-base-content/70 text-sm">
+              <p className="text-base-content/70 mt-2 text-sm">
                 共有されたURLをAIで要約するか、通常のメモとして保存できます。
               </p>
             </div>
 
-            <div className="rounded-box border border-base-300 bg-base-200 p-4">
-              <p className="font-semibold text-sm">{sharedUrl.host}</p>
-              <p className="mt-2 break-all text-base-content/70 text-sm">
+            <div className="rounded-box border-base-300 bg-base-200 border p-4">
+              <p className="text-sm font-semibold">{sharedUrl.host}</p>
+              <p className="text-base-content/70 mt-2 text-sm break-all">
                 {destination.url}
               </p>
             </div>
@@ -145,7 +145,7 @@ export default function ShareConsumer({ quota }: ShareConsumerProps) {
 
   return (
     <div className="flex min-h-[50svh] items-center justify-center p-8">
-      <div className="card w-full max-w-[28rem] bg-base-100 shadow-sm">
+      <div className="card bg-base-100 w-full max-w-[28rem] shadow-sm">
         <div className="card-body text-center">
           {error ? (
             <div aria-live="polite" className="alert alert-error" role="alert">

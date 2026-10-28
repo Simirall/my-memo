@@ -17,7 +17,7 @@ export default async function Page() {
   return (
     <div className="mx-auto w-full max-w-screen-2xl space-y-4 p-4 sm:p-8">
       <title>まとめて入力 | My Memo</title>
-      <h1 className="font-bold text-2xl">メモをまとめて入力</h1>
+      <h1 className="text-2xl font-bold">メモをまとめて入力</h1>
       <p>
         最大30件まで入力できます。カテゴリー・タグは各メモに手動で設定します。
       </p>

@@ -47,7 +47,7 @@ export const Memo = ({
 
   return (
     <div
-      className="card card-md card-body memo-card-grid memo-card-grid-row w-full min-w-0 bg-base-200 shadow-sm"
+      className="card card-md card-body memo-card-grid memo-card-grid-row bg-base-200 w-full min-w-0 shadow-sm"
       data-memo-card={memo.id}
       key={memo.id}
     >
@@ -55,7 +55,7 @@ export const Memo = ({
         <div className="grid content-start gap-2">
           {memo.url && isSafeMemoUrl(memo.url) ? (
             <AppLink
-              className="card-title break-all text-info text-xl hover:underline"
+              className="card-title text-info text-xl break-all hover:underline"
               href={memo.url}
               rel="noopener noreferrer"
               target="_blank"
@@ -113,7 +113,7 @@ export const Memo = ({
         </div>
         <div className="grid content-start">
           {memo.content !== null && (
-            <div className="*:space-y-4 [&_a]:text-info [&_h1,&_h2]:font-bold [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_img]:max-h-[70vh] [&_img]:max-w-full [&_img]:object-contain [&_ol]:list-inside [&_ol]:list-decimal [&_p]:whitespace-pre-wrap [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_ul]:list-inside [&_ul]:list-disc">
+            <div className="[&_a]:text-info *:space-y-4 [&_h1]:text-2xl [&_h1,&_h2]:font-bold [&_h2]:text-xl [&_h3]:text-lg [&_img]:max-h-[70vh] [&_img]:max-w-full [&_img]:object-contain [&_ol]:list-inside [&_ol]:list-decimal [&_p]:whitespace-pre-wrap [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_ul]:list-inside [&_ul]:list-disc">
               <div
                 // biome-ignore lint/security/noDangerouslySetInnerHtml: renderMarkdown disables HTML and validates URL schemes.
                 dangerouslySetInnerHTML={{

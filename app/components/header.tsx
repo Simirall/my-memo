@@ -15,7 +15,7 @@ export const Header = ({
   const userRole = user ? (user as { role?: string }).role : undefined;
 
   return (
-    <header className="navbar sticky top-0 z-20 bg-base-200 shadow-sm">
+    <header className="navbar bg-base-200 sticky top-0 z-20 shadow-sm">
       <SettingsMenuButton />
       <div className="flex-1">
         <AppLink className="btn btn-ghost text-xl" href="/">
@@ -36,14 +36,14 @@ export const Header = ({
                 {user.image ? (
                   <img alt={`${user.name}のアバター`} src={user.image} />
                 ) : (
-                  <span className="flex size-full items-center justify-center bg-base-300 font-bold">
+                  <span className="bg-base-300 flex size-full items-center justify-center font-bold">
                     {user.name.slice(0, 1).toUpperCase()}
                   </span>
                 )}
               </div>
             </button>
             <ul
-              className="dropdown dropdown-end menu mt-3 w-52 flex-col items-stretch space-y-2 rounded-box bg-base-300 p-2 shadow-lg"
+              className="dropdown dropdown-end menu rounded-box bg-base-300 mt-3 w-52 flex-col items-stretch space-y-2 p-2 shadow-lg"
               id="user-menu"
               popover="auto"
               style={{ positionAnchor: "--user-menu-anchor" }}
