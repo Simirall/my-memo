@@ -27,7 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 55
     concurrency:
-      group: dependabot-merge-${{ github.event.workflow_run.pull_requests[0].number || inputs.pr_number || github.run_id }}
+      group: dependabot-merge
+      queue: max
       cancel-in-progress: false
     steps:
       # 書き込み権限を持つジョブでは、PR側のコードを取得・実行しない。
