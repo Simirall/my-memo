@@ -361,7 +361,9 @@ test("タグ保存後はRSCで再取得し、絞り込み結果と候補へ反�
   ).run();
   await page.goto(`${appUrl}/`);
   await expect(async () => {
-    await page.getByRole("button", { name: "タグを編集: タグ更新対象" }).click();
+    await page
+      .getByRole("button", { name: "タグを編集: タグ更新対象" })
+      .click();
     await expect(page.getByRole("dialog")).toBeVisible();
   }).toPass();
   await page.getByRole("dialog").getByRole("combobox").fill("新しいタグ");
