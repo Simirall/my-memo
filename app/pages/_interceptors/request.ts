@@ -1,3 +1,4 @@
+import { tryGetContext } from "hono/context-storage";
 import {
   type HandlerInterceptor,
   unstable_getRequest,
@@ -5,10 +6,12 @@ import {
   unstable_setNonce,
 } from "waku/router/server";
 import { isPublicPath } from "@/security/public-paths";
-import { getRequestContext, redirect } from "@/server/request-context";
+import { redirect } from "@/server/request-context";
 
 const request: HandlerInterceptor = async (next) => {
-  const c = getRequestContext();
+  const c = tryGetContext<{ Bindings: CloudflareBindings }>();
+  // Wakuのビルド用リクエストはHonoミドルウェアを通らない。
+  if (!c) return next();
   unstable_setNonce(c.get("nonce"));
   const route = unstable_parseRouterRequest(unstable_getRequest());
   const user = c.get("user");

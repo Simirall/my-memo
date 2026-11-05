@@ -110,6 +110,9 @@ test("SSRとRSCの所有者分離を維持し、nonce付きCSPで内部遷移で
   const cookie = (token: string) => ({
     Cookie: `better-auth.session_token=${token}`,
   });
+  const anonymous = await server.fetch("/", { redirect: "manual" });
+  expect(anonymous.status).toBe(307);
+  expect(anonymous.headers.get("Location")).toBe("/login");
   const denied = await server.fetch("/admin/users", {
     headers: cookie(ownerCookie),
   });
