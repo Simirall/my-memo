@@ -107,22 +107,8 @@ export default async function mergeDependabot({
     });
     const baseSha = comparison.base_commit.sha;
     if (!pr.mergeable || comparison.behind_by > 0) {
-      const command = pr.mergeable ? "rebase" : "recreate";
-      const marker = `<!-- dependabot-${command}:${expectedSha}:${baseSha} -->`;
-      const comments = await github.paginate(github.rest.issues.listComments, {
-        ...repo,
-        issue_number: number,
-        per_page: 100,
-      });
-      if (!comments.some((comment) => comment.body?.includes(marker))) {
-        await github.rest.issues.createComment({
-          ...repo,
-          issue_number: number,
-          body: `@dependabot ${command}\n\n${marker}`,
-        });
-      }
       core.info(
-        `PR #${number}: requested ${command}; holding the merge queue until the updated PR is verified.`,
+        `PR #${number}: waiting for Dependabot to update the branch; holding the merge queue until the updated PR is verified.`,
       );
       awaitingUpdate = true;
       await pause();

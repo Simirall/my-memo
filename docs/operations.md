@@ -54,14 +54,16 @@ Dependabotの待機期間では防げないセキュリティ更新や間接依�
 検証したコミットのSHAと現在のPRのhead SHAが一致することを確認してから、squash mergeします。
 必須チェックと署名要件はGitHubのRulesetで維持します。
 
-PRがmainに追従していない場合は、`@dependabot rebase`を投稿して更新を依頼します。[^dependabot-commands]
-この実行ではマージせず、Dependabotによる更新後のPR検証へ引き継ぎます。
-マージ直前にmainが進んだ場合も、同じ更新依頼へ戻ります。
+PRがmainに追従していない場合や競合がある場合は、Dependabot自身の自動更新を待ちます。[^dependabot-rebase]
+待機中もマージ用のキューを保持し、更新後のhead SHAに対応するPR検証が成功してからマージします。
+マージ直前にmainが進んだ場合も、同じ更新待ちへ戻ります。
+ActionsのBotによるコマンドは権限不足で拒否されるため、`@dependabot rebase`や`@dependabot recreate`のコメントは投稿しません。[^dependabot-bot-commands]
 
-競合がある場合は、`@dependabot recreate`を投稿して再作成を依頼します。[^dependabot-commands]
-各依頼は、同じhead SHAとbase SHAの組み合わせにつき一度だけ投稿します。
-再作成はPRへの編集を上書きするため、Dependabot PRには手動変更を加えない運用とします。
-依頼後に更新されない場合は、PR上のDependabotの応答と更新ログを確認します。
+自動更新の開始時刻は保証されません。
+50分以内に更新と検証が完了しなければ、マージせず停止してキューを解放します。
+その後Dependabotが更新し、新しいPR検証が成功すると、自動マージを再度試みます。
+更新されない場合はDependabotの更新ログを確認し、必要ならpush権限を持つ自分のアカウントから`@dependabot rebase`を投稿します。
+手動の追加コミットやPR作成から30日の経過で自動リベースが停止するため、Dependabot PRには手動変更を加えない運用とします。[^dependabot-rebase]
 
 PRブランチの検証には、通常の`pull_request`イベントを使用します。
 `workflow_dispatch`で起動したジョブのチェックは、成功してもPRの必須ステータスチェックを満たしません。[^required-checks]
@@ -70,7 +72,7 @@ PRブランチの検証には、通常の`pull_request`イベントを使用し�
 ### 手動復旧と停止
 
 未マージのPRを復旧するには、Actionsの`Merge verified Dependabot updates`をmainから実行し、`pr_number`に対象のPR番号を指定します。
-mainに追従していない場合や競合がある場合は、前述の更新依頼を行います。
+mainに追従していない場合や競合がある場合は、前述の自動更新を待ちます。
 
 mainに追従済みの場合は、現在のhead SHAに対応する最新のPR検証を再実行し、新しい実行回数（`run_attempt`）の成功を待ちます。[^workflow-rerun]
 すでに実行中の場合は、二重起動せず完了を待ちます。
@@ -90,7 +92,8 @@ mainに追従済みの場合は、現在のhead SHAに対応する最新のPR検
 設定値と復旧手順は、このリポジトリのワークフローと`scripts/merge-dependabot.mjs`を根拠としています。
 
 [^dependabot-cooldown]: GitHub Docs, [Dependabot options reference: cooldown](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#cooldown)。待機期間はバージョン更新に適用され、セキュリティ更新には適用されません。
-[^dependabot-commands]: GitHub Docs, [Dependabot pull request comment commands](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-pull-request-comment-commands)。`rebase`はリベースを依頼し、`recreate`は追加された編集を上書きしてPRを再作成します。
+[^dependabot-rebase]: GitHub Docs, [Managing pull requests for dependency updates](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/manage-your-dependency-security/manage-dependabot-prs)。Dependabotは既定で競合を解消するために自動リベースしますが、追加コミットがある場合やPRが30日間未マージの場合は停止します。
+[^dependabot-bot-commands]: dependabot/dependabot-core, [Support Dependabot commands by GitHub apps #9147](https://github.com/dependabot/dependabot-core/issues/9147)。書き込み権限のあるGitHub Appからのコマンドも権限不足で拒否される問題が報告されています。
 [^required-checks]: GitHub Docs, [Troubleshooting required status checks: Checks from some workflow jobs are not evaluated](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks#checks-from-some-workflow-jobs-are-not-evaluated)。`workflow_dispatch`によるジョブのチェックは、PRの必須チェックとして評価されません。
 [^workflow-triggers]: GitHub Docs, [Triggering a workflow: Triggering a workflow from a workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow)。`GITHUB_TOKEN`でPRを作成または更新した場合、`opened`、`synchronize`、`reopened`によるワークフロー実行は承認待ちになります。
 [^workflow-rerun]: GitHub Docs, [REST API endpoints for workflow runs: Re-run a workflow](https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2026-03-10#re-run-a-workflow)。既存のrun IDを指定してワークフローを再実行します。
