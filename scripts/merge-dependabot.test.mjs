@@ -36,7 +36,6 @@ function scenario() {
     merged: [],
     updated: [],
     rerun: false,
-    comments: [],
     childConclusion: "success",
   };
   const context = {
@@ -100,14 +99,6 @@ function scenario() {
           };
         },
       },
-      issues: {
-        listComments: async () => ({
-          data: state.comments.map((body) => ({ body })),
-        }),
-        createComment: async ({ body }) => {
-          state.comments.push(body);
-        },
-      },
     },
   };
   const execute = () =>
@@ -143,21 +134,17 @@ test("成功した現在のSHAだけをマージしmainを明示検証する", a
   );
 });
 
-test("古いPRはリベース後のPR検証が成功するまでキューを保持してマージする", async () => {
+test("古いPRは更新APIやコメントを使わずDependabotの更新とPR検証を待つ", async () => {
   const s = scenario();
   s.state.pr.mergeable_state = "behind";
   s.state.behindBy = 1;
   s.state.onSleep = () => {
-    if (s.state.comments.length && s.state.pr.head.sha === "old")
-      completeUpdate(s);
+    if (s.state.pr.head.sha === "old") completeUpdate(s);
   };
   await s.execute();
   assert.deepEqual(s.state.updated, []);
   assert.deepEqual(s.state.merged, ["updated"]);
   assert.equal(s.state.rerun, false);
-  assert.deepEqual(s.state.comments, [
-    "@dependabot rebase\n\n<!-- dependabot-rebase:old:base -->",
-  ]);
 });
 
 test("対象外PR・古いSHA・不成功の実行では変更しない", async () => {
@@ -245,24 +232,34 @@ test("マージ直前のmain更新で405となっても更新後の検証まで�
     return merge(args);
   };
   s.state.onSleep = () => {
-    if (s.state.comments.length && s.state.pr.head.sha === "old")
-      completeUpdate(s);
+    if (s.state.pr.head.sha === "old") completeUpdate(s);
   };
   await s.execute();
   assert.deepEqual(s.state.merged, ["updated"]);
-  assert.equal(s.state.comments.length, 1);
-  assert.match(s.state.comments[0], /old:new-base/);
+  assert.deepEqual(s.state.updated, []);
 });
 
-test("競合時は同じSHAにつき一度だけDependabotへ再作成を依頼する", async () => {
-  const conflict = scenario();
-  conflict.state.pr.mergeable = false;
-  await assert.rejects(conflict.execute(), /timed out/);
-  await assert.rejects(conflict.execute(), /timed out/);
-  assert.deepEqual(conflict.state.comments, [
-    "@dependabot recreate\n\n<!-- dependabot-recreate:old:base -->",
-  ]);
-  assert.deepEqual(conflict.state.merged, []);
+test("古いPRや競合PRが更新されなければマージせず待機上限で停止する", async () => {
+  for (const mergeable of [true, false]) {
+    const s = scenario();
+    s.state.pr.mergeable = mergeable;
+    s.state.behindBy = 1;
+    await assert.rejects(s.execute(), /timed out/);
+    assert.deepEqual(s.state.updated, []);
+    assert.deepEqual(s.state.merged, []);
+    assert.deepEqual(s.state.dispatched, []);
+  }
+});
+
+test("競合PRもDependabotが解消した後の検証が成功すればマージする", async () => {
+  const s = scenario();
+  s.state.pr.mergeable = false;
+  s.state.onSleep = () => {
+    if (s.state.pr.head.sha === "old") completeUpdate(s);
+  };
+  await s.execute();
+  assert.deepEqual(s.state.updated, []);
+  assert.deepEqual(s.state.merged, ["updated"]);
 });
 
 test("更新後のPR検証がまだ作られていない場合は古い実行を使わず待つ", async () => {
@@ -275,8 +272,7 @@ test("更新後のPR検証がまだ作られていない場合は古い実行を
     return lists === 1 ? { data: { workflow_runs: [] } } : listRuns();
   };
   s.state.onSleep = () => {
-    if (s.state.comments.length && s.state.pr.head.sha === "old")
-      completeUpdate(s);
+    if (s.state.pr.head.sha === "old") completeUpdate(s);
   };
   await s.execute();
   assert.ok(lists >= 2);
@@ -304,7 +300,7 @@ test("更新後の検証中にmainが再び進んだ場合も最新mainまで追
   s.state.behindBy = 1;
   s.state.onSleep = () => {
     if (s.state.pr.head.sha === "old") completeUpdate(s, "first");
-    else if (s.state.comments.length === 2 && s.state.pr.head.sha === "first")
+    else if (s.state.behindBy > 0 && s.state.pr.head.sha === "first")
       completeUpdate(s, "second");
   };
   const getRun = s.github.rest.actions.getWorkflowRun;
@@ -318,15 +314,14 @@ test("更新後の検証中にmainが再び進んだ場合も最新mainまで追
   };
   await s.execute();
   assert.deepEqual(s.state.merged, ["second"]);
-  assert.equal(s.state.comments.length, 2);
-  assert.match(s.state.comments[1], /first:new-base/);
+  assert.deepEqual(s.state.updated, []);
 });
 
 test("PR状態がbehindのままでも最新mainを含むheadは不要な更新を依頼しない", async () => {
   const s = scenario();
   s.state.pr.mergeable_state = "behind";
   await s.execute();
-  assert.deepEqual(s.state.comments, []);
+  assert.deepEqual(s.state.updated, []);
   assert.deepEqual(s.state.merged, ["old"]);
 });
 
