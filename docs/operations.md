@@ -18,6 +18,23 @@ GitHub OAuth AppのAuthorization callback URLは、`BETTER_AUTH_URL`に`/api/aut
 GitHubで一度このworkflowを実行した後、Settings → Rules → Rulesetsで`main`のルールを開き、Require status checks to passを有効にして`verify`を追加します。
 Dependabotの自動マージを設定する場合も、この`verify`を必須条件にします。
 
+## GitHub Actionsの依存固定
+
+Actionの実行コミットは`.github/workflows/actions.lock`で固定します。
+ワークフローの`uses`を変更したら、GitHub CLIで認証した環境で次を実行し、ワークフローとlockfileを一緒にコミットします。
+
+```powershell
+gh extension install github/gh-actions-lock --pin v0.2.0
+pnpm run actions-lock
+pnpm run actions-lock --verify
+```
+
+lockfileは手で編集せず、差分の`commit`、`owner_id`、`repo_id`を確認します。
+`verify`ジョブでも`gh actions-lock --verify`を実行します。
+DependabotによるActionのバージョン更新では、対応するlockfileも同じPRで更新されます。
+再利用可能な`deploy.yml`内のActionも、このリポジトリのlockfileで固定します。
+詳細はGitHub公式の[依存固定の手順](https://docs.github.com/en/actions/how-tos/secure-your-work/lock-workflow-dependencies)を参照してください。
+
 ## Dependabotの更新と自動マージ
 
 ### 更新の確認と待機期間
