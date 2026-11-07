@@ -44,7 +44,7 @@ jobs:
             echo "deploy=false" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.current.outputs.deploy == 'true'
-        uses: pnpm/action-setup@v6.1.0
+        uses: pnpm/action-setup@v6.1.1
         with:
           run_install: false
       - if: steps.current.outputs.deploy == 'true'
