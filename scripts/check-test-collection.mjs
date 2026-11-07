@@ -54,10 +54,11 @@ for (const file of files) {
   expected[matches[0]].add(relativePath);
 }
 
+const vitestList = ["exec", "vitest", "list", "--json"];
 const listCommands = {
-  unit: ["exec", "vitest", "list", "--config=vitest.unit.config.ts"],
-  integration: ["exec", "vitest", "list", "--config=vitest.config.ts"],
-  browser: ["exec", "vitest", "list", "--config=vitest.browser.config.ts"],
+  unit: [...vitestList, "--config=vitest.unit.config.ts"],
+  integration: [...vitestList, "--config=vitest.config.ts"],
+  browser: [...vitestList, "--config=vitest.browser.config.ts"],
   e2e: ["exec", "playwright", "test", "--list"],
 };
 
@@ -80,18 +81,17 @@ for (const [name, args] of Object.entries(listCommands)) {
     continue;
   }
 
-  const listedFiles = result.stdout
-    .split(/\r?\n/)
-    .map((line) =>
-      name === "e2e"
-        ? line.match(/›\s+(.+?\.e2e\.test\.ts):\d+/)
-        : line.match(/^(?:\[[^\]]+\]\s+)?(app[\\/].+?\.test\.(?:ts|tsx))\s+>/),
-    )
-    .filter(Boolean)
-    .map((match) =>
-      name === "e2e" ? `tests/e2e/${match[1]}` : match[1].replaceAll("\\", "/"),
-    );
-  collected[name] = new Set(listedFiles);
+  const listedFiles =
+    name === "e2e"
+      ? [...result.stdout.matchAll(/›\s+(.+?\.e2e\.test\.ts):\d+/g)].map(
+          ([, file]) => path.join("tests/e2e", file),
+        )
+      : JSON.parse(result.stdout).map(({ file }) =>
+          path.relative(process.cwd(), file),
+        );
+  collected[name] = new Set(
+    listedFiles.map((file) => file.replaceAll("\\", "/")),
+  );
 }
 
 for (const name of Object.keys(categories)) {

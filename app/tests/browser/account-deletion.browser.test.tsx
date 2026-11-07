@@ -26,7 +26,7 @@ describe("退会完了通知", () => {
 
     await expect
       .element(page.getByRole("status"))
-      .toHaveTextContent("退会が完了しました。");
+      .toMatchTextContent("退会が完了しました。");
     await expect.poll(() => location.pathname + location.search).toBe("/login");
     await page.getByRole("button", { name: "退会完了通知を閉じる" }).click();
 
@@ -99,7 +99,9 @@ describe("退会画面", () => {
     mount("failed");
 
     await expect
-      .element(page.getByText("ファイルの削除が停止しました。"))
+      .element(
+        page.getByText("ファイルの削除が停止しました。再試行してください。"),
+      )
       .toBeVisible();
     await page.getByRole("button", { name: "削除を再試行" }).click();
 
@@ -107,7 +109,11 @@ describe("退会画面", () => {
       method: "POST",
     });
     await expect
-      .element(page.getByText("すべてのデータを削除しています。"))
+      .element(
+        page.getByText(
+          "すべてのデータを削除しています。この処理は取り消せません。",
+        ),
+      )
       .toBeVisible();
   });
 });

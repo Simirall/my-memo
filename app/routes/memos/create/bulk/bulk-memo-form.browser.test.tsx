@@ -41,7 +41,6 @@ afterEach(() => {
     render(null, element as HTMLElement);
   document.body.replaceChildren();
   vi.restoreAllMocks();
-  vi.clearAllMocks();
 });
 
 describe("メモの一括入力", () => {
@@ -166,7 +165,7 @@ describe("メモの一括入力", () => {
     await saveButton().click();
     await expect
       .element(page.getByRole("alert"))
-      .toHaveTextContent("メモ1: タイトルを入力してください");
+      .toMatchTextContent("メモ1: タイトルを入力してください");
     await expect.element(title(2)).toBeDisabled();
     expect(fetchSpy).toHaveBeenCalledOnce();
     expect(goToMemoList).not.toHaveBeenCalled();
@@ -202,7 +201,7 @@ describe("メモの一括入力", () => {
     await saveButton().click();
     await expect
       .element(page.getByRole("alert"))
-      .toHaveTextContent("メモ2: カテゴリーが見つかりません。");
+      .toMatchTextContent("メモ2: カテゴリーが見つかりません。");
     expect(JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))).toMatchObject({
       categoryId: "work",
       tags: ["新規"],
@@ -229,7 +228,7 @@ describe("メモの一括入力", () => {
     await saveButton().click();
     await expect
       .element(page.getByRole("alert"))
-      .toHaveTextContent("保存結果を確認できませんでした");
+      .toMatchTextContent("保存結果を確認できませんでした");
     await expect.element(title(1)).toBeDisabled();
     await expect.element(title(2)).toBeEnabled();
     expect(fetchSpy).toHaveBeenCalledOnce();
@@ -283,7 +282,7 @@ describe("メモの一括入力", () => {
     await saveButton().click();
     await expect
       .element(page.getByRole("alert"))
-      .toHaveTextContent("認証が必要です。");
+      .toMatchTextContent("認証が必要です。");
     await expect.element(title(1)).toBeDisabled();
   });
 
@@ -302,7 +301,7 @@ describe("メモの一括入力", () => {
       await saveButton().click();
       await expect
         .element(page.getByRole("alert"))
-        .toHaveTextContent("メモ1: 保存を続けられません。");
+        .toMatchTextContent("メモ1: 保存を続けられません。");
       expect(fetchSpy).toHaveBeenCalledOnce();
       await expect.element(title(2)).toHaveValue("後続行");
     },

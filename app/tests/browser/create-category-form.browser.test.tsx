@@ -22,7 +22,7 @@ describe("カテゴリー作成フォーム", () => {
       .element(page.getByRole("alert"))
       .toHaveTextContent("同じ名前のカテゴリーがすでに登録されています。");
     await expect
-      .element(page.getByLabelText("カテゴリー名"))
+      .element(page.getByRole("textbox", { name: "カテゴリー名" }))
       .toHaveAttribute(
         "aria-describedby",
         "category-name-help category-name-error",

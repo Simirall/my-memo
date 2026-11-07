@@ -32,6 +32,7 @@ lerna-debug.log*
 
 # misc
 .DS_Store
+.vitest/
 .vitest-attachments/
 __screenshots__/
 test-results/

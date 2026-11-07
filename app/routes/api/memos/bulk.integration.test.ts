@@ -1,13 +1,13 @@
+import {
+  createExecutionContext,
+  waitOnExecutionContext,
+} from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { insertMemoWithinQuota } from "@/features/access-control/quota";
-import { refreshLinkPreviewCache } from "@/features/link-preview/server/link-preview-cache";
 import bulkRoute from "./-routes/bulk";
 
-vi.mock("@/features/link-preview/server/link-preview-cache", () => ({
-  refreshLinkPreviewCache: vi.fn().mockResolvedValue(true),
-}));
 const db = env.MY_MEMO_D1;
 const run = (sql: string, ...values: unknown[]) =>
   db
@@ -35,6 +35,7 @@ const send = (
   id: string,
   body: unknown = input,
   userId: string | undefined = "owner",
+  ctx = createExecutionContext(),
 ) =>
   appFor(userId).fetch(
     new Request(`https://example.test/api/memos/bulk/${id}`, {
@@ -43,18 +44,14 @@ const send = (
       body: JSON.stringify(body),
     }),
     env,
-    {
-      waitUntil: () => {},
-      passThroughOnException: () => {},
-      props: {},
-    },
+    ctx,
   );
 const memoCount = () =>
   db.prepare("SELECT COUNT(*) AS count FROM memos").first<{ count: number }>();
 
 beforeEach(async () => {
-  vi.clearAllMocks();
   await db.batch([
+    db.prepare("DELETE FROM link_preview_cache"),
     db.prepare("DELETE FROM memo_tags"),
     db.prepare("DELETE FROM memos"),
     db.prepare("DELETE FROM categories"),
@@ -89,12 +86,17 @@ beforeEach(async () => {
 });
 
 describe("メモの一括保存", () => {
-  it("本人のカテゴリーと既存・新規タグを保存し、別所有者のタグを使わない", async () => {
+  it("本人のカテゴリーとタグを保存し、リンクプレビューを更新する", async () => {
     const id = crypto.randomUUID();
-    const response = await send(id, {
-      ...input,
-      url: "https://example.com/article",
-    });
+    const url = "https://example.com/article";
+    const ctx = createExecutionContext();
+    using _fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response('<meta property="og:title" content="記事">', {
+        headers: { "Content-Type": "text/html" },
+      }),
+    );
+    const response = await send(id, { ...input, url }, "owner", ctx);
+    await waitOnExecutionContext(ctx);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ memoId: id });
     expect(
@@ -108,7 +110,7 @@ describe("メモの一括保存", () => {
       user_id: "owner",
       title: input.title,
       content: input.content,
-      url: "https://example.com/article",
+      url,
       category_id: input.categoryId,
       is_ai_summary: 0,
     });
@@ -125,7 +127,14 @@ describe("メモの一括保存", () => {
       { user_id: "owner", name: "新規" },
       { user_id: "owner", name: "既存" },
     ]);
-    expect(refreshLinkPreviewCache).toHaveBeenCalledOnce();
+    expect(
+      await db
+        .prepare(
+          "SELECT title, status FROM link_preview_cache WHERE normalized_url = ?",
+        )
+        .bind(url)
+        .first(),
+    ).toEqual({ title: "記事", status: "ready" });
   });
 
   it("未認証・他人のカテゴリー・他人のメモIDを拒否する", async () => {

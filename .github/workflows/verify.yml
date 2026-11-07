@@ -44,7 +44,8 @@ jobs:
           path: |
             playwright-report/
             test-results/
-            app/**/__screenshots__/
+            .vitest/attachments/
+          include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
   deploy:
