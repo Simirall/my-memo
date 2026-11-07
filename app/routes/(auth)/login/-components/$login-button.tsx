@@ -44,7 +44,7 @@ export const LoginButton = ({ callbackURL }: { callbackURL?: string }) => {
   };
 
   return (
-    <div className="mx-auto grid w-full gap-4 text-left">
+    <div className="mx-auto grid w-full max-w-[32rem] gap-4 text-left">
       <button
         className="btn mx-auto"
         disabled={!hasConsent}
