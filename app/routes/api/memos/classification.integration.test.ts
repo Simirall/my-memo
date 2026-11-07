@@ -457,7 +457,13 @@ describe("メモ分類サジェスト", () => {
         }),
       ),
     );
-    const encoder = new TextEncoder();
+    const runAi = vi.fn();
+    const aiResponses = vi
+      .when(runAi, { onUnmatched: "throw" })
+      .calledWith("@cf/google/gemma-4-26b-a4b-it", expect.anything())
+      .thenResolveOnce(new Response('data: {"response":"要約本文"}\n\n').body)
+      .calledWith("@cf/cloudflare/clef", expect.anything())
+      .thenRejectOnce(new Error("unavailable"));
     const testEnv = {
       ...env,
       AI: {
@@ -466,17 +472,7 @@ describe("メモ分類サジェスト", () => {
           .mockResolvedValue([
             { format: "markdown", data: "title: 記事\n本文" },
           ]),
-        run: vi.fn().mockImplementation(async (model: string) => {
-          if (model === "@cf/cloudflare/clef") throw new Error("unavailable");
-          return new ReadableStream({
-            start(controller) {
-              controller.enqueue(
-                encoder.encode('data: {"response":"要約本文"}\n\n'),
-              );
-              controller.close();
-            },
-          });
-        }),
+        run: runAi,
       },
     } as unknown as CloudflareBindings;
 
@@ -498,6 +494,7 @@ describe("メモ分類サジェスト", () => {
     const body = await response.text();
     expect(body).toContain("event: complete");
     expect(body).toContain("AIによるカテゴリー・タグの判断に失敗しました");
+    expect(aiResponses).toHaveBeenExhausted();
     expect(
       await db
         .prepare(

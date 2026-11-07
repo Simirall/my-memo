@@ -71,8 +71,8 @@ describe("メモ作成フォーム", () => {
     const suggestion = page.getByRole("button", {
       name: "AIでカテゴリー・タグを提案",
     });
-    const title = page.getByLabelText("タイトル");
-    const content = page.getByLabelText("本文");
+    const title = page.getByRole("textbox", { name: "タイトル" });
+    const content = page.getByRole("textbox", { name: "本文" });
     await expect.element(suggestion).toBeDisabled();
     await title.fill("タイトルだけ");
     await expect.element(suggestion).toBeEnabled();
@@ -98,7 +98,7 @@ describe("メモ作成フォーム", () => {
     await expect
       .element(page.getByRole("combobox", { name: "タグ" }))
       .toBeVisible();
-    await page.getByLabelText("タイトル").fill("任意の分類");
+    await page.getByRole("textbox", { name: "タイトル" }).fill("任意の分類");
     await page.getByRole("button", { name: "メモを作成" }).click();
     expect(fetchSpy).toHaveBeenCalledOnce();
     const body = fetchSpy.mock.calls[0][1]?.body as FormData;
@@ -112,15 +112,17 @@ describe("メモ作成フォーム", () => {
       .spyOn(window, "fetch")
       .mockResolvedValue(Response.json({ message: "確認用" }, { status: 500 }));
     mount(<CreateMemoForm categories={categories} />);
-    await page.getByLabelText("タイトル").fill("手動分類");
-    await page.getByLabelText("カテゴリー").selectOptions("category-2");
+    await page.getByRole("textbox", { name: "タイトル" }).fill("手動分類");
+    await page
+      .getByRole("combobox", { name: "カテゴリー" })
+      .selectOptions("category-2");
     const tags = page.getByRole("combobox", { name: "タグ" });
     await tags.fill("手動タグ");
     await page
       .getByRole("option", { name: "#手動タグを新しいタグとして追加" })
       .click();
     await tags.fill("入力途中");
-    await page.getByLabelText("タイトル").click();
+    await page.getByRole("textbox", { name: "タイトル" }).click();
     await expect
       .element(page.getByRole("button", { name: "手動タグを外す" }))
       .toBeVisible();
@@ -148,7 +150,7 @@ describe("メモ作成フォーム", () => {
           Response.json({ message: "保存失敗" }, { status: 500 }),
         );
       const container = mount(<CreateMemoForm categories={categories} />);
-      await page.getByLabelText("タイトル").fill("待機中");
+      await page.getByRole("textbox", { name: "タイトル" }).fill("待機中");
       await page
         .getByRole("button", { name: "AIでカテゴリー・タグを提案" })
         .click();
@@ -156,7 +158,9 @@ describe("メモ作成フォーム", () => {
         .element(page.getByRole("button", { name: "判断しています…" }))
         .toBeDisabled();
       if (operation === "manual") {
-        await page.getByLabelText("カテゴリー").selectOptions("category-1");
+        await page
+          .getByRole("combobox", { name: "カテゴリー" })
+          .selectOptions("category-1");
       } else if (operation === "save") {
         await page.getByRole("button", { name: "メモを作成" }).click();
         await expect
@@ -180,11 +184,11 @@ describe("メモ作成フォーム", () => {
           .toBeVisible();
         if (operation === "manual") {
           await expect
-            .element(page.getByLabelText("カテゴリー"))
+            .element(page.getByRole("combobox", { name: "カテゴリー" }))
             .toHaveValue("category-1");
         } else {
           await expect
-            .element(page.getByLabelText("カテゴリー"))
+            .element(page.getByRole("combobox", { name: "カテゴリー" }))
             .toHaveValue("");
         }
         await expect
@@ -206,7 +210,7 @@ describe("メモ作成フォーム", () => {
     mount(<UrlSummaryForm categories={categories} />);
     await page.getByRole("button", { name: "手動で設定する" }).click();
     await page
-      .getByLabelText("要約するページのURL")
+      .getByRole("textbox", { name: "要約するページのURL" })
       .fill("https://example.com/article");
     await page.getByRole("button", { name: "要約して保存" }).click();
     expect(fetchSpy).toHaveBeenCalledOnce();
@@ -240,7 +244,7 @@ describe("メモ作成フォーム", () => {
         await page.getByRole("button", { name: "手動で設定する" }).click();
       expect(fetchSpy).not.toHaveBeenCalled();
       await page
-        .getByLabelText("要約するページのURL")
+        .getByRole("textbox", { name: "要約するページのURL" })
         .fill("https://example.com/article");
       await page.getByRole("button", { name: "要約して保存" }).click();
       expect(fetchSpy).toHaveBeenCalledOnce();
@@ -262,16 +266,16 @@ describe("メモ作成フォーム", () => {
     );
     mount(<CreateMemoForm categories={categories} tags={[suggestedTag]} />);
 
-    await page.getByLabelText("タイトル").fill("分類するメモ");
+    await page.getByRole("textbox", { name: "タイトル" }).fill("分類するメモ");
     const tagInput = page.getByRole("combobox", { name: "タグ" });
     await tagInput.fill("入力途中");
-    await page.getByLabelText("タイトル").click();
+    await page.getByRole("textbox", { name: "タイトル" }).click();
     await page
       .getByRole("button", { name: "AIでカテゴリー・タグを提案" })
       .click();
 
     await expect
-      .element(page.getByLabelText("カテゴリー"))
+      .element(page.getByRole("combobox", { name: "カテゴリー" }))
       .toHaveValue("category-2");
     await expect
       .element(page.getByRole("button", { name: "AI候補を外す" }))
@@ -293,18 +297,18 @@ describe("メモ作成フォーム", () => {
     mount(
       <CreateMemoForm categories={categories} initialCategoryId="category-1" />,
     );
-    await page.getByLabelText("タイトル").fill("補完のみ");
+    await page.getByRole("textbox", { name: "タイトル" }).fill("補完のみ");
     await page.getByRole("combobox", { name: "タグ" }).fill("手動タグ");
     await page
       .getByRole("option", { name: "#手動タグを新しいタグとして追加" })
       .click();
-    await page.getByLabelText("タイトル").click();
+    await page.getByRole("textbox", { name: "タイトル" }).click();
     await page
       .getByRole("button", { name: "AIでカテゴリー・タグを提案" })
       .click();
     await expect.element(page.getByText(/残り29回/)).toBeVisible();
     await expect
-      .element(page.getByLabelText("カテゴリー"))
+      .element(page.getByRole("combobox", { name: "カテゴリー" }))
       .toHaveValue("category-1");
     await expect
       .element(page.getByRole("button", { name: "手動タグを外す" }))
@@ -340,7 +344,7 @@ describe("メモ作成フォーム", () => {
     );
     mount(<CreateMemoForm categories={categories} />);
 
-    const title = page.getByLabelText("タイトル");
+    const title = page.getByRole("textbox", { name: "タイトル" });
     await title.fill("変更前");
     await page
       .getByRole("button", { name: "AIでカテゴリー・タグを提案" })
@@ -359,7 +363,9 @@ describe("メモ作成フォーム", () => {
     await expect
       .element(page.getByText(/古いサジェスト結果は反映しませんでした/))
       .toBeVisible();
-    await expect.element(page.getByLabelText("カテゴリー")).toHaveValue("");
+    await expect
+      .element(page.getByRole("combobox", { name: "カテゴリー" }))
+      .toHaveValue("");
   });
 
   it("カテゴリーに応じた未入力タグ候補へ切り替え、選択済みタグを保持する", async () => {
@@ -379,7 +385,9 @@ describe("メモ作成フォーム", () => {
 
     await page.getByRole("combobox", { name: "タグ" }).click();
     await page.getByRole("option", { name: "#仕事" }).click();
-    await page.getByLabelText("カテゴリー").selectOptions("category-2");
+    await page
+      .getByRole("combobox", { name: "カテゴリー" })
+      .selectOptions("category-2");
     await expect.element(page.getByText("#仕事")).toBeInTheDocument();
     await expect
       .element(page.getByRole("option", { name: "#個人" }))
@@ -412,10 +420,10 @@ describe("メモ作成フォーム", () => {
       <CreateMemoForm categories={categories} initialCategoryId="category-1" />,
     );
 
-    const category = page.getByLabelText("カテゴリー");
+    const category = page.getByRole("combobox", { name: "カテゴリー" });
     await expect.element(category).toHaveValue("category-1");
     await category.selectOptions("category-2");
-    await page.getByLabelText("タイトル").fill("保存先を変更");
+    await page.getByRole("textbox", { name: "タイトル" }).fill("保存先を変更");
     await page.getByRole("button", { name: "メモを作成" }).click();
 
     const body = fetchSpy.mock.calls[0]?.[1]?.body as FormData;
@@ -430,7 +438,9 @@ describe("メモ作成フォーム", () => {
       .mockResolvedValue(Response.json({ message: "確認用" }, { status: 500 }));
     mount(<CreateMemoForm categories={[]} />);
 
-    await page.getByLabelText("タイトル").fill("ショートカット送信");
+    await page
+      .getByRole("textbox", { name: "タイトル" })
+      .fill("ショートカット送信");
     outsideButton.focus();
     await new Promise((resolve) => requestAnimationFrame(resolve));
     pressCtrlEnter(outsideButton);
@@ -444,9 +454,11 @@ describe("メモ作成フォーム", () => {
       .mockResolvedValue(Response.json({ message: "確認用" }, { status: 500 }));
     mount(<CreateMemoForm categories={[]} />);
 
-    const content = page.getByLabelText("本文");
+    const content = page.getByRole("textbox", { name: "本文" });
     await expect.element(content).not.toBeRequired();
-    await page.getByLabelText("タイトル").fill("タイトルだけのメモ");
+    await page
+      .getByRole("textbox", { name: "タイトル" })
+      .fill("タイトルだけのメモ");
     await page.getByRole("button", { name: "メモを作成" }).click();
 
     expect(fetchSpy).toHaveBeenCalledOnce();
@@ -477,7 +489,7 @@ describe("メモ作成フォーム", () => {
     );
     mount(<CreateMemoForm categories={[]} />);
 
-    await page.getByLabelText("本文").click();
+    await page.getByRole("textbox", { name: "本文" }).click();
     const event = dispatchPaste(
       [
         new File(["audio"], "pasted.mp3", { type: "audio/mpeg" }),
@@ -498,7 +510,9 @@ describe("メモ作成フォーム", () => {
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
     expect(event.defaultPrevented).toBe(true);
-    await expect.element(page.getByLabelText("本文")).toHaveValue("");
+    await expect
+      .element(page.getByRole("textbox", { name: "本文" }))
+      .toHaveValue("");
   });
 
   it("本文以外にフォーカス中はメディアを貼り付けず、対応メディアがなければ通常貼り付けを妨げない", async () => {
@@ -513,7 +527,7 @@ describe("メモ作成フォーム", () => {
     );
     mount(<CreateMemoForm categories={[]} />);
 
-    await page.getByLabelText("タイトル").click();
+    await page.getByRole("textbox", { name: "タイトル" }).click();
     const titlePaste = dispatchPaste([
       new File(["audio"], "title.mp3", { type: "audio/mpeg" }),
     ]);
@@ -541,7 +555,9 @@ describe("メモ作成フォーム", () => {
     );
     mount(<CreateMemoForm categories={[]} />);
 
-    await expect.element(page.getByLabelText("本文")).toBeVisible();
+    await expect
+      .element(page.getByRole("textbox", { name: "本文" }))
+      .toBeVisible();
     await new Promise((resolve) =>
       requestAnimationFrame(() => resolve(undefined)),
     );
@@ -604,8 +620,8 @@ describe("メモ作成フォーム", () => {
     );
     mount(<CreateMemoForm categories={[]} />);
 
-    const title = page.getByLabelText("タイトル");
-    const content = page.getByLabelText("本文");
+    const title = page.getByRole("textbox", { name: "タイトル" });
+    const content = page.getByRole("textbox", { name: "本文" });
     await title.fill("残してほしいタイトル");
     await content.fill("残してほしい本文");
     await page.getByRole("button", { name: "メモを作成" }).click();
@@ -627,8 +643,8 @@ describe("メモ作成フォーム", () => {
     );
     mount(<CreateMemoForm categories={[]} />);
 
-    await page.getByLabelText("タイトル").fill("title");
-    await page.getByLabelText("本文").fill("content");
+    await page.getByRole("textbox", { name: "タイトル" }).fill("title");
+    await page.getByRole("textbox", { name: "本文" }).fill("content");
     await page.getByRole("button", { name: "メモを作成" }).click();
     await expect
       .element(page.getByRole("button", { name: "メモを作成" }))
@@ -656,13 +672,13 @@ describe("メモ作成フォーム", () => {
     mount(<CreateMemoForm categories={[]} />);
 
     await expect
-      .element(page.getByLabelText("タイトル"))
+      .element(page.getByRole("textbox", { name: "タイトル" }))
       .toHaveValue("共有タイトル");
     await expect
-      .element(page.getByLabelText("本文"))
+      .element(page.getByRole("textbox", { name: "本文" }))
       .toHaveValue("共有本文\nhttps://example.com/article");
     await expect
-      .element(page.getByLabelText("関連URL"))
+      .element(page.getByRole("textbox", { name: "関連URL" }))
       .toHaveValue("https://example.com/article");
     expect(window.sessionStorage.getItem(SHARE_STORAGE_KEY)).toBeNull();
   });
@@ -681,11 +697,13 @@ describe("メモ作成フォーム", () => {
     mount(<CreateMemoForm categories={[]} />);
 
     await expect
-      .element(page.getByLabelText("タイトル"))
+      .element(page.getByRole("textbox", { name: "タイトル" }))
       .toHaveValue("ページタイトル");
-    await expect.element(page.getByLabelText("本文")).toHaveValue("");
     await expect
-      .element(page.getByLabelText("関連URL"))
+      .element(page.getByRole("textbox", { name: "本文" }))
+      .toHaveValue("");
+    await expect
+      .element(page.getByRole("textbox", { name: "関連URL" }))
       .toHaveValue("https://example.com/article");
     expect(window.sessionStorage.getItem(SHARE_STORAGE_KEY)).toBeNull();
   });
@@ -809,7 +827,7 @@ describe("メモ作成フォーム", () => {
     );
     mount(<UrlSummaryForm categories={[]} />);
 
-    const url = page.getByLabelText("要約するページのURL");
+    const url = page.getByRole("textbox", { name: "要約するページのURL" });
     await url.fill("https://example.com/article");
     await page.getByRole("button", { name: "要約して保存" }).click();
 
@@ -830,11 +848,11 @@ describe("メモ作成フォーム", () => {
     );
 
     await page.getByRole("button", { name: "手動で設定する" }).click();
-    const category = page.getByLabelText("カテゴリー");
+    const category = page.getByRole("combobox", { name: "カテゴリー" });
     await expect.element(category).toHaveValue("category-1");
     await category.selectOptions("category-2");
     await page
-      .getByLabelText("要約するページのURL")
+      .getByRole("textbox", { name: "要約するページのURL" })
       .fill("https://example.com/article");
     await page.getByRole("button", { name: "要約して保存" }).click();
 
@@ -851,7 +869,7 @@ describe("メモ作成フォーム", () => {
       );
     mount(<UrlSummaryForm categories={[]} />);
 
-    const url = page.getByLabelText("要約するページのURL");
+    const url = page.getByRole("textbox", { name: "要約するページのURL" });
     await url.fill("https://example.com/article");
     await url.click();
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -883,7 +901,7 @@ describe("メモ作成フォーム", () => {
     mount(<UrlSummaryForm categories={[]} />);
 
     await page
-      .getByLabelText("要約するページのURL")
+      .getByRole("textbox", { name: "要約するページのURL" })
       .fill("https://example.com/article");
     await page.getByRole("button", { name: "要約して保存" }).click();
 
@@ -907,7 +925,7 @@ describe("メモ作成フォーム", () => {
     mount(<UrlSummaryForm categories={[]} />);
 
     await expect
-      .element(page.getByLabelText("要約するページのURL"))
+      .element(page.getByRole("textbox", { name: "要約するページのURL" }))
       .toHaveValue("https://example.com/article");
     expect(window.sessionStorage.getItem(SHARE_STORAGE_KEY)).toBeNull();
   });

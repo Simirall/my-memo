@@ -13,7 +13,6 @@ export default defineConfig({
   },
   test: {
     setupFiles: ["./tests/setup/browser.tsx"],
-    clearMocks: true,
     retry: process.env.CI ? 1 : 0,
     include: ["app/**/*.browser.test.tsx"],
     browser: {

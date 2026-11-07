@@ -21,8 +21,9 @@ export default defineConfig({
     plugins: [
       tailwindcss(),
       cloudflare({
-        // ビルド末尾のpreview Workerも、CIでは外部認証を不要にする。
-        remoteBindings: process.env.CI ? false : undefined,
+        // ビルド時の静的生成はローカルで完結させ、開発時は Workers AI に接続する。
+        remoteBindings:
+          !process.env.CI && process.env.NODE_ENV === "development",
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
         inspectorPort: false,
       }),

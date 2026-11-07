@@ -105,7 +105,9 @@ describe("メモ編集フォーム", () => {
       );
     mount();
 
-    await page.getByLabelText("タイトル").fill("ショートカット更新");
+    await page
+      .getByRole("textbox", { name: "タイトル" })
+      .fill("ショートカット更新");
     outsideButton.focus();
     pressCtrlEnter(outsideButton);
 
@@ -120,10 +122,10 @@ describe("メモ編集フォーム", () => {
       );
     mount(null);
 
-    const content = page.getByLabelText("本文");
+    const content = page.getByRole("textbox", { name: "本文" });
     await expect.element(content).toHaveValue("");
     await expect.element(content).not.toBeRequired();
-    await page.getByLabelText("タイトル").fill("更新タイトル");
+    await page.getByRole("textbox", { name: "タイトル" }).fill("更新タイトル");
     await page.getByRole("button", { name: "更新" }).click();
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -205,14 +207,16 @@ describe("メモ編集フォーム", () => {
 
     await expect.element(page.getByText("✨ AI要約")).toBeVisible();
     await expect
-      .element(page.getByLabelText("タイトル"))
+      .element(page.getByRole("textbox", { name: "タイトル" }))
       .toHaveValue("AIタイトル");
-    await expect.element(page.getByLabelText("本文")).toHaveValue("AI本文");
     await expect
-      .element(page.getByLabelText("関連URL"))
+      .element(page.getByRole("textbox", { name: "本文" }))
+      .toHaveValue("AI本文");
+    await expect
+      .element(page.getByRole("textbox", { name: "関連URL" }))
       .toHaveValue("https://example.com");
     await expect
-      .element(page.getByLabelText("カテゴリー"))
+      .element(page.getByRole("combobox", { name: "カテゴリー" }))
       .toHaveValue("category-1");
     await expect.element(page.getByText("資料.txt")).toBeVisible();
   });
@@ -255,9 +259,13 @@ describe("メモ編集フォーム", () => {
     });
     const fetchMock = vi.spyOn(window, "fetch").mockReturnValue(response);
     mount();
-    await page.getByLabelText("タイトル").fill("未保存タイトル");
-    await page.getByLabelText("関連URL").fill("https://draft.example.com");
-    await page.getByLabelText("本文").fill("未保存本文");
+    await page
+      .getByRole("textbox", { name: "タイトル" })
+      .fill("未保存タイトル");
+    await page
+      .getByRole("textbox", { name: "関連URL" })
+      .fill("https://draft.example.com");
+    await page.getByRole("textbox", { name: "本文" }).fill("未保存本文");
 
     await page.getByRole("button", { name: "再生成" }).click();
     await page.getByRole("button", { name: "再要約する" }).click();
@@ -273,13 +281,13 @@ describe("メモ編集フォーム", () => {
     resolveResponse?.(Response.json({ content: "新しいAI要約" }));
 
     await expect
-      .element(page.getByLabelText("本文"))
+      .element(page.getByRole("textbox", { name: "本文" }))
       .toHaveValue("新しいAI要約");
     await expect
-      .element(page.getByLabelText("タイトル"))
+      .element(page.getByRole("textbox", { name: "タイトル" }))
       .toHaveValue("未保存タイトル");
     await expect
-      .element(page.getByLabelText("関連URL"))
+      .element(page.getByRole("textbox", { name: "関連URL" }))
       .toHaveValue("https://draft.example.com");
     await expect
       .element(page.getByRole("status"))
@@ -298,7 +306,9 @@ describe("メモ編集フォーム", () => {
     await page.getByRole("button", { name: "再生成" }).click();
     await page.getByRole("button", { name: "再要約する" }).click();
 
-    await expect.element(page.getByLabelText("本文")).toHaveValue("AI本文");
+    await expect
+      .element(page.getByRole("textbox", { name: "本文" }))
+      .toHaveValue("AI本文");
     await expect
       .element(page.getByRole("alert"))
       .toHaveTextContent("AI要約の今月の上限に達しています。");
@@ -323,7 +333,7 @@ describe("メモ編集フォーム", () => {
     await expect
       .element(page.getByRole("option", { name: "#カテゴリ候補" }))
       .toBeVisible();
-    await page.getByLabelText("タイトル").click();
+    await page.getByRole("textbox", { name: "タイトル" }).click();
     await page.getByRole("button", { name: "既存タグを外す" }).click();
     await page.getByPlaceholder("タグを入力").fill("新規タグ");
     await page.getByText("#新規タグを新しいタグとして追加").click();
@@ -371,7 +381,7 @@ describe("メモ編集フォーム", () => {
       );
     mount();
 
-    await page.getByLabelText("本文").fill("変更後の本文");
+    await page.getByRole("textbox", { name: "本文" }).fill("変更後の本文");
     await page.getByRole("button", { name: "更新" }).click();
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -396,7 +406,7 @@ describe("メモ編集フォーム", () => {
 
   it("未保存の変更がある場合は破棄確認を表示し、キャンセルできる", async () => {
     mount();
-    await page.getByLabelText("本文").fill("変更後の本文");
+    await page.getByRole("textbox", { name: "本文" }).fill("変更後の本文");
     const cancelLink = page.getByRole("link", { name: "キャンセル" });
 
     await cancelLink.click();

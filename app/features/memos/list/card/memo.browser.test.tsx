@@ -189,7 +189,7 @@ describe("メモ表示", () => {
         "/memos/memo-1/edit?returnTo=%2Fcategories%2Fcategory-1",
       );
     await expect
-      .element(page.getByRole("button", { name: "削除" }))
+      .element(page.getByRole("button", { name: "メモ「テストメモ」を削除" }))
       .toBeVisible();
     expect(
       document

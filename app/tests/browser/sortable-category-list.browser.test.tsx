@@ -208,7 +208,7 @@ describe("カテゴリー名の変更", () => {
         }),
       }),
     );
-    const updatedLink = page.getByRole("link", { name: "更新後" });
+    const updatedLink = page.getByRole("link", { name: /^更新後/ });
     await expect.element(updatedLink).toBeVisible();
     await expect
       .element(updatedLink.getByText("private", { exact: true }))
@@ -258,7 +258,7 @@ describe("カテゴリー名の変更", () => {
     await input.fill("別の名前");
     await userEvent.click(page.getByRole("button", { name: "保存" }));
     await expect
-      .element(page.getByRole("link", { name: "別の名前" }))
+      .element(page.getByRole("link", { name: /^別の名前/ }))
       .toBeVisible();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });

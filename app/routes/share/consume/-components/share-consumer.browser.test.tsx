@@ -50,7 +50,9 @@ describe("共有URLの保存方法選択", () => {
     await expect
       .element(page.getByText("example.com", { exact: true }))
       .toBeVisible();
-    await expect.element(page.getByText("今月あと9回")).toBeVisible();
+    await expect
+      .element(page.getByText("AI要約クォータ: 今月あと9回"))
+      .toBeVisible();
     await expect
       .element(page.getByRole("button", { name: "AIで要約" }))
       .not.toBeDisabled();
@@ -66,7 +68,9 @@ describe("共有URLの保存方法選択", () => {
       aiSummary: { used: 10, limit: 10 },
     });
 
-    await expect.element(page.getByText("今月あと0回")).toBeVisible();
+    await expect
+      .element(page.getByText("AI要約クォータ: 今月あと0回"))
+      .toBeVisible();
     await expect
       .element(page.getByRole("button", { name: "AIで要約" }))
       .toBeDisabled();
@@ -82,7 +86,9 @@ describe("共有URLの保存方法選択", () => {
       aiSummary: { used: 1, limit: null },
     });
 
-    await expect.element(page.getByText("無制限")).toBeVisible();
+    await expect
+      .element(page.getByText("AI要約クォータ: 無制限"))
+      .toBeVisible();
   });
 
   it("メモ上限到達時は2つの保存方法を無効にする", async () => {
@@ -94,7 +100,7 @@ describe("共有URLの保存方法選択", () => {
 
     await expect
       .element(page.getByRole("alert"))
-      .toHaveTextContent("メモの上限に達しているため");
+      .toMatchTextContent("メモの上限に達しているため");
     await expect
       .element(page.getByRole("button", { name: "AIで要約" }))
       .toBeDisabled();
@@ -109,7 +115,7 @@ describe("共有URLの保存方法選択", () => {
 
     await expect
       .element(page.getByRole("alert"))
-      .toHaveTextContent("プランの上限設定を確認できないため");
+      .toMatchTextContent("プランの上限設定を確認できないため");
     await expect
       .element(page.getByRole("button", { name: "AIで要約" }))
       .toBeDisabled();

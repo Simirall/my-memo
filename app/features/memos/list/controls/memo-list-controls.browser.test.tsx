@@ -33,12 +33,18 @@ describe("メモ一覧の並べ替え・絞り込み", () => {
     );
 
     await page.getByText("並べ替え・絞り込み").click();
-    await expect.element(page.getByLabelText("作成時間")).toHaveValue("asc");
-    await expect.element(page.getByLabelText("種類")).toHaveValue("ai");
     await expect
-      .element(page.getByLabelText("添付ファイル"))
+      .element(page.getByRole("combobox", { name: "作成時間" }))
+      .toHaveValue("asc");
+    await expect
+      .element(page.getByRole("combobox", { name: "種類" }))
+      .toHaveValue("ai");
+    await expect
+      .element(page.getByRole("combobox", { name: "添付ファイル" }))
       .toHaveValue("with");
-    await expect.element(page.getByLabelText("タグ")).toHaveValue("tag-1");
+    await expect
+      .element(page.getByRole("combobox", { name: "タグ" }))
+      .toHaveValue("tag-1");
     await expect
       .element(page.getByRole("link", { name: "すべて解除" }))
       .toHaveAttribute("href", "/categories/category-1");

@@ -596,7 +596,7 @@ describe("タグUI", () => {
     await expect.poll(() => fetchMock.mock.calls.length).toBe(1);
     await expect
       .element(page.getByRole("alert"))
-      .toHaveTextContent("保存済みですが表示を更新できませんでした");
+      .toMatchTextContent("保存済みですが表示を更新できませんでした");
     await page.getByRole("button", { name: "キャンセル" }).click();
     await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
 

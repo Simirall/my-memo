@@ -76,7 +76,9 @@ describe("ファイル一覧", () => {
       "requestSubmit",
     );
 
-    await page.getByLabelText("カテゴリー").selectOptions("category-1");
+    await page
+      .getByRole("combobox", { name: "カテゴリー" })
+      .selectOptions("category-1");
 
     expect(navigation.push).toHaveBeenCalledWith(
       "/settings/files?category=category-1",
