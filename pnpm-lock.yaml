@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: ^0.9.1
-        version: 0.9.1(hono@4.13.16)(zod@4.6.7)
+        version: 0.9.1(hono@4.13.17)(zod@4.6.7)
       '@phosphor-icons/core':
         specifier: 2.1.1
         version: 2.1.1
@@ -30,8 +30,8 @@ importers:
         specifier: ^0.8.3
         version: 0.8.3(drizzle-orm@0.45.4(@opentelemetry/api@1.9.1)(kysely@0.29.8))(zod@4.6.7)
       hono:
-        specifier: ^4.13.16
-        version: 4.13.16
+        specifier: ^4.13.17
+        version: 4.13.17
       markdown-it:
         specifier: ^15.0.3
         version: 15.0.3
@@ -2086,8 +2086,8 @@ packages:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
     engines: {node: '>=8'}
 
-  hono@4.13.16:
-    resolution: {integrity: sha512-AOLOEhvrV+iH92xXCnFr/5+3KjPKcI3xP63XJtX5spAnkznPdHijlIsUTpi7/9EhWqrTCekw5c5zh1K+YsVw7A==}
+  hono@4.13.17:
+    resolution: {integrity: sha512-vZIcbkvjOR5hHRWERbGkr8fGfF0GGM1ooYkuH448iO3b2AdVEr3AXZSw4Z3Kn+1L5z0CVoVeyV29VGYmFh05kQ==}
     engines: {node: '>=16.9.0'}
 
   jest-worker@27.5.1:
@@ -3148,13 +3148,13 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
-  '@hono/node-server@2.1.5(hono@4.13.16)':
+  '@hono/node-server@2.1.5(hono@4.13.17)':
     dependencies:
-      hono: 4.13.16
+      hono: 4.13.17
 
-  '@hono/zod-validator@0.9.1(hono@4.13.16)(zod@4.6.7)':
+  '@hono/zod-validator@0.9.1(hono@4.13.17)(zod@4.6.7)':
     dependencies:
-      hono: 4.13.16
+      hono: 4.13.17
       zod: 4.6.7
 
   '@img/colour@1.1.0': {}
@@ -4079,7 +4079,7 @@ snapshots:
 
   has-flag@4.0.0: {}
 
-  hono@4.13.16: {}
+  hono@4.13.17: {}
 
   jest-worker@27.5.1:
     dependencies:
@@ -4559,11 +4559,11 @@ snapshots:
 
   waku@1.0.0-rc.4(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(react-dom@19.3.1(react@19.3.1))(react-server-dom-webpack@19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(webpack@5.111.1(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(sharp@0.35.5(@types/node@26.6.6))))(react@19.3.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1):
     dependencies:
-      '@hono/node-server': 2.1.5(hono@4.13.16)
+      '@hono/node-server': 2.1.5(hono@4.13.17)
       '@vitejs/plugin-react': 6.1.2(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
       '@vitejs/plugin-rsc': 0.5.37(react-dom@19.3.1(react@19.3.1))(react-server-dom-webpack@19.3.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(webpack@5.111.1(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(sharp@0.35.5(@types/node@26.6.6))))(react@19.3.1)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
       dotenv: 18.0.7
-      hono: 4.13.16
+      hono: 4.13.17
       magic-string: 1.4.3
       picocolors: 1.1.1
       react: 19.3.1
