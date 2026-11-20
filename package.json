@@ -42,7 +42,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.6.8",
     "@cloudflare/vite-plugin": "^1.70.0",
-    "@cloudflare/vitest-plugin": "1.8.3",
+    "@cloudflare/vitest-plugin": "1.8.4",
     "@playwright/test": "1.65.1",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
