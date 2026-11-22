@@ -117,7 +117,22 @@ test("SSRとRSCの所有者分離を維持し、nonce付きCSPで内部遷移で
     headers: cookie(ownerCookie),
   });
   expect(denied.status).toBe(403);
-  expect(await denied.text()).not.toContain("owner@example.com");
+  const deniedBody = await denied.text();
+  expect(deniedBody).toContain("このページを表示する権限がありません。");
+  expect(deniedBody).not.toContain("owner@example.com");
+  await env.MY_MEMO_D1.prepare(
+    "UPDATE user SET role = 'admin' WHERE id = 'other'",
+  ).run();
+  const allowed = await server.fetch("/admin/users", {
+    headers: cookie(otherCookie),
+  });
+  expect(allowed.status).toBe(200);
+  expect(await allowed.text()).toContain("owner@example.com");
+  const inaccessibleMemo = await server.fetch("/memos/other-ssr/edit", {
+    headers: cookie(ownerCookie),
+  });
+  expect(inaccessibleMemo.status).toBe(404);
+  expect(await inaccessibleMemo.text()).toContain("ページが見つかりません");
   const response = await server.fetch("/", { headers: cookie(ownerCookie) });
   const html = await response.text();
   expect(html).toContain("サーバーで描画する本文");

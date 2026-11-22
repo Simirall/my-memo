@@ -19,5 +19,6 @@ declare module "hono" {
     user: User | null;
     session: Session | null;
     nonce: string;
+    canViewAdminUsers?: true;
   }
 }

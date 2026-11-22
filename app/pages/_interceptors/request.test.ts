@@ -1,11 +1,10 @@
 import { expect, it, vi } from "vitest";
 
 vi.mock("waku/router/server", () => ({
-  unstable_getRequest: vi.fn(),
+  getRequest: vi.fn(),
+  requestRedirect: vi.fn(),
   unstable_parseRouterRequest: vi.fn(),
   unstable_setNonce: vi.fn(),
-  unstable_notFound: vi.fn(),
-  unstable_redirect: vi.fn(),
 }));
 
 import request from "./request";

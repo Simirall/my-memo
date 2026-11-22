@@ -1,26 +1,14 @@
 import { asc, eq } from "drizzle-orm";
-import {
-  getAppDb,
-  getFreshUser,
-} from "@/features/access-control/authorization";
+import { getAppDb } from "@/features/access-control/authorization";
 import UserAccessForm from "@/routes/admin/users/-components/$user-access-form";
 import { plansTable, userTable } from "@/schema";
-import {
-  forbidden,
-  getRequestContext,
-  redirect,
-} from "@/server/request-context";
+import { getRequestContext, notFound } from "@/server/request-context";
 
 export default async function Page() {
   const c = getRequestContext();
-  const sessionUser = c.get("user");
-  if (!sessionUser) return redirect("/login");
+  if (!c.get("canViewAdminUsers")) return notFound();
 
   const db = getAppDb(c.env);
-  const actor = await getFreshUser(db, sessionUser.id);
-  if (actor?.role !== "admin") {
-    return forbidden();
-  }
 
   const [users, plans] = await Promise.all([
     db
