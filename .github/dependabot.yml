@@ -3,22 +3,38 @@ updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: cron
-      # 06:00 Asia/Tokyo (UTC+9), including weekends.
-      cronjob: "0 21 * * *"
+      interval: weekly
+      day: sunday
+      time: "21:00"
+      timezone: Asia/Tokyo
     cooldown:
       default-days: 3
     groups:
       react:
+        applies-to: version-updates
         patterns:
           - react
           - react-dom
           - react-server-dom-webpack
+      npm-versions:
+        applies-to: version-updates
+        patterns: ["*"]
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: cron
-      # 06:00 Asia/Tokyo (UTC+9), including weekends.
-      cronjob: "0 21 * * *"
+      interval: weekly
+      day: sunday
+      time: "21:00"
+      timezone: Asia/Tokyo
     cooldown:
       default-days: 3
+    groups:
+      actions-versions:
+        applies-to: version-updates
+        patterns: ["*"]
+      actions-security:
+        applies-to: security-updates
+        patterns: ["*"]
